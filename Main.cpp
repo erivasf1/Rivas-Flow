@@ -165,18 +165,6 @@ int main() {
     return 0;
   }
   
-  /*
-  if (!meshfile) //1D Nozzle case
-    euler = new Euler1DNozzle;
-
-  else { //2D Euler Solver
-    if (MMS == true)
-      euler = new Euler2DMMS;
-    else
-      euler = new Euler2D;
-  }
-  */
-
   SpaceVariables1D Sols; //for operating on Field variables
 
   SpaceVariables2D Sols_TEST; //for operating on Field variables
@@ -266,6 +254,10 @@ int main() {
     euler_test->EvalSourceTerms(field_ms_source,sols_test,mesh); //!< computing manufactured source terms
     error->OutputPrimitiveVariables(field_ms,mms_sol_filename,false,0,mesh->xcoords,mesh->ycoords,mesh->cellnumber,mesh->Nx,mesh->Ny);
     error->OutputManufacturedSourceTerms(field_ms_source,mms_source_filename,false,0,mesh->xcoords,mesh->ycoords,mesh->cellnumber,mesh->Nx,mesh->Ny);
+
+    int left_id = 0;int right_id = 0;int top_id = 0;int btm_id = 1;
+    mesh->GenerateGhostCells(left_id,right_id,btm_id,top_id);
+ 
     delete euler_test;
     delete mesh;
   }

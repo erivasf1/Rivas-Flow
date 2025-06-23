@@ -22,7 +22,7 @@ class MeshGenBASE {
   virtual void GenerateMesh();
   virtual void ReadMeshFile();
   virtual void OutputMesh();
-  //virtual void GenerateGhostCells(); //-- adds the extra ghost cells to the domain 
+  virtual void GenerateGhostCells(int left_id,int right_id,int btm_id,int top_id); //-- adds the extra ghost cells to the domain 
   
   virtual ~MeshGenBASE();
 
@@ -72,8 +72,8 @@ class MeshGen2D : public MeshGenBASE { //reads in a non-uniform 2D mesh
   //array<double,2> GetCoords(int ghost_domain,int cell_id); //fcn. to retrieve coords
   //double GetCellVolume(int cell_id) override;
   
-  //void GenerateGhostCells() override;
-  void ReflectGhostCoords(vector<double> &xcoords,vector<double> &ycoords,int tag);
+  void GenerateGhostCells(int left_id,int right_id,int btm_id,int top_id) override; //main fcn. that generates ghost nodes to each pertaining bounds
+  void ReflectGhostCoords(int tag);
   //void OutflowandInflow
   //void Farfield
 

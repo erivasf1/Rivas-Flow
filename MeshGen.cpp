@@ -19,6 +19,8 @@ void MeshGenBASE::ReadMeshFile(){}
 void MeshGenBASE::OutputMesh(){}
 
 //-----------------------------------------------------------
+void MeshGenBASE::GenerateGhostCells(int left_id,int right_id,int btm_id,int top_id){}
+//-----------------------------------------------------------
 MeshGenBASE::~MeshGenBASE(){}
 //-----------------------------------------------------------
 
@@ -194,7 +196,21 @@ void MeshGen2D::OutputMesh(){
 }
 
 //-----------------------------------------------------------
-void MeshGen2D::ReflectGhostCoords(vector<double> &xcoords,vector<double> &ycoords,int tag){
+void MeshGen2D::GenerateGhostCells(int left_id,int right_id,int btm_id,int top_id){
+
+  //Left Boundary
+  //Left Boundary
+  //Bottom Boundary
+  //(btm_id == 0) ? ReflectGhostCoords(0) : ExtendGhostCoords();
+  ReflectGhostCoords(0); //temp
+  //Left Boundary
+  
+  return;
+
+}
+
+//-----------------------------------------------------------
+void MeshGen2D::ReflectGhostCoords(int tag){
 
   //using the symmetry method: https://doi-org.ezproxy.lib.vt.edu/10.2514/3.11983
   //symmetry imposed by creating ghost cell nodes as same sign in x but different sign in y (for top + btm cases), vice versa in right and left cases
@@ -206,13 +222,14 @@ void MeshGen2D::ReflectGhostCoords(vector<double> &xcoords,vector<double> &ycoor
   double p1x,p1y;
   double p2x,p2y;
   double d1,d2;
+  double pdotp; //dot products of point vectors
   double theta;
   int ghost_id; 
   //btm boundary case -- tag=0 case
   if (tag == 0){
     for (int j=0;j<2;j++){
-      for (int i=0;i<Ny;i++){
-        //determining pts + retrieving coords
+      for (int i=0;i<Nx;i++){
+        //determining pts + retrieving coords TODO: First ghost node is computed as nan!!!
         pt_id1 = i + (j*Nx);
         pt_id2 = i + ((j+1)*Nx);//ptid2 is j+1 from ptid1
         pt_id3 = (j<Ny-1) ? (i+1) + (j*Nx) : (i-1) + (j*Nx); //use i-1 pt. for last i node
@@ -225,7 +242,8 @@ void MeshGen2D::ReflectGhostCoords(vector<double> &xcoords,vector<double> &ycoor
         d1 = sqrt(pow(p1x,2.0) + pow(p1y,2.0));//mag. of interior pt. line (L2 norm)
         d2 = sqrt(pow(p2x,2.0) + pow(p2y,2.0));//mag. of reflection axis line (L2 norm)
         //computing angle
-        theta = acos(Tools::ComputeDotProduct(p1x,p1y,p2x,p2y) / (d1*d2)); 
+        pdotp = Tools::ComputeDotProduct(p1x,p1y,p2x,p2y);
+        theta = acos(pdotp / (d1*d2)); 
         //computing coords of reflected pt.
         if (j>0) //for 2nd layer, the last ghost node layer are computed from the previously computed layer
           ghost_id = i + (j-1)*Nx;
