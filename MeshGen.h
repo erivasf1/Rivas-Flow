@@ -8,9 +8,13 @@
 class MeshGenBASE {
 
   public:
-  vector<double> xcoords,ycoords;
+  vector<double> xcoords,ycoords; //domain nodes
+  //vector top_xcoords,top_ycoords; //top ghost cell nodes
+  //vector btm_xcoords,btm_ycoords; //btm ghost cell nodes
+  //vector right_xcoords,right_ycoords; //right ghost cell nodes
+  //vector left_xcoords,left_ycoords; //left ghost cell nodes
   int cellnumber;
-  int imax,jmax,kmax;
+  int Nx,Ny,Nz;
 
   MeshGenBASE();
 
@@ -18,6 +22,7 @@ class MeshGenBASE {
   virtual void GenerateMesh();
   virtual void ReadMeshFile();
   virtual void OutputMesh();
+  //virtual void GenerateGhostCells(); //-- adds the extra ghost cells to the domain 
   
   virtual ~MeshGenBASE();
 
@@ -38,7 +43,7 @@ class MeshGenNozzle : public MeshGenBASE { //creates a uniform mesh (in x)
  
   void GenerateMesh() override;
 
-  void OutputNozzleAreas(vector<double> &xcoords,const char *filename);
+  void OutputNozzleAreas(vector<double> &coords,const char *filename);
 
   ~MeshGenNozzle();
 
@@ -46,19 +51,31 @@ class MeshGenNozzle : public MeshGenBASE { //creates a uniform mesh (in x)
 };
 
 class MeshGen2D : public MeshGenBASE { //reads in a non-uniform 2D mesh
-  //double xmin,xmax;
-  //double ymin,ymax;
+ 
+  vector<double> right_xcoords,left_xcoords,top_xcoords,btm_xcoords;
+  vector<double> right_ycoords,left_ycoords,top_ycoords,btm_ycoords;
+
+  //vector<array<double,4>> top_cells,btm_cells,right_cells,left_cells;
+
+  //NOTE: Make indexing of ghost cells consistent with the interior cells for the pertaining indice
+  //size of top and btm cells are Nx*2 & size of right and left cells are 2*Ny
+
   const char* filename;
 
   public:
   MeshGen2D(const char* name);
 
-
   void ReadMeshFile() override;
 
   void OutputMesh();
 
+  //array<double,2> GetCoords(int ghost_domain,int cell_id); //fcn. to retrieve coords
   //double GetCellVolume(int cell_id) override;
+  
+  //void GenerateGhostCells() override;
+  void ReflectGhostCoords(vector<double> &xcoords,vector<double> &ycoords,int tag);
+  //void OutflowandInflow
+  //void Farfield
 
   ~MeshGen2D();
 

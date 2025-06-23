@@ -2,6 +2,7 @@
 #include "ExactNozzle.h" 
 
 // TOOLS DEFINITIONS
+//-----------------------------------------------------------------------
 void Tools::print(const char format[],...) {
 
   va_list Argp;
@@ -12,6 +13,7 @@ void Tools::print(const char format[],...) {
 
 }
 
+//-----------------------------------------------------------------------
 void Tools::printWithPrecision(int precision,const char* format,...) {
   //Code generated from ChatGPT
   std::ostringstream output;
@@ -43,7 +45,7 @@ void Tools::printWithPrecision(int precision,const char* format,...) {
 
 
 
-
+//-----------------------------------------------------------------------
 vector<double> Tools::RetrievePoints(double xmin,double xmax,int pt_num){
 
   vector<double> pts;
@@ -67,6 +69,15 @@ double Tools::AreaVal(double x){
   double res = 0.2 + 0.4*(1+sin(PI*(x-0.5)));
   return res;
 }
+//-----------------------------------------------------------------------
+double Tools::ComputeDotProduct(double &x1,double &x2,double &y1,double &y2){
+
+  double res = (x1*x2) + (y1*y2);
+
+  return res;
+
+}
+//-----------------------------------------------------------------------
 
 // SUPERSONICNOZZLE DEFINITIONS
 SuperSonicNozzle::SuperSonicNozzle(double &a,double &b,double &c,double &d,bool &e) //constructor

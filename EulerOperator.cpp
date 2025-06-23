@@ -1063,8 +1063,8 @@ void Euler2DMMS::ManufacturedPrimitiveSols(vector<array<double,4>>* &field,Space
   int cellid;
   double x,y; //x and y coords
 
-  int cell_imax = mesh->imax - 1;
-  int cell_jmax = mesh->jmax - 1;
+  int cell_imax = mesh->Nx - 1;
+  int cell_jmax = mesh->Ny - 1;
 
   //Evaluating Cell-Center Coords 
   vector<double> cell_center_xcoords(mesh->cellnumber);
@@ -1201,8 +1201,8 @@ void Euler2DMMS::EvalSourceTerms(vector<array<double,4>>* &mms_source,SpaceVaria
 
   double x,y;
   int cellid;
-  int cell_imax = mesh->imax-1;
-  int cell_jmax = mesh->jmax-1;
+  int cell_imax = mesh->Nx-1;
+  int cell_jmax = mesh->Ny-1;
   //Evaluating Cell-Center Coords 
   vector<double> cell_center_xcoords(mesh->cellnumber);
   vector<double> cell_center_ycoords(mesh->cellnumber);

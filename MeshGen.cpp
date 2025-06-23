@@ -55,12 +55,12 @@ void MeshGenNozzle::GenerateMesh() {
 
 }
 //-----------------------------------------------------------
-void MeshGenNozzle::OutputNozzleAreas(vector<double> &xcoords,const char *filename){
+void MeshGenNozzle::OutputNozzleAreas(vector<double> &coords,const char *filename){
 
   //Computing Areas
-  vector<double> Areas((int)xcoords.size());
-  for (int n=0;n<(int)xcoords.size();n++){
-    Areas[n] = Tools::AreaVal(xcoords[n]);
+  vector<double> Areas((int)coords.size());
+  for (int n=0;n<(int)coords.size();n++){
+    Areas[n] = Tools::AreaVal(coords[n]);
   }
 
 
@@ -75,9 +75,9 @@ void MeshGenNozzle::OutputNozzleAreas(vector<double> &xcoords,const char *filena
   }
     myfile<<"Areas"<<endl;
     myfile<<"XCoord"<<"  "<<"Area"<<endl;
-    for (int i=0;i<(int)xcoords.size();i++){
+    for (int i=0;i<(int)coords.size();i++){
   
-      myfile<<xcoords[i]<<"  "<<Areas[i]<<endl;
+      myfile<<coords[i]<<"  "<<Areas[i]<<endl;
 
     }
 
@@ -116,7 +116,7 @@ void MeshGen2D::ReadMeshFile(){
 
   if (std::getline(myfileread,line)){ //!< calling 2nd line
     std::istringstream iss(line); //converts string into stream
-    iss >> imax >> jmax >> kmax; //setting values of 2nd line to imax,jmax,kmax, respectively
+    iss >> Nx >> Ny >> Nz; //setting values of 2nd line to imax,jmax,kmax, respectively
   }
   else{
     cerr<<"Mesh File does not contain a second line!"<<endl; 
@@ -124,7 +124,7 @@ void MeshGen2D::ReadMeshFile(){
   }
 
   double val; //value of i,j,&k indices
-  int total_pts = imax*jmax*kmax;
+  int total_pts = Nx*Ny*Nz;
 
   vector<double> xcoords_orig,ycoords_orig; //needed for duplicated xcoords and ycoords when k>1 (i.e. 3D structured grid)
   
@@ -143,8 +143,8 @@ void MeshGen2D::ReadMeshFile(){
   }
 
   //Case if 3D structured mesh is provided -- to extract the x & y coords in 2D plane
-  if (kmax>0){
-    for(int n=0;n<(int)imax*jmax;n++){
+  if (Nz>0){
+    for(int n=0;n<(int)Nx*Ny;n++){
       xcoords.push_back(xcoords_orig[n]);
       ycoords.push_back(ycoords_orig[n]);
     }
@@ -153,7 +153,7 @@ void MeshGen2D::ReadMeshFile(){
   //skipping first line for now
   //2nd line: 1st int refers to imax and 2nd int refers to jmax
 
-  cellnumber = (imax-1) * (jmax-1); //1 more faces than each dir.
+  cellnumber = (Nx-1) * (Ny-1); //1 more faces than each dir.
 
 }
 //-----------------------------------------------------------
@@ -170,7 +170,7 @@ void MeshGen2D::OutputMesh(){
   //Writing header to Mesh Output File
   myfilewrite<<"TITLE = \" 2D Structured Mesh \""<<endl;
   myfilewrite<<"VARIABLES = \"X\",\"Y\",\"Z\""<<endl;
-  myfilewrite<<"ZONE I="<<imax<<", J="<<jmax<<", K="<<kmax<<" DATAPACKING=BLOCK"<<endl;
+  myfilewrite<<"ZONE I="<<Nx<<", J="<<Ny<<", K="<<Nz<<" DATAPACKING=BLOCK"<<endl;
   
   
   //Reading vals. of input mesh file & writing to output mesh file
@@ -190,6 +190,59 @@ void MeshGen2D::OutputMesh(){
   }
     
   //myfilewrite.close(); 
+
+}
+
+//-----------------------------------------------------------
+void MeshGen2D::ReflectGhostCoords(vector<double> &xcoords,vector<double> &ycoords,int tag){
+
+  //using the symmetry method: https://doi-org.ezproxy.lib.vt.edu/10.2514/3.11983
+  //symmetry imposed by creating ghost cell nodes as same sign in x but different sign in y (for top + btm cases), vice versa in right and left cases
+  
+  //Note: there are 2 layers of ghost nodes that comprise the ghost cell domains
+  double x,x1,x2,x3; //x&y: reflected pt. && x1&y1: 1st interior pt. && x2&y2: 2nd interior pt. && x3&y3: interior pt. used to determine reflected axis
+  double y,y1,y2,y3;
+  int pt_id1,pt_id2,pt_id3; //pt ids in loop
+  double p1x,p1y;
+  double p2x,p2y;
+  double d1,d2;
+  double theta;
+  int ghost_id; 
+  //btm boundary case -- tag=0 case
+  if (tag == 0){
+    for (int j=0;j<2;j++){
+      for (int i=0;i<Ny;i++){
+        //determining pts + retrieving coords
+        pt_id1 = i + (j*Nx);
+        pt_id2 = i + ((j+1)*Nx);//ptid2 is j+1 from ptid1
+        pt_id3 = (j<Ny-1) ? (i+1) + (j*Nx) : (i-1) + (j*Nx); //use i-1 pt. for last i node
+        x1 = xcoords[pt_id1]; y1 = ycoords[pt_id1]; //1st interior pt
+        x2 = xcoords[pt_id2]; y2 = ycoords[pt_id2]; //2nd interior pt
+        x3 = xcoords[pt_id3]; y3 = ycoords[pt_id3]; //3rd interior pt
+        //computing dist. vectors + mag.(axis of reflection and interior pt line (1&2)
+        p1x = x2-x1; p1y = y2-y1;
+        p2x = x3-x1; p2y = y3-y1; 
+        d1 = sqrt(pow(p1x,2.0) + pow(p1y,2.0));//mag. of interior pt. line (L2 norm)
+        d2 = sqrt(pow(p2x,2.0) + pow(p2y,2.0));//mag. of reflection axis line (L2 norm)
+        //computing angle
+        theta = acos(Tools::ComputeDotProduct(p1x,p1y,p2x,p2y) / (d1*d2)); 
+        //computing coords of reflected pt.
+        if (j>0) //for 2nd layer, the last ghost node layer are computed from the previously computed layer
+          ghost_id = i + (j-1)*Nx;
+        x = (j<1) ? d1*cos(-theta) + x1 : d1*cos(-theta) + btm_xcoords[ghost_id]; 
+        y = (j<1) ? d1*sin(-theta) + y1 : d1*sin(-theta) + btm_ycoords[ghost_id];
+        btm_xcoords.push_back(x);
+        btm_ycoords.push_back(y);
+        
+      }
+    }
+
+  }
+  //right boundary case -- tag=1 case
+  //top boundary case -- tag=2 case
+  //btm boundary case -- tag=3 case
+
+  return;
 
 }
 

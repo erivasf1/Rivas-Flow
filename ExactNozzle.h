@@ -25,6 +25,7 @@ class Tools{
     static vector<double> RetrievePoints(double xmin,double xmax,int pt_num);
 
     static double AreaVal(double x); // Returns the area val. at a specified x-location
+    static double ComputeDotProduct(double &x1,double &x2,double &y1,double &y2);
   
 };
 

@@ -53,3 +53,19 @@ TODO!!!:
   3.2) EulerExplicit 
   3.3) RungeKutta2
   3.4) RungeKutta4
+--BOUNDARY CONDITIONS
+1) Manufactured Sols. Case
+  1.1) Top - Outflow
+  1.2) Bottom - Inflow
+  1.3) Left - Inflow
+  1.4) Right - Outflow
+1) 30 deg. inlet:
+  1.1) Top - Slip Wall
+  1.2) Bottom - Slip Wall
+  1.3) Left - Inflow
+  1.4) Right - Outflow
+1) Airfoil?
+  1.1) Top - Slip Wall
+  1.2) Bottom - Slip Wall
+  1.3) Left - Inflow
+  1.4) Right - Outflow

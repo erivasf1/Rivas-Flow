@@ -53,7 +53,7 @@ int main() {
   vector<double> xcoords; //stores the coords of the cell NODES!!! (i.e. size of xcoords is cellnum+1)!
   vector<double> ycoords; //stores the coords of the cell NODES!!! (i.e. size of xcoords is cellnum+1)!
   double dx;
-  const char* meshfile = "Grids/CurvilinearGrids/curv2d257.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
+  const char* meshfile = "Grids/CurvilinearGrids/curv2d9.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
   //const char* meshfile = NULL;
 
   // Temporal Specifications
@@ -69,7 +69,7 @@ int main() {
   bool flux_accuracy{true}; //true for 1st order & false for 2nd order
   [[maybe_unused]] const double ramp_stop = 1.0e-7; //stopping criteria for ramping fcn. of transitioning from 1st to 2nd
   double epsilon = 1.0; //ramping value used to transition from 1st to 2nd order
-  bool resid_stall{false};
+  bool resid_stall{false};//for detecting if residuals have stalled
   int stall_count = 0;
 
   // Under-Relaxation Parameters
@@ -91,7 +91,6 @@ int main() {
   }
   else if ((scenario == 2) || (scenario == 3)) {
     mesh = new MeshGen2D(meshfile);
-    //mesh->ReadMeshFile();
     mesh->OutputMesh(); //!< outputs mesh file for Tecplot visualization
   }
   else{
@@ -125,8 +124,8 @@ int main() {
   vector<array<double,3>> Field(cellnum); //stores primitive variable sols.
   vector<array<double,3>> FieldStar(cellnum); //stores intermediate primitive variable sols.
   vector<array<double,3>> FieldStall(cellnum); //stores primitive variable sols. before stall (if detected)
-  vector<array<double,4>> FieldMS(mesh->cellnumber); //stores primitive variable sols. before stall (if detected)
-  vector<array<double,4>> FieldMS_Source(mesh->cellnumber); //stores primitive variable sols. before stall (if detected)
+  vector<array<double,4>> FieldMS(mesh->cellnumber); //stores manufactured sol.
+  vector<array<double,4>> FieldMS_Source(mesh->cellnumber); //stores manufactured source term for all cells
 
   vector<array<double,3>> ExactField(cellnum); //stores exact cell-averaged primitve variable sols.
   vector<array<double,3>> ExactFaces(cellnum+1); //stores exact primitve variable sols. at cell faces
@@ -139,7 +138,7 @@ int main() {
   array<double,3> ResidualNorms; //for storing the global residual norms
   array<double,3> Prev_ResidualNorms; //for storing the previous global residual norms
 
-  //Pointers to Sol. Field variables
+  //Pointers to Field variables
   vector<array<double,3>>* field = &Field; //pointer to Field solutions
   vector<array<double,3>>* field_star = &FieldStar; //pointer to intermediate Field solutions
   vector<array<double,3>>* field_stall = &FieldStall; //pointer to intermediate Field solutions
@@ -156,7 +155,7 @@ int main() {
   //TODO: Create pointer and assign it to correct object depending on user inputs
 
   EulerBASE* euler_test;
-  //Temp -- will add scenario == 1 once 1D section is fixed
+  //Temp -- will add scenario == 1 once 1D section is fixed!
   if (scenario == 2) 
     euler_test = new Euler2D(case_2d);
   else if (scenario == 3)
@@ -265,8 +264,8 @@ int main() {
     string mms_source_filename = "SourceTerms.dat";
     euler_test->ManufacturedPrimitiveSols(field_ms,sols_test,mesh); //!< computing manufactured sol.
     euler_test->EvalSourceTerms(field_ms_source,sols_test,mesh); //!< computing manufactured source terms
-    error->OutputPrimitiveVariables(field_ms,mms_sol_filename,false,0,mesh->xcoords,mesh->ycoords,mesh->cellnumber,mesh->imax,mesh->jmax);
-    error->OutputManufacturedSourceTerms(field_ms_source,mms_source_filename,false,0,mesh->xcoords,mesh->ycoords,mesh->cellnumber,mesh->imax,mesh->jmax);
+    error->OutputPrimitiveVariables(field_ms,mms_sol_filename,false,0,mesh->xcoords,mesh->ycoords,mesh->cellnumber,mesh->Nx,mesh->Ny);
+    error->OutputManufacturedSourceTerms(field_ms_source,mms_source_filename,false,0,mesh->xcoords,mesh->ycoords,mesh->cellnumber,mesh->Nx,mesh->Ny);
     delete euler_test;
     delete mesh;
   }
@@ -276,6 +275,7 @@ int main() {
   //TODO: Replace xcoords and dx w/ MeshGen object pointer
   //Tools::print("At initial conditions\n");
   euler->SetInitialConditions(field,mesh->xcoords);
+  //euler->SetInitialConditions(field); <-- This is correct!
 
   //! COMPUTING EXACT SOLUTION -- ONLY FOR 1D QUASI-STEADY NOZZLE
   if ((cond_bc == false) && (!meshfile)){ //Compute Exact Solution if isentropic case is selected

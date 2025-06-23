@@ -21,7 +21,8 @@ class EulerBASE {
   array<double,4> ComputeConserved(vector<array<double,4>>* &field,int &i,int &j);
   //Initial Conditions
   virtual void SetInitialConditions(vector<array<double,4>>* &field); //Complete (tested)
-  //Boundary Conditions
+  //TODO:Boundary Conditions -- refer to this paper:https://arc-aiaa-org.ezproxy.lib.vt.edu/doi/10.2514/3.11983  
+  //virtual void SetupBoundaryConditions -- genereates ghost nodes to the boundaries + assigns values
   //ComputeLeftBoundaryCondition -- inflow
   //ComputeRightBoundaryCondition -- outflow
   //ComputeTopBoundaryCondition -- freestream
@@ -37,7 +38,7 @@ class EulerBASE {
   virtual ~EulerBASE();
 };
 
-class Euler1D {
+class Euler1D { //TODO: Make this into inherit class
   //vector<double> &xcoords;
   // parameters for 1D nozzle
   double stag_pressure; //stagnation pressure
