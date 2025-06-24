@@ -70,7 +70,7 @@ double Tools::AreaVal(double x){
   return res;
 }
 //-----------------------------------------------------------------------
-double Tools::ComputeDotProduct(double &x1,double &x2,double &y1,double &y2){
+double Tools::ComputeDotProduct(double &x1,double &y1,double &x2,double &y2){
 
   double res = (x1*x2) + (y1*y2);
 

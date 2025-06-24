@@ -225,30 +225,39 @@ void MeshGen2D::ReflectGhostCoords(int tag){
   double pdotp; //dot products of point vectors
   double theta;
   int ghost_id; 
-  //btm boundary case -- tag=0 case
+
+  //btm boundary case (tag=0) 
   if (tag == 0){
     for (int j=0;j<2;j++){
       for (int i=0;i<Nx;i++){
-        //determining pts + retrieving coords TODO: First ghost node is computed as nan!!!
+        //Step 1: determining pts + retrieving coords 
         pt_id1 = i + (j*Nx);
         pt_id2 = i + ((j+1)*Nx);//ptid2 is j+1 from ptid1
-        pt_id3 = (j<Ny-1) ? (i+1) + (j*Nx) : (i-1) + (j*Nx); //use i-1 pt. for last i node
+        pt_id3 = (i<Nx-1) ? (i+1) + (j*Nx) : (i-1) + (j*Nx); //use i-1 pt. for last i node
         x1 = xcoords[pt_id1]; y1 = ycoords[pt_id1]; //1st interior pt
         x2 = xcoords[pt_id2]; y2 = ycoords[pt_id2]; //2nd interior pt
         x3 = xcoords[pt_id3]; y3 = ycoords[pt_id3]; //3rd interior pt
-        //computing dist. vectors + mag.(axis of reflection and interior pt line (1&2)
+        //Step 2: computing dist. vectors + mag.(axis of reflection and interior pt line (1&2)
         p1x = x2-x1; p1y = y2-y1;
         p2x = x3-x1; p2y = y3-y1; 
         d1 = sqrt(pow(p1x,2.0) + pow(p1y,2.0));//mag. of interior pt. line (L2 norm)
         d2 = sqrt(pow(p2x,2.0) + pow(p2y,2.0));//mag. of reflection axis line (L2 norm)
-        //computing angle
+        //Step 3: computing angle
         pdotp = Tools::ComputeDotProduct(p1x,p1y,p2x,p2y);
         theta = acos(pdotp / (d1*d2)); 
-        //computing coords of reflected pt.
+        //Step 4: computing coords of reflected pt.
         if (j>0) //for 2nd layer, the last ghost node layer are computed from the previously computed layer
           ghost_id = i + (j-1)*Nx;
-        x = (j<1) ? d1*cos(-theta) + x1 : d1*cos(-theta) + btm_xcoords[ghost_id]; 
-        y = (j<1) ? d1*sin(-theta) + y1 : d1*sin(-theta) + btm_ycoords[ghost_id];
+        if (i==Nx-1){ //for nodes that are at the imax loc.
+          x = (j<1) ? d1*cos(-theta) + x1 : d1*cos(-theta) + btm_xcoords[ghost_id]; 
+          y = (j<1) ? -d1*sin(-theta) + y1 : -d1*sin(-theta) + btm_ycoords[ghost_id];
+        }
+        else {
+          x = (j<1) ? -d1*cos(-theta) + x1 : -d1*cos(-theta) + btm_xcoords[ghost_id]; 
+          y = (j<1) ? -d1*sin(-theta) + y1 : -d1*sin(-theta) + btm_ycoords[ghost_id];
+        }
+        //x = (j<1) ? -d1*cos(-theta) + x1 : -d1*cos(-theta) + btm_xcoords[ghost_id]; 
+        //y = (j<1) ? -d1*sin(-theta) + y1 : -d1*sin(-theta) + btm_ycoords[ghost_id];
         btm_xcoords.push_back(x);
         btm_ycoords.push_back(y);
         
@@ -256,9 +265,9 @@ void MeshGen2D::ReflectGhostCoords(int tag){
     }
 
   }
-  //right boundary case -- tag=1 case
-  //top boundary case -- tag=2 case
-  //btm boundary case -- tag=3 case
+  //TODO:right boundary case -- tag=1 case
+  //TODO:top boundary case -- tag=2 case
+  //TODO:btm boundary case -- tag=3 case
 
   return;
 

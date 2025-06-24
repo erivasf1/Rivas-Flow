@@ -73,7 +73,8 @@ class MeshGen2D : public MeshGenBASE { //reads in a non-uniform 2D mesh
   //double GetCellVolume(int cell_id) override;
   
   void GenerateGhostCells(int left_id,int right_id,int btm_id,int top_id) override; //main fcn. that generates ghost nodes to each pertaining bounds
-  void ReflectGhostCoords(int tag);
+  void ReflectGhostCoords(int tag); //used for slip wall treatments
+  //void ExtendGhostCoords(int tag); //used for inflow and outflow treatments
   //void OutflowandInflow
   //void Farfield
 
