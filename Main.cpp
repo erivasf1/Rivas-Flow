@@ -255,7 +255,8 @@ int main() {
     error->OutputPrimitiveVariables(field_ms,mms_sol_filename,false,0,mesh->xcoords,mesh->ycoords,mesh->cellnumber,mesh->Nx,mesh->Ny);
     error->OutputManufacturedSourceTerms(field_ms_source,mms_source_filename,false,0,mesh->xcoords,mesh->ycoords,mesh->cellnumber,mesh->Nx,mesh->Ny);
 
-    int left_id = 0;int right_id = 0;int top_id = 0;int btm_id = 1;
+    // 0 = extend ghost coords; 1 = reflect ghost coords; 
+    int left_id = 0;int right_id = 0;int top_id = 1;int btm_id = 1;
     mesh->GenerateGhostCells(left_id,right_id,btm_id,top_id);
  
     delete euler_test;

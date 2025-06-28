@@ -198,12 +198,14 @@ void MeshGen2D::OutputMesh(){
 //-----------------------------------------------------------
 void MeshGen2D::GenerateGhostCells(int left_id,int right_id,int btm_id,int top_id){
 
-  //Left Boundary
-  //Left Boundary
   //Bottom Boundary
-  //(btm_id == 0) ? ReflectGhostCoords(0) : ExtendGhostCoords();
-  ReflectGhostCoords(0); //temp
+  (btm_id == 1) ? ReflectGhostCoords(0) : ExtendGhostCoords(0);
+  //Top Boundary
+  (top_id == 1) ? ReflectGhostCoords(1) : ExtendGhostCoords(1);
   //Left Boundary
+  (left_id == 1) ? ReflectGhostCoords(2) : ExtendGhostCoords(2);
+  //Right Boundary
+  (right_id == 1) ? ReflectGhostCoords(3) : ExtendGhostCoords(3);
   
   return;
 
@@ -267,11 +269,11 @@ void MeshGen2D::ReflectGhostCoords(int tag){
   //TODO:top boundary case (tag==1)
   else if (tag==1){
 
-    for (int j=Ny-1;j<Ny-3;j--){ //j decreasing 
+    for (int j=Ny-1;j>Ny-3;j--){ //j decreasing 
       for (int i=0;i<Nx;i++){
         //Step 1: determining pts + retrieving coords 
         pt_id1 = i + (j*Nx);
-        pt_id2 = i + ((j+1)*Nx);//ptid2 is j+1 from ptid1
+        pt_id2 = i + ((j-1)*Nx);//ptid2 is j-1 from ptid1
         pt_id3 = (i<Nx-1) ? (i+1) + (j*Nx) : (i-1) + (j*Nx); //use i-1 pt. for last i node
         x1 = xcoords[pt_id1]; y1 = ycoords[pt_id1]; //1st interior pt
         x2 = xcoords[pt_id2]; y2 = ycoords[pt_id2]; //2nd interior pt
@@ -286,17 +288,18 @@ void MeshGen2D::ReflectGhostCoords(int tag){
         theta = acos(pdotp / (d1*d2)); 
         //Step 4: computing coords of reflected pt.
         if (j<Ny-1) //for 2nd layer, the last ghost node layer are computed from the previously computed layer
-          ghost_id = i + (j-1)*Nx;
+          ghost_id = i;
+          //ghost_id = i + (j-1)*Nx;
         if (i==Nx-1){ //for nodes that are at the imax loc.
-          x = (j<1) ? d1*cos(-theta) + x1 : d1*cos(-theta) + btm_xcoords[ghost_id]; 
-          y = (j<1) ? -d1*sin(-theta) + y1 : -d1*sin(-theta) + btm_ycoords[ghost_id];
+          x = (j>Ny-2) ? -d1*cos(-theta) + x1 : -d1*cos(-theta) + top_xcoords[ghost_id]; 
+          y = (j>Ny-2) ? d1*sin(-theta) + y1 : d1*sin(-theta) + top_ycoords[ghost_id];
         }
-        else {
-          x = (j<1) ? -d1*cos(-theta) + x1 : -d1*cos(-theta) + btm_xcoords[ghost_id]; 
-          y = (j<1) ? -d1*sin(-theta) + y1 : -d1*sin(-theta) + btm_ycoords[ghost_id];
+        else { //Nodes less than imax
+          x = (j>Ny-2) ? -d1*cos(-theta) + x1 : -d1*cos(-theta) + top_xcoords[ghost_id]; 
+          y = (j>Ny-2) ? d1*sin(-theta) + y1 : d1*sin(-theta) + top_ycoords[ghost_id];
         }
-        btm_xcoords.push_back(x);
-        btm_ycoords.push_back(y);
+        top_xcoords.push_back(x);
+        top_ycoords.push_back(y);
 
         }
       }
@@ -325,15 +328,15 @@ void MeshGen2D::ReflectGhostCoords(int tag){
         if (i>0) //for 2nd layer, the last ghost node layer are computed from the previously computed layer
           ghost_id = (i-1) + (j*Nx);
         if (j==Ny-1){ //for nodes that are at the jmax loc.
-          x = (i<1) ? d1*cos(-theta) + x1 : d1*cos(-theta) + btm_xcoords[ghost_id]; 
-          y = (i<1) ? -d1*sin(-theta) + y1 : -d1*sin(-theta) + btm_ycoords[ghost_id];
+          x = (i<1) ? d1*cos(-theta) + x1 : d1*cos(-theta) + left_xcoords[ghost_id]; 
+          y = (i<1) ? -d1*sin(-theta) + y1 : -d1*sin(-theta) + left_ycoords[ghost_id];
         }
         else {
-          x = (i<1) ? -d1*cos(-theta) + x1 : -d1*cos(-theta) + btm_xcoords[ghost_id]; 
-          y = (i<1) ? -d1*sin(-theta) + y1 : -d1*sin(-theta) + btm_ycoords[ghost_id];
+          x = (i<1) ? -d1*cos(-theta) + x1 : -d1*cos(-theta) + left_xcoords[ghost_id]; 
+          y = (i<1) ? -d1*sin(-theta) + y1 : -d1*sin(-theta) + left_ycoords[ghost_id];
         }
-        btm_xcoords.push_back(x);
-        btm_ycoords.push_back(y);
+        left_xcoords.push_back(x);
+        left_ycoords.push_back(y);
 
         }
       }
@@ -343,7 +346,7 @@ void MeshGen2D::ReflectGhostCoords(int tag){
   //TODO:right boundary case (tag==3)
   else if (tag==3) {
 
-    for (int i=Nx-1;i<Nx-2;i--){ //i decreasing 
+    for (int i=Nx-1;i>Nx-3;i--){ //i decreasing 
       for (int j=0;j<Ny;j++){
         //Step 1: determining pts + retrieving coords 
         pt_id1 = i + (j*Nx);
@@ -362,17 +365,17 @@ void MeshGen2D::ReflectGhostCoords(int tag){
         theta = acos(pdotp / (d1*d2)); 
         //Step 4: computing coords of reflected pt.
         if (i<Nx-1) //for 2nd layer, the last ghost node layer are computed from the previously computed layer
-          ghost_id = (i-1) + (j*Nx);
+          ghost_id = j;
         if (j==Ny-1){ //for nodes that are at the jmax loc.
-          x = (i<1) ? d1*cos(-theta) + x1 : d1*cos(-theta) + btm_xcoords[ghost_id]; 
-          y = (i<1) ? -d1*sin(-theta) + y1 : -d1*sin(-theta) + btm_ycoords[ghost_id];
+          x = (i<1) ? d1*cos(-theta) + x1 : d1*cos(-theta) + right_xcoords[ghost_id]; 
+          y = (i<1) ? -d1*sin(-theta) + y1 : -d1*sin(-theta) + right_ycoords[ghost_id];
         }
         else { //nodes that are from 0<j<jmax-1
-          x = (i<1) ? -d1*cos(-theta) + x1 : -d1*cos(-theta) + btm_xcoords[ghost_id]; 
-          y = (i<1) ? -d1*sin(-theta) + y1 : -d1*sin(-theta) + btm_ycoords[ghost_id];
+          x = (i>Nx-2) ? -d1*cos(-theta) + x1 : -d1*cos(-theta) + right_xcoords[ghost_id]; 
+          y = (i>Nx-2) ? -d1*sin(-theta) + y1 : -d1*sin(-theta) + right_ycoords[ghost_id];
         }
-        btm_xcoords.push_back(x);
-        btm_ycoords.push_back(y);
+        right_xcoords.push_back(x);
+        right_ycoords.push_back(y);
 
         }
       }
@@ -391,6 +394,98 @@ void MeshGen2D::ReflectGhostCoords(int tag){
 
 }
 
+//-----------------------------------------------------------
+void MeshGen2D::ExtendGhostCoords(int tag){
+
+  //algoritm: find x&y diff. between corresponding interior point and boundary and then subtract that diff. to boundary point to find ghost coord
+  double x,x1,x2; //x&y: reflected pt. && x1&y1: 1st interior pt. && x2&y2: 2nd interior pt. && x3&y3: interior pt. used to determine reflected axis
+  double y,y1,y2;
+  int pt_id1,pt_id2; //pt ids in loop
+  double dx,dy;
+
+  //btm boundary
+  if (tag==0){
+    for (int j=0;j<2;j++){
+      for (int i=0;i<Nx;i++){
+        //extracting pts
+        pt_id1 = i + (j*Nx); pt_id2 = i + (j+1)*Nx; 
+        x1 = xcoords[pt_id1];x2 = xcoords[pt_id2];
+        y1 = ycoords[pt_id1];y2 = ycoords[pt_id2];
+        //computing x+y diffs.
+        dx = x2-x1;
+        dy = y2-y1;
+        //computing ghost cell coord.
+        x = x1 - dx; y = y1 - dy;
+        //saving ghost cell coords to list
+        btm_xcoords.push_back(x); 
+        btm_ycoords.push_back(y); 
+      }
+    }
+  }
+
+  //top boundary
+  if (tag==1){
+    for (int j=Ny-1;j<Ny-3;j--){
+      for (int i=0;i<Nx;i++){
+        //extracting pts
+        pt_id1 = i + (j*Nx); pt_id2 = i + (j-1)*Nx; 
+        x1 = xcoords[pt_id1];x2 = xcoords[pt_id2];
+        y1 = ycoords[pt_id1];y2 = ycoords[pt_id2];
+        //computing x+y diffs.
+        dx = x2-x1;
+        dy = y2-y1;
+        //computing ghost cell coord.
+        x = x1 - dx; y = y1 - dy;
+        //saving ghost cell coords to list
+        top_xcoords.push_back(x); 
+        top_ycoords.push_back(y); 
+      }
+    }
+  }
+
+  //left boundary
+  if (tag==2){
+    for (int i=0;i<2;i++){
+      for (int j=0;j<Ny;j++){
+        //extracting pts
+        pt_id1 = i + (j*Nx); pt_id2 = (i+1) + (j*Nx); 
+        x1 = xcoords[pt_id1];x2 = xcoords[pt_id2];
+        y1 = ycoords[pt_id1];y2 = ycoords[pt_id2];
+        //computing x+y diffs.
+        dx = x2-x1;
+        dy = y2-y1;
+        //computing ghost cell coord.
+        x = x1 - dx; y = y1 - dy;
+        //saving ghost cell coords to list
+        left_xcoords.push_back(x); 
+        left_ycoords.push_back(y); 
+      }
+    }
+  }
+
+  //right boundary
+  if (tag==3){
+    for (int i=Nx-1;i<Nx-3;i--){
+      for (int j=0;j<Ny;j++){
+        //extracting pts
+        pt_id1 = i + (j*Nx); pt_id2 = (i-1) + (j*Nx); 
+        x1 = xcoords[pt_id1];x2 = xcoords[pt_id2];
+        y1 = ycoords[pt_id1];y2 = ycoords[pt_id2];
+        //computing x+y diffs.
+        dx = x2-x1;
+        dy = y2-y1;
+        //computing ghost cell coord.
+        x = x1 - dx; y = y1 - dy;
+        //saving ghost cell coords to list
+        right_xcoords.push_back(x); 
+        right_ycoords.push_back(y); 
+      }
+    }
+  }
+
+
+  return;
+}
 //-----------------------------------------------------------
 MeshGen2D::~MeshGen2D(){}
 //-----------------------------------------------------------
