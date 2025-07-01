@@ -22,7 +22,7 @@ class MeshGenBASE {
   virtual void GenerateMesh();
   virtual void ReadMeshFile();
   virtual void OutputMesh();
-  virtual void GenerateGhostCells(int left_id,int right_id,int btm_id,int top_id); //-- adds the extra ghost cells to the domain 
+  virtual void GenerateGhostCells(int left_id,int right_id,int top_id,int btm_id); //-- adds the extra ghost cells to the domain 
   
   virtual ~MeshGenBASE();
 
@@ -65,17 +65,19 @@ class MeshGen2D : public MeshGenBASE { //reads in a non-uniform 2D mesh
   public:
   MeshGen2D(const char* name);
 
-  void ReadMeshFile() override;
+  void ReadMeshFile() override; //assings values to x and y coords list
 
   void OutputMesh();
 
-  //array<double,2> GetCoords(int ghost_domain,int cell_id); //fcn. to retrieve coords
+  array<array<double,4>,2> GetCellCoords(int &i,int &j); //fcn. to retrieve coords; indexing: [btm_left,btm_right,top_left,top_right]!
   //double GetCellVolume(int cell_id) override;
   
   void GenerateGhostCells(int left_id,int right_id,int btm_id,int top_id) override; //main fcn. that generates ghost nodes to each pertaining bounds
   void ReflectGhostCoords(int tag); //used for slip wall treatments
   void ExtendGhostCoords(int tag); //used for inflow and outflow treatments
-  //double GetArea(int &cell_id,int &side); //retrives the area of the specified side of a cell
+  double GetInteriorCellArea(int &i,int &j,int side); //retrieves the area of the specified side of an interior cell (really just a length); side =0(top),1(btm),2(left),3(right)
+  double GetGhostCellArea(int &i,int &j,int side); //side refers to the boundary of the domain (instead of the side of the cell)
+  array<double,2> ComputeOutwardUnitVector(int &i,int &j,int side);
   //void Farfield
 
   ~MeshGen2D();

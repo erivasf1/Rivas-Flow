@@ -19,7 +19,7 @@ void MeshGenBASE::ReadMeshFile(){}
 void MeshGenBASE::OutputMesh(){}
 
 //-----------------------------------------------------------
-void MeshGenBASE::GenerateGhostCells(int left_id,int right_id,int btm_id,int top_id){}
+void MeshGenBASE::GenerateGhostCells(int ,int ,int ,int ){}
 //-----------------------------------------------------------
 MeshGenBASE::~MeshGenBASE(){}
 //-----------------------------------------------------------
@@ -193,6 +193,37 @@ void MeshGen2D::OutputMesh(){
     
   //myfilewrite.close(); 
 
+}
+
+//-----------------------------------------------------------
+array<array<double,4>,2> MeshGen2D::GetCellCoords(int &i,int &j){
+
+  //int cell_imax = Nx-2;
+  double x1,x2,x3,x4; 
+  double y1,y2,y3,y4; 
+  int cell_id = i + (j*Nx);
+  int pt_id1,pt_id2,pt_id3,pt_id4;
+  
+  array<array<double,4>,2> cell_coords;
+    
+  pt_id1 = (j==0) ? cell_id : cell_id+j; //for j>0, cell nodes and pt nodes are offsetted by the # of j rows above j=0
+
+  pt_id2 = cell_id+1; pt_id3 = cell_id + Nx;
+  pt_id4 = cell_id + (Nx+1);
+
+  x1 = xcoords[pt_id1]; y1 = ycoords[pt_id1];
+  x2 = xcoords[pt_id2]; y2 = ycoords[pt_id2];
+  x3 = xcoords[pt_id3]; y3 = ycoords[pt_id3];
+  x4 = xcoords[pt_id4]; y4 = ycoords[pt_id4];
+  
+  //saving cell's xcoords to list
+  cell_coords[0][0] = x1;cell_coords[0][1] = x2;
+  cell_coords[0][2] = x3;cell_coords[0][3] = x4;
+  //saving cell's ycoords to list
+  cell_coords[1][0] = y1;cell_coords[1][1] = y2;
+  cell_coords[1][2] = y3;cell_coords[1][3] = y4;
+
+  return cell_coords; 
 }
 
 //-----------------------------------------------------------
@@ -486,6 +517,158 @@ void MeshGen2D::ExtendGhostCoords(int tag){
 
   return;
 }
+
+//-----------------------------------------------------------
+double MeshGen2D::GetInteriorCellArea(int &i,int &j,int side){
+  //side: top = 0, btm = 1, left = 2, right = 3
+  double node1_x,node1_y,node2_x,node2_y;
+  int node1_id,node2_id;
+  double area;
+  if (side == 0){ //top side case
+    node1_id = i + ((j+1)*Nx);  
+    node2_id = (i+1) + ((j+1)*Nx);  
+    node1_x = xcoords[node1_id]; node1_y = ycoords[node1_id];
+    node2_x = xcoords[node2_id]; node2_y = ycoords[node2_id];
+    
+    area = sqrt(pow(node2_x-node1_x,2.0) + pow(node2_y-node1_y,2.0));
+  }
+
+  else if (side == 1){ //btm side case
+    node1_id = i + (j*Nx);  
+    node2_id = (i+1) + (j*Nx);  
+    node1_x = xcoords[node1_id]; node1_y = ycoords[node1_id];
+    node2_x = xcoords[node2_id]; node2_y = ycoords[node2_id];
+    
+    area = sqrt(pow(node2_x-node1_x,2.0) + pow(node2_y-node1_y,2.0));
+  }
+
+  else if (side == 2){ //left side case
+    node1_id = i + (j*Nx);  
+    node2_id = i + ((j+1)*Nx);  
+    node1_x = xcoords[node1_id]; node1_y = ycoords[node1_id];
+    node2_x = xcoords[node2_id]; node2_y = ycoords[node2_id];
+    
+    area = sqrt(pow(node2_x-node1_x,2.0) + pow(node2_y-node1_y,2.0));
+  }
+
+  else if (side == 3){ //right side case
+    node1_id = (i+1) + (j*Nx);  
+    node2_id = (i+1) + ((j+1)*Nx);  
+    node1_x = xcoords[node1_id]; node1_y = ycoords[node1_id];
+    node2_x = xcoords[node2_id]; node2_y = ycoords[node2_id];
+    
+    area = sqrt(pow(node2_x-node1_x,2.0) + pow(node2_y-node1_y,2.0));
+  }
+
+  else { //error handling
+    cerr<<"Error:Unkown side # when retrieving area fcn."<<endl;
+
+  }
+
+  return area;
+}
+
+//-----------------------------------------------------------
+double MeshGen2D::GetGhostCellArea(int &i,int &j,int side){ //retrieves the area of the specified side of the domain
+
+  //side: top = 0, btm = 1, left = 2, right = 3
+  double node1_x,node1_y,node2_x,node2_y;
+  int node1_id,node2_id;
+  double area;
+
+  node1_id = i + (j*Nx); node2_id = (i+1) + (j*Nx);
+  if (side == 0){ //top side case
+    node1_x = top_xcoords[node1_id]; node1_y = top_xcoords[node1_id];
+    node2_x = top_xcoords[node2_id]; node2_y = top_xcoords[node2_id];
+
+    area = sqrt(pow(node2_x-node1_x,2.0) + pow(node2_y-node1_y,2.0));
+
+  } 
+
+  else if (side == 1){ //btm side case
+    node1_x = btm_xcoords[node1_id]; node1_y = btm_xcoords[node1_id];
+    node2_x = btm_xcoords[node2_id]; node2_y = btm_xcoords[node2_id];
+
+    area = sqrt(pow(node2_x-node1_x,2.0) + pow(node2_y-node1_y,2.0));
+
+  }
+
+  else if (side == 2){ //left side case
+    node1_x = left_xcoords[node1_id]; node1_y = left_xcoords[node1_id];
+    node2_x = left_xcoords[node2_id]; node2_y = left_xcoords[node2_id];
+
+    area = sqrt(pow(node2_x-node1_x,2.0) + pow(node2_y-node1_y,2.0));
+  }
+
+  else if (side == 3){ //right side case
+    node1_x = right_xcoords[node1_id]; node1_y = right_xcoords[node1_id];
+    node2_x = right_xcoords[node2_id]; node2_y = right_xcoords[node2_id];
+
+    area = sqrt(pow(node2_x-node1_x,2.0) + pow(node2_y-node1_y,2.0));
+
+  }
+
+  else { //error handling
+    cerr<<"Error:Unkown side # when retrieving area fcn."<<endl;
+  }
+
+  return area;
+}
+
+//-----------------------------------------------------------
+array<double,2> MeshGen2D::ComputeOutwardUnitVector(int &i,int &j,int side){
+
+  //side refering to the side of the cell
+  double nx,ny; //unit normal vector components
+  double x1,y1,x2,y2;
+  double area;
+  array<array<double,4>,2> cell_coords = GetCellCoords(i,j);
+
+  if (side == 0){ //top side case
+    x1 = cell_coords[0][2]; x2 = cell_coords[0][3];
+    y1 = cell_coords[1][2]; y2 = cell_coords[1][3];
+    area = GetInteriorCellArea(i,j,0);
+    
+    nx = y2-y1 / area; ny = x2-x1 / area;
+    
+  }
+
+  else if (side == 1){ //btm side case
+    x1 = cell_coords[0][0]; x2 = cell_coords[0][1];
+    y1 = cell_coords[1][0]; y2 = cell_coords[1][1];
+    area = GetInteriorCellArea(i,j,1);
+    
+    nx = y2-y1 / area; ny = x2-x1 / area;
+
+  }
+
+  else if (side == 2){ //left side case
+    x1 = cell_coords[0][0]; x2 = cell_coords[0][2];
+    y1 = cell_coords[1][0]; y2 = cell_coords[1][2];
+    area = GetInteriorCellArea(i,j,2);
+    
+    nx = y2-y1 / area; ny = x2-x1 / area;
+
+  }
+
+  else if (side == 3){ //right side case
+    x1 = cell_coords[0][1]; x2 = cell_coords[0][3];
+    y1 = cell_coords[1][1]; y2 = cell_coords[1][3];
+    area = GetInteriorCellArea(i,j,3);
+    
+    nx = y2-y1 / area; ny = x2-x1 / area;
+
+  }
+
+  else {
+    cerr<<"Unknown side # specification!"<<endl;
+  }
+  
+  array<double,2> normals{nx,ny};
+  return normals;
+
+}
+
 //-----------------------------------------------------------
 MeshGen2D::~MeshGen2D(){}
 //-----------------------------------------------------------
