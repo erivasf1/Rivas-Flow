@@ -21,6 +21,11 @@ void MeshGenBASE::OutputMesh(){}
 //-----------------------------------------------------------
 void MeshGenBASE::GenerateGhostCells(int ,int ,int ,int ){}
 //-----------------------------------------------------------
+array<double,2> MeshGenBASE::ComputeOutwardUnitVector(int,int,int){
+  array<double,2> zero{0.0,0.0};
+  return zero; //return a zero array by default
+}
+//-----------------------------------------------------------
 MeshGenBASE::~MeshGenBASE(){}
 //-----------------------------------------------------------
 
@@ -616,7 +621,7 @@ double MeshGen2D::GetGhostCellArea(int &i,int &j,int side){ //retrieves the area
 }
 
 //-----------------------------------------------------------
-array<double,2> MeshGen2D::ComputeOutwardUnitVector(int &i,int &j,int side){
+array<double,2> MeshGen2D::ComputeOutwardUnitVector(int i,int j,int side){
 
   //side refering to the side of the cell
   double nx,ny; //unit normal vector components
@@ -629,7 +634,7 @@ array<double,2> MeshGen2D::ComputeOutwardUnitVector(int &i,int &j,int side){
     y1 = cell_coords[1][2]; y2 = cell_coords[1][3];
     area = GetInteriorCellArea(i,j,0);
     
-    nx = y2-y1 / area; ny = x2-x1 / area;
+    nx = (y2-y1) / area; ny = (x2-x1) / area;
     
   }
 
@@ -638,7 +643,7 @@ array<double,2> MeshGen2D::ComputeOutwardUnitVector(int &i,int &j,int side){
     y1 = cell_coords[1][0]; y2 = cell_coords[1][1];
     area = GetInteriorCellArea(i,j,1);
     
-    nx = y2-y1 / area; ny = x2-x1 / area;
+    nx = (y2-y1) / area; ny = -(x2-x1) / area;
 
   }
 
@@ -647,7 +652,7 @@ array<double,2> MeshGen2D::ComputeOutwardUnitVector(int &i,int &j,int side){
     y1 = cell_coords[1][0]; y2 = cell_coords[1][2];
     area = GetInteriorCellArea(i,j,2);
     
-    nx = y2-y1 / area; ny = x2-x1 / area;
+    nx = -(y2-y1) / area; ny = -(x2-x1) / area; //nx negative to point outward of cell
 
   }
 
@@ -656,7 +661,7 @@ array<double,2> MeshGen2D::ComputeOutwardUnitVector(int &i,int &j,int side){
     y1 = cell_coords[1][1]; y2 = cell_coords[1][3];
     area = GetInteriorCellArea(i,j,3);
     
-    nx = y2-y1 / area; ny = x2-x1 / area;
+    nx = (y2-y1) / area; ny = -(x2-x1) / area; 
 
   }
 

@@ -23,6 +23,7 @@ class MeshGenBASE {
   virtual void ReadMeshFile();
   virtual void OutputMesh();
   virtual void GenerateGhostCells(int left_id,int right_id,int top_id,int btm_id); //-- adds the extra ghost cells to the domain 
+  virtual array<double,2> ComputeOutwardUnitVector(int i,int j,int side);
   
   virtual ~MeshGenBASE();
 
@@ -77,7 +78,7 @@ class MeshGen2D : public MeshGenBASE { //reads in a non-uniform 2D mesh
   void ExtendGhostCoords(int tag); //used for inflow and outflow treatments
   double GetInteriorCellArea(int &i,int &j,int side); //retrieves the area of the specified side of an interior cell (really just a length); side =0(top),1(btm),2(left),3(right)
   double GetGhostCellArea(int &i,int &j,int side); //side refers to the boundary of the domain (instead of the side of the cell)
-  array<double,2> ComputeOutwardUnitVector(int &i,int &j,int side);
+  array<double,2> ComputeOutwardUnitVector(int i,int j,int side) override;
   //void Farfield
 
   ~MeshGen2D();

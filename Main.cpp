@@ -258,6 +258,9 @@ int main() {
     // 0 = extend ghost coords; 1 = reflect ghost coords; 
     int left_id = 0;int right_id = 0;int top_id = 1;int btm_id = 1;
     mesh->GenerateGhostCells(left_id,right_id,btm_id,top_id);
+    int test_i=6; int test_j=0;
+    array<double,2> unit_vec = mesh->ComputeOutwardUnitVector(test_i,test_j,3);
+    Tools::print("unit_vec_comp of (%d,%d) is : (%f,%f)\n",test_i,test_j,unit_vec[0],unit_vec[1]);
  
     delete euler_test;
     delete mesh;
