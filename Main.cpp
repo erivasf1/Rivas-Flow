@@ -24,6 +24,10 @@ enum CASE_2D { //For ease of defining parameters
   INLET,AIRFOIL1,AIRFOIL2
 };
 
+enum BOUNDARY_COND {
+  INFLOW,OUTFLOW,SLIP_WALL
+};
+
 
 int main() {
 
@@ -44,7 +48,12 @@ int main() {
   double gamma = 1.4; //specific heat ratio
   double area_star = Tools::AreaVal(0.5*(xmin+xmax)); //area at throat
 
-  // Case Specification
+  // Boundary Conditions Specification
+  BOUNDARY_COND top_cond = OUTFLOW;
+  BOUNDARY_COND btm_cond = INFLOW;
+  BOUNDARY_COND left_cond = INFLOW;
+  BOUNDARY_COND right_cond = OUTFLOW;
+
   bool cond_loc{false}; //true for subsonic & false for supersonic (FOR EXACT SOL.)
   bool cond_bc{true}; //true for subsonic & false for supersonic (FOR OUTFLOW BC)
 
@@ -124,6 +133,7 @@ int main() {
   vector<array<double,3>> Field(cellnum); //stores primitive variable sols.
   vector<array<double,3>> FieldStar(cellnum); //stores intermediate primitive variable sols.
   vector<array<double,3>> FieldStall(cellnum); //stores primitive variable sols. before stall (if detected)
+  vector<array<double,4>> FieldTest(mesh->cellnumber); 
   vector<array<double,4>> FieldMS(mesh->cellnumber); //stores manufactured sol.
   vector<array<double,4>> FieldMS_Source(mesh->cellnumber); //stores manufactured source term for all cells
 
@@ -142,6 +152,7 @@ int main() {
   vector<array<double,3>>* field = &Field; //pointer to Field solutions
   vector<array<double,3>>* field_star = &FieldStar; //pointer to intermediate Field solutions
   vector<array<double,3>>* field_stall = &FieldStall; //pointer to intermediate Field solutions
+  vector<array<double,4>>* field_test = &FieldTest; //pointer to intermediate Field solutions
   vector<array<double,4>>* field_ms = &FieldMS; //pointer to intermediate Field solutions
   vector<array<double,4>>* field_ms_source = &FieldMS_Source; //pointer to intermediate Field solutions
   vector<array<double,3>>* exact_sols = &ExactField; //pointer to exact solution field values
@@ -152,14 +163,12 @@ int main() {
   vector<double>* time_steps = &TimeSteps;
 
   //!OBJECT INITIALIZATIONS
-  //TODO: Create pointer and assign it to correct object depending on user inputs
-
   EulerBASE* euler_test;
   //Temp -- will add scenario == 1 once 1D section is fixed!
   if (scenario == 2) 
-    euler_test = new Euler2D(case_2d);
+    euler_test = new Euler2D(case_2d,mesh->Nx-1,mesh->Ny-1,top_cond,btm_cond,left_cond,right_cond,mesh);
   else if (scenario == 3)
-    euler_test = new Euler2DMMS;
+    euler_test = new Euler2DMMS(mesh->Nx-1,mesh->Ny-1,top_cond,btm_cond,left_cond,right_cond,mesh);
   else{
     cerr<<"Error: scenario # not recognized!"<<endl;
     return 0;
@@ -250,17 +259,17 @@ int main() {
   if (scenario == 3){
     string mms_sol_filename = "ManufacturedSols.dat";
     string mms_source_filename = "SourceTerms.dat";
-    euler_test->ManufacturedPrimitiveSols(field_ms,sols_test,mesh); //!< computing manufactured sol.
-    euler_test->EvalSourceTerms(field_ms_source,sols_test,mesh); //!< computing manufactured source terms
+    euler_test->ManufacturedPrimitiveSols(field_ms,sols_test); //!< computing manufactured sol.
+    euler_test->EvalSourceTerms(field_ms_source,sols_test); //!< computing manufactured source terms
     error->OutputPrimitiveVariables(field_ms,mms_sol_filename,false,0,mesh->xcoords,mesh->ycoords,mesh->cellnumber,mesh->Nx,mesh->Ny);
     error->OutputManufacturedSourceTerms(field_ms_source,mms_source_filename,false,0,mesh->xcoords,mesh->ycoords,mesh->cellnumber,mesh->Nx,mesh->Ny);
 
     // 0 = extend ghost coords; 1 = reflect ghost coords; 
-    int left_id = 0;int right_id = 0;int top_id = 1;int btm_id = 1;
-    mesh->GenerateGhostCells(left_id,right_id,btm_id,top_id);
-    int test_i=6; int test_j=0;
-    array<double,2> unit_vec = mesh->ComputeOutwardUnitVector(test_i,test_j,3);
-    Tools::print("unit_vec_comp of (%d,%d) is : (%f,%f)\n",test_i,test_j,unit_vec[0],unit_vec[1]);
+    //int left_id = 0;int right_id = 0;int top_id = 1;int btm_id = 1;
+    //mesh->GenerateGhostCells(left_id,right_id,btm_id,top_id);
+    //int test_i=6; int test_j=0;
+    //array<double,2> unit_vec = mesh->ComputeOutwardUnitVector(test_i,test_j,3);
+    //Tools::print("unit_vec_comp of (%d,%d) is : (%f,%f)\n",test_i,test_j,unit_vec[0],unit_vec[1]);
  
     delete euler_test;
     delete mesh;
@@ -268,10 +277,8 @@ int main() {
   return 0;
 
   //! SETTING INITIAL CONDITIONS
-  //TODO: Replace xcoords and dx w/ MeshGen object pointer
   //Tools::print("At initial conditions\n");
-  euler->SetInitialConditions(field,mesh->xcoords);
-  //euler->SetInitialConditions(field); <-- This is correct!
+  euler_test->SetInitialConditions(field_test);
 
   //! COMPUTING EXACT SOLUTION -- ONLY FOR 1D QUASI-STEADY NOZZLE
   if ((cond_bc == false) && (!meshfile)){ //Compute Exact Solution if isentropic case is selected
@@ -299,7 +306,7 @@ int main() {
 
 
   // SETTING BOUNDARY CONDITIONS
-  euler->SetBoundaryConditions(field,cond_bc);
+  euler_test->SetupBoundaryConditions(); //set includes generating the ghost cells
 
   time->SolutionLimiter(field);
 

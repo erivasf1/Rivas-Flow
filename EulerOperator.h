@@ -11,18 +11,22 @@ class SpaceVariables2D;
 //TODO: Make BASE Class
 class EulerBASE {
   
+  int top_cond,btm_cond,left_cond,right_cond; //boundary conds. of domain
+
   public:
+  MeshGenBASE* mesh;
+
   double gamma = 1.4;
   int cell_imax; //NUMBER of cells in the i dir!
   int cell_jmax; //NUMBER of cells in the j dir!
   //TODO: Make constructor to assign cell_imax and cell_jmax
-  EulerBASE(int &cell_inum,int &cell_jnum);
+  EulerBASE(int &cell_inum,int &cell_jnum,int &top,int &btm,int &left,int &right,MeshGenBASE* &mesh_ptr);
   //Compute Conserved & Primitive Variables
   array<double,4> ComputeConserved(vector<array<double,4>>* &field,int &i,int &j);
   //Initial Conditions
   virtual void SetInitialConditions(vector<array<double,4>>* &field); //Complete (tested)
   //TODO:Boundary Conditions -- refer to this paper:https://arc-aiaa-org.ezproxy.lib.vt.edu/doi/10.2514/3.11983  
-  //virtual void SetupBoundaryConditions -- genereates ghost nodes to the boundaries + assigns values
+  void SetupBoundaryConditions();
   //ComputeLeftBoundaryCondition -- inflow
   //ComputeRightBoundaryCondition -- outflow
   //ComputeTopBoundaryCondition -- freestream
@@ -33,8 +37,8 @@ class EulerBASE {
   //Source Term
   //Residual
   //MMS
-  virtual void ManufacturedPrimitiveSols(vector<array<double,4>>* &field,SpaceVariables2D* &sols,MeshGenBASE* &mesh);
-  virtual void EvalSourceTerms(vector<array<double,4>>* &MMS_Source,SpaceVariables2D* &sols,MeshGenBASE* &mesh); //source terms for all governing equations
+  virtual void ManufacturedPrimitiveSols(vector<array<double,4>>* &field,SpaceVariables2D* &sols);
+  virtual void EvalSourceTerms(vector<array<double,4>>* &MMS_Source,SpaceVariables2D* &sols); //source terms for all governing equations
   virtual ~EulerBASE();
 };
 
@@ -134,11 +138,12 @@ class Euler1D { //TODO: Make this into inherit class
 
 // EulerOperator Class for 2D Problems
 class Euler2D : public EulerBASE {
+  
 
   public:
   double Mach_bc,T_stag,P_stag,alpha; //free-stream and initial conditions, depending on case
   
-  Euler2D(int case_2d); //constructor determines val. of const. parameters (e.g. freestream Mach #, angle-of-attack)
+  Euler2D(int case_2d,int cell_inum,int cell_jnum,int top,int btm,int left,int right,MeshGenBASE* &mesh_ptr); //constructor determines val. of const. parameters (e.g. freestream Mach #, angle-of-attack)
 
   void InitSolutions(vector<array<double,4>>* &field,int cellnum);
   void SetInitialConditions(vector<array<double,4>>* &field) override;
@@ -147,7 +152,7 @@ class Euler2D : public EulerBASE {
 
 };
 
-// EulerOperator Clas for 2D Problems w/ MMS
+// EulerOperator Class for 2D Problems w/ MMS
 class Euler2DMMS : public EulerBASE {
 
   //Source Terms Constants
@@ -167,17 +172,17 @@ class Euler2DMMS : public EulerBASE {
   double wvel0 = 0.0;
 
   public:
-  Euler2DMMS();
+  Euler2DMMS(int cell_inum,int cell_jnum,int top,int btm, int left,int right,MeshGenBASE* &mesh_ptr);
 
   void SetInitialConditions(vector<array<double,4>>* &field) override; 
 
-  void ManufacturedPrimitiveSols(vector<array<double,4>>* &field,SpaceVariables2D* &Sols,MeshGenBASE* &mesh) override;
+  void ManufacturedPrimitiveSols(vector<array<double,4>>* &field,SpaceVariables2D* &Sols) override;
 
   double ContinuitySourceTerm(double x,double y);
   double XMomentumSourceTerm(double x,double y);
   double YMomentumSourceTerm(double x,double y);
   double EnergySourceTerm(double x,double y);
-  void EvalSourceTerms(vector<array<double,4>>* &MMS_Source,SpaceVariables2D* &sols,MeshGenBASE* &mesh) override; //source terms for all governing equations
+  void EvalSourceTerms(vector<array<double,4>>* &MMS_Source,SpaceVariables2D* &sols) override; //source terms for all governing equations
   ~Euler2DMMS();
 
 };

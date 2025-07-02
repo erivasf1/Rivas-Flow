@@ -5,9 +5,8 @@
 // EULERBASE DEFINITIONS
 
 //-----------------------------------------------------------
-EulerBASE::EulerBASE(int &cell_inum,int &cell_jnum)
-  : cell_imax(cell_inum), cell_jmax(cell_jnum) {}
-
+EulerBASE::EulerBASE(int &cell_inum,int &cell_jnum,int &top,int &btm,int &left,int &right,MeshGenBASE* &mesh_ptr)
+  : cell_imax(cell_inum), cell_jmax(cell_jnum),top_cond(top),btm_cond(btm),left_cond(left), right_cond(right), mesh(mesh_ptr) {}
 
 //-----------------------------------------------------------
 array<double,4> EulerBASE::ComputeConserved(vector<array<double,4>>* &field,int &i,int &j){
@@ -38,17 +37,65 @@ void EulerBASE::SetInitialConditions([[maybe_unused]] vector<array<double,4>>* &
 }
 
 //-----------------------------------------------------------
-void EulerBASE::EvalSourceTerms(vector<array<double,4>>* &,SpaceVariables2D* &,MeshGenBASE* &){
+void EulerBASE::EvalSourceTerms(vector<array<double,4>>* &,SpaceVariables2D* &){
 //void EulerBASE::EvalSourceTerms(vector<array<double,4>>* &MMS_Source,SpaceVariables2D* &sols,MeshGenBASE* &mesh){
   return;
 }
 
 //-----------------------------------------------------------
-void EulerBASE::ManufacturedPrimitiveSols(vector<array<double,4>>* &,SpaceVariables2D* &,MeshGenBASE* &){
+void EulerBASE::ManufacturedPrimitiveSols(vector<array<double,4>>* &,SpaceVariables2D* &){
 //void EulerBASE::ManufacturedPrimitiveSols(vector<array<double,4>>* &field,SpaceVariables2D* &sols,MeshGenBASE* &mesh){
   return;
 }
 
+//-----------------------------------------------------------
+void EulerBASE::SetupBoundaryConditions(){
+  //TODO: Should only include the GenerateGhostCells fcn. of MeshGen
+  // & then initialize the ghost cells with a specified val.
+  //cond: 0=Inflow, 1 = Outflow, 2 = Slip Wall
+  //Top part of domain
+  if ( (top_cond==0) || (top_cond==1) )
+    mesh->ExtendGhostCoords(1);
+  else if (top_cond==2)
+    mesh->ReflectGhostCoords(1);
+  else{
+    cerr<<"Unknown Boundary Condition applied to Top Section!"<<endl;
+    return; 
+  }
+
+  //Btm part of domain
+  if ( (btm_cond==0) || (btm_cond==1) )
+    mesh->ExtendGhostCoords(0);
+  else if (top_cond==2)
+    mesh->ReflectGhostCoords(0);
+  else{
+    cerr<<"Unknown Boundary Condition applied to Bottom Section!"<<endl;
+    return; 
+  }
+
+  //Left part of domain
+  if ( (left_cond==0) || (left_cond==1) )
+    mesh->ExtendGhostCoords(2);
+  else if (top_cond==2)
+    mesh->ReflectGhostCoords(2);
+  else{
+    cerr<<"Unknown Boundary Condition applied to Left Section!"<<endl;
+    return; 
+  }
+
+  //Right part of domain
+  if ( (right_cond==0) || (right_cond==1) )
+    mesh->ExtendGhostCoords(3);
+  else if (top_cond==2)
+    mesh->ReflectGhostCoords(3);
+  else{
+    cerr<<"Unknown Boundary Condition applied to Right Section!"<<endl;
+    return; 
+  }
+  
+  return;
+
+}
 //-----------------------------------------------------------
 EulerBASE::~EulerBASE(){}
 //-----------------------------------------------------------
@@ -981,7 +1028,8 @@ Euler1D::~Euler1D(){}
 
 // EULER2D DEFINITIONS
 //-----------------------------------------------------------
-Euler2D::Euler2D(int case_2d) : EulerBASE(cell_imax,cell_jmax){
+Euler2D::Euler2D(int case_2d,int cell_inum,int cell_jnum,int top,int btm,int left,int right,MeshGenBASE* &mesh_ptr) : EulerBASE(cell_inum,cell_jnum,top,btm,left,right,mesh_ptr){
+  //Case assignments
   if (case_2d == 0){ //30 deg inlet case
     Mach_bc = 4.0;
     P_stag = 12270.0;
@@ -1006,6 +1054,7 @@ Euler2D::Euler2D(int case_2d) : EulerBASE(cell_imax,cell_jmax){
   else {
     cerr<<"Unknown 2D Case!"<<endl;
   }
+
   return;
 }
 //-----------------------------------------------------------
@@ -1043,7 +1092,7 @@ Euler2D::~Euler2D(){}
 
 // EULER2DMMS DEFINITIONS
 //-----------------------------------------------------------
-Euler2DMMS::Euler2DMMS() : EulerBASE(cell_imax,cell_jmax){}
+Euler2DMMS::Euler2DMMS(int cell_inum,int cell_jnum,int top,int btm, int left,int right,MeshGenBASE* &mesh_ptr) : EulerBASE(cell_inum,cell_jnum,top,btm,left,right,mesh_ptr){}
 //-----------------------------------------------------------
 void Euler2DMMS::SetInitialConditions(vector<array<double,4>>* &field){
 
@@ -1060,7 +1109,7 @@ void Euler2DMMS::SetInitialConditions(vector<array<double,4>>* &field){
 }
 
 //-----------------------------------------------------------
-void Euler2DMMS::ManufacturedPrimitiveSols(vector<array<double,4>>* &field,SpaceVariables2D* &sols,MeshGenBASE* &mesh){
+void Euler2DMMS::ManufacturedPrimitiveSols(vector<array<double,4>>* &field,SpaceVariables2D* &sols){
 
   int cellid;
   double x,y; //x and y coords
@@ -1199,7 +1248,7 @@ double Euler2DMMS::EnergySourceTerm(double x,double y){
 }
 
 //-----------------------------------------------------------
-void Euler2DMMS::EvalSourceTerms(vector<array<double,4>>* &mms_source,SpaceVariables2D* &sols,MeshGenBASE* &mesh){
+void Euler2DMMS::EvalSourceTerms(vector<array<double,4>>* &mms_source,SpaceVariables2D* &sols){
 
   double x,y;
   int cellid;
