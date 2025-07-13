@@ -53,45 +53,21 @@ void EulerBASE::SetupBoundaryConditions(){
   //TODO: Should only include the GenerateGhostCells fcn. of MeshGen
   // & then initialize the ghost cells with a specified val.
   //cond: 0=Inflow, 1 = Outflow, 2 = Slip Wall
-  //Top part of domain
-  if ( (top_cond==0) || (top_cond==1) )
-    mesh->ExtendGhostCoords(1);
-  else if (top_cond==2)
-    mesh->ReflectGhostCoords(1);
-  else{
-    cerr<<"Unknown Boundary Condition applied to Top Section!"<<endl;
-    return; 
-  }
+  //id: 0 = reflect, 1 = extend
+  int btm_id = (btm_cond==0 || btm_cond==1) ? 1:0;
+  int top_id = (top_cond==0 || top_cond==1) ? 1:0;
+  int left_id = (left_cond==0 || left_cond==1) ? 1:0;
+  int right_id = (right_cond==0 || right_cond==1) ? 1:0;
+  
+  mesh->GenerateGhostCells(left_id,right_id,btm_id,top_id);
 
-  //Btm part of domain
-  if ( (btm_cond==0) || (btm_cond==1) )
-    mesh->ExtendGhostCoords(0);
-  else if (top_cond==2)
-    mesh->ReflectGhostCoords(0);
-  else{
-    cerr<<"Unknown Boundary Condition applied to Bottom Section!"<<endl;
-    return; 
-  }
-
-  //Left part of domain
-  if ( (left_cond==0) || (left_cond==1) )
-    mesh->ExtendGhostCoords(2);
-  else if (top_cond==2)
-    mesh->ReflectGhostCoords(2);
-  else{
-    cerr<<"Unknown Boundary Condition applied to Left Section!"<<endl;
-    return; 
-  }
-
-  //Right part of domain
-  if ( (right_cond==0) || (right_cond==1) )
-    mesh->ExtendGhostCoords(3);
-  else if (top_cond==2)
-    mesh->ReflectGhostCoords(3);
+  //initializing ghost cells
+/*
   else{
     cerr<<"Unknown Boundary Condition applied to Right Section!"<<endl;
     return; 
   }
+*/
   
   return;
 

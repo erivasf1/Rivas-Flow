@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 
 # Project name
-project(1DQuasiSteadyNozzle)
+project(2DEulerEqSolver)
 
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
