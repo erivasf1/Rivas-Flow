@@ -5,8 +5,8 @@
 // EULERBASE DEFINITIONS
 
 //-----------------------------------------------------------
-EulerBASE::EulerBASE(int &cell_inum,int &cell_jnum,int &top,int &btm,int &left,int &right,MeshGenBASE* &mesh_ptr)
-  : cell_imax(cell_inum), cell_jmax(cell_jnum),top_cond(top),btm_cond(btm),left_cond(left), right_cond(right), mesh(mesh_ptr) {}
+EulerBASE::EulerBASE(int &cell_inum,int &cell_jnum,int &scheme,int &accuracy,int &top,int &btm,int &left,int &right,MeshGenBASE* &mesh_ptr,vector<array<double,4>>* &source)
+  : cell_imax(cell_inum), cell_jmax(cell_jnum),flux_scheme(scheme),flux_accuracy(accuracy),top_cond(top),btm_cond(btm),left_cond(left), right_cond(right), mesh(mesh_ptr), mms_source(source) {}
 
 //-----------------------------------------------------------
 array<double,4> EulerBASE::ComputeConserved(vector<array<double,4>>* &field,int &i,int &j){
@@ -37,7 +37,7 @@ void EulerBASE::SetInitialConditions([[maybe_unused]] vector<array<double,4>>* &
 }
 
 //-----------------------------------------------------------
-void EulerBASE::EvalSourceTerms(vector<array<double,4>>* &,SpaceVariables2D* &){
+void EulerBASE::EvalSourceTerms(SpaceVariables2D* &){
 //void EulerBASE::EvalSourceTerms(vector<array<double,4>>* &MMS_Source,SpaceVariables2D* &sols,MeshGenBASE* &mesh){
   return;
 }
@@ -72,6 +72,11 @@ void EulerBASE::SetupBoundaryConditions(){
   return;
 
 }
+//-----------------------------------------------------------
+void EulerBASE::ComputeResidual(vector<array<double,4>>* &){
+  return;
+}
+
 //-----------------------------------------------------------
 EulerBASE::~EulerBASE(){}
 //-----------------------------------------------------------
@@ -1004,7 +1009,7 @@ Euler1D::~Euler1D(){}
 
 // EULER2D DEFINITIONS
 //-----------------------------------------------------------
-Euler2D::Euler2D(int case_2d,int cell_inum,int cell_jnum,int top,int btm,int left,int right,MeshGenBASE* &mesh_ptr) : EulerBASE(cell_inum,cell_jnum,top,btm,left,right,mesh_ptr){
+Euler2D::Euler2D(int case_2d,int cell_inum,int cell_jnum,int scheme,int accuracy,int top,int btm,int left,int right,MeshGenBASE* &mesh_ptr,vector<array<double,4>>* &source) : EulerBASE(cell_inum,cell_jnum,scheme,accuracy,top,btm,left,right,mesh_ptr,source){
   //Case assignments
   if (case_2d == 0){ //30 deg inlet case
     Mach_bc = 4.0;
@@ -1063,12 +1068,21 @@ void Euler2D::SetInitialConditions(vector<array<double,4>>* &field){
 }
 
 //-----------------------------------------------------------
+void Euler2D::ComputeResidual(vector<array<double,4>>* &resid){
+
+  //normal residual computation (no source term)
+
+
+  return;
+}
+
+//-----------------------------------------------------------
 Euler2D::~Euler2D(){}
 //-----------------------------------------------------------
 
 // EULER2DMMS DEFINITIONS
 //-----------------------------------------------------------
-Euler2DMMS::Euler2DMMS(int cell_inum,int cell_jnum,int top,int btm, int left,int right,MeshGenBASE* &mesh_ptr) : EulerBASE(cell_inum,cell_jnum,top,btm,left,right,mesh_ptr){}
+Euler2DMMS::Euler2DMMS(int cell_inum,int cell_jnum,int scheme,int accuracy,int top,int btm, int left,int right,MeshGenBASE* &mesh_ptr,vector<array<double,4>>* &source) : EulerBASE(cell_inum,cell_jnum,scheme,accuracy,top,btm,left,right,mesh_ptr,source){}
 //-----------------------------------------------------------
 void Euler2DMMS::SetInitialConditions(vector<array<double,4>>* &field){
 
@@ -1224,7 +1238,7 @@ double Euler2DMMS::EnergySourceTerm(double x,double y){
 }
 
 //-----------------------------------------------------------
-void Euler2DMMS::EvalSourceTerms(vector<array<double,4>>* &mms_source,SpaceVariables2D* &sols){
+void Euler2DMMS::EvalSourceTerms(/*vector<array<double,4>>* &mms_source,*/SpaceVariables2D* &sols){
 
   double x,y;
   int cellid;
@@ -1259,6 +1273,14 @@ void Euler2DMMS::EvalSourceTerms(vector<array<double,4>>* &mms_source,SpaceVaria
     }
   }
 
+}
+
+//-----------------------------------------------------------
+void Euler2DMMS::ComputeResidual(vector<array<double,4>>* &resid){
+
+  //evaluate source term
+
+  return;
 }
 
 //-----------------------------------------------------------

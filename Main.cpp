@@ -62,7 +62,7 @@ int main() {
   vector<double> xcoords; //stores the coords of the cell NODES!!! (i.e. size of xcoords is cellnum+1)!
   vector<double> ycoords; //stores the coords of the cell NODES!!! (i.e. size of xcoords is cellnum+1)!
   double dx;
-  const char* meshfile = "Grids/CurvilinearGrids/curv2d9.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
+  const char* meshfile = "Grids/CurvilinearGrids/curv2d257.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
   //const char* meshfile = NULL;
 
   // Temporal Specifications
@@ -73,9 +73,11 @@ int main() {
   bool timestep{false}; //true = local time stepping; false = global time stepping
 
   // Flux Specifications
-  bool flux_scheme{false}; //true for JST Damping & false for Upwind
+  bool flux_scheme{false}; 
+  int flux_scheme1{1}; //0=JST, 1=Van Leer, 2 = Roe
   bool upwind_scheme{false}; //true for Van Leer & false for Roe
-  bool flux_accuracy{true}; //true for 1st order & false for 2nd order
+  bool flux_accuracy{false}; 
+  int flux_accuracy1{1}; //1=1st order, 2=2nd order
   [[maybe_unused]] const double ramp_stop = 1.0e-7; //stopping criteria for ramping fcn. of transitioning from 1st to 2nd
   double epsilon = 1.0; //ramping value used to transition from 1st to 2nd order
   bool resid_stall{false};//for detecting if residuals have stalled
@@ -163,17 +165,7 @@ int main() {
   vector<double>* time_steps = &TimeSteps;
 
   //!OBJECT INITIALIZATIONS
-  EulerBASE* euler_test;
-  //Temp -- will add scenario == 1 once 1D section is fixed!
-  if (scenario == 2) 
-    euler_test = new Euler2D(case_2d,mesh->Nx-1,mesh->Ny-1,top_cond,btm_cond,left_cond,right_cond,mesh);
-  else if (scenario == 3)
-    euler_test = new Euler2DMMS(mesh->Nx-1,mesh->Ny-1,top_cond,btm_cond,left_cond,right_cond,mesh);
-  else{
-    cerr<<"Error: scenario # not recognized!"<<endl;
-    return 0;
-  }
-  
+
   SpaceVariables1D Sols; //for operating on Field variables
 
   SpaceVariables2D Sols_TEST; //for operating on Field variables
@@ -191,6 +183,21 @@ int main() {
   SpaceVariables1D* sols = NULL;
   SpaceVariables2D* sols_test = &Sols_TEST;
   Euler1D* euler = &Euler;
+
+  EulerBASE* euler_test;
+  //Temp -- will add scenario == 1 once 1D section is fixed!
+  if (scenario == 2) 
+    euler_test = new Euler2D(case_2d,mesh->Nx-1,mesh->Ny-1,flux_scheme1,flux_accuracy1,top_cond,btm_cond,left_cond,right_cond,mesh,field_ms_source);
+  else if (scenario == 3)
+    euler_test = new Euler2DMMS(mesh->Nx-1,mesh->Ny-1,flux_scheme1,flux_accuracy1,top_cond,btm_cond,left_cond,right_cond,mesh,field_ms_source);
+  else{
+    cerr<<"Error: scenario # not recognized!"<<endl;
+    return 0;
+  }
+  
+
+
+
   //if (mesh_2d) //reassigns pointer to newly created 2D SpaceVariable
     //sols = new SpaceVariables2D();
 
@@ -260,7 +267,7 @@ int main() {
     string mms_sol_filename = "ManufacturedSols.dat";
     string mms_source_filename = "SourceTerms.dat";
     euler_test->ManufacturedPrimitiveSols(field_ms,sols_test); //!< computing manufactured sol.
-    euler_test->EvalSourceTerms(field_ms_source,sols_test); //!< computing manufactured source terms
+    euler_test->EvalSourceTerms(sols_test); //!< computing manufactured source terms
     error->OutputPrimitiveVariables(field_ms,mms_sol_filename,false,0,mesh->xcoords,mesh->ycoords,mesh->cellnumber,mesh->Nx,mesh->Ny);
     error->OutputManufacturedSourceTerms(field_ms_source,mms_source_filename,false,0,mesh->xcoords,mesh->ycoords,mesh->cellnumber,mesh->Nx,mesh->Ny);
 
@@ -322,6 +329,7 @@ int main() {
     //flux_accuracy = true;
 
   euler->ComputeResidual(init_resid,field,field_stall,xcoords,dx,flux_scheme,flux_accuracy,upwind_scheme,epsilon,resid_stall); //computing upwind flux 1st order initially
+  //euler_test->ComputeResidual(init_resid);
   InitNorms = sols->ComputeSolutionNorms(init_resid); //computing L2 norm of residuals
   Tools::print("-Initial Residual Norms\n");
   Tools::print("--Continuity:%e\n",InitNorms[0]);

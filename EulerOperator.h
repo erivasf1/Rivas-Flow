@@ -13,14 +13,20 @@ class EulerBASE {
   
   int top_cond,btm_cond,left_cond,right_cond; //boundary conds. of domain
 
+
   public:
   MeshGenBASE* mesh;
+
+  vector<array<double,4>>* mms_source; //pointer to source terms
+
+  int flux_scheme; //flux scheme id (0=JST, 1=VanLeer, 2=Roe)
+  int flux_accuracy; //flux accuracy id (1=1st order, 2 = 2nd order)
 
   double gamma = 1.4;
   int cell_imax; //NUMBER of cells in the i dir!
   int cell_jmax; //NUMBER of cells in the j dir!
   //TODO: Make constructor to assign cell_imax and cell_jmax
-  EulerBASE(int &cell_inum,int &cell_jnum,int &top,int &btm,int &left,int &right,MeshGenBASE* &mesh_ptr);
+  EulerBASE(int &cell_inum,int &cell_jnum,int &scheme,int &accuracy,int &top,int &btm,int &left,int &right,MeshGenBASE* &mesh_ptr,vector<array<double,4>>* &source);
   //Compute Conserved & Primitive Variables
   array<double,4> ComputeConserved(vector<array<double,4>>* &field,int &i,int &j);
   //Initial Conditions
@@ -36,9 +42,10 @@ class EulerBASE {
   //Artificial Dissipation (JST Damping Only)
   //Source Term
   //Residual
+  virtual void ComputeResidual(vector<array<double,4>>* &resid);
   //MMS
   virtual void ManufacturedPrimitiveSols(vector<array<double,4>>* &field,SpaceVariables2D* &sols);
-  virtual void EvalSourceTerms(vector<array<double,4>>* &MMS_Source,SpaceVariables2D* &sols); //source terms for all governing equations
+  virtual void EvalSourceTerms(SpaceVariables2D* &sols); //source terms for all governing equations
   virtual ~EulerBASE();
 };
 
@@ -143,10 +150,12 @@ class Euler2D : public EulerBASE {
   public:
   double Mach_bc,T_stag,P_stag,alpha; //free-stream and initial conditions, depending on case
   
-  Euler2D(int case_2d,int cell_inum,int cell_jnum,int top,int btm,int left,int right,MeshGenBASE* &mesh_ptr); //constructor determines val. of const. parameters (e.g. freestream Mach #, angle-of-attack)
+  Euler2D(int case_2d,int scheme,int accuracy,int cell_inum,int cell_jnum,int top,int btm,int left,int right,MeshGenBASE* &mesh_ptr,vector<array<double,4>>* &source); //constructor determines val. of const. parameters (e.g. freestream Mach #, angle-of-attack)
 
   void InitSolutions(vector<array<double,4>>* &field,int cellnum);
   void SetInitialConditions(vector<array<double,4>>* &field) override;
+
+  void ComputeResidual(vector<array<double,4>>* &resid) override;
 
   ~Euler2D();
 
@@ -172,7 +181,7 @@ class Euler2DMMS : public EulerBASE {
   double wvel0 = 0.0;
 
   public:
-  Euler2DMMS(int cell_inum,int cell_jnum,int top,int btm, int left,int right,MeshGenBASE* &mesh_ptr);
+  Euler2DMMS(int cell_inum,int cell_jnum,int scheme,int accuracy,int top,int btm, int left,int right,MeshGenBASE* &mesh_ptr,vector<array<double,4>>* &source);
 
   void SetInitialConditions(vector<array<double,4>>* &field) override; 
 
@@ -182,7 +191,8 @@ class Euler2DMMS : public EulerBASE {
   double XMomentumSourceTerm(double x,double y);
   double YMomentumSourceTerm(double x,double y);
   double EnergySourceTerm(double x,double y);
-  void EvalSourceTerms(vector<array<double,4>>* &MMS_Source,SpaceVariables2D* &sols) override; //source terms for all governing equations
+  void EvalSourceTerms(SpaceVariables2D* &sols) override; //source terms for all governing equations
+  void ComputeResidual(vector<array<double,4>>* &resid) override;
   ~Euler2DMMS();
 
 };
