@@ -73,7 +73,7 @@ void EulerBASE::SetupBoundaryConditions(){
 
 }
 //-----------------------------------------------------------
-void EulerBASE::ComputeResidual(vector<array<double,4>>* &){
+void EulerBASE::ComputeResidual(vector<array<double,4>>* &,vector<array<double,4>>* &){
   return;
 }
 
@@ -1068,10 +1068,43 @@ void Euler2D::SetInitialConditions(vector<array<double,4>>* &field){
 }
 
 //-----------------------------------------------------------
-void Euler2D::ComputeResidual(vector<array<double,4>>* &resid){
+void Euler2D::ComputeResidual(vector<array<double,4>>* &resid,vector<array<double,4>>* &field){
 
-  //normal residual computation (no source term)
+  array<double,4> flux_right,flux_left,flux_top,flux_btm;
+  double area_right,area_left,area_btm,area_top;
+  array<double,4> res;
+  array<double,4> field_loc;
+  array<double,4> field_rnbor,field_lnbor,field_topnbor,field_btmnbor;
 
+  for (int j=0;j<cell_jmax;j++){
+    for (int i=0;i<cell_imax;i++){
+      //primitive vars. of current cell and nbor cells
+      field_loc = fieldij(field,i,j,cell_imax); 
+      field_rnbor = fieldij(field,i+1,j,cell_imax); 
+      field_lnbor = fieldij(field,i-1,j,cell_imax); 
+      field_topnbor = fieldij(field,i,j+1,cell_imax); 
+      field_btmnbor = fieldij(field,i,j-1,cell_imax); 
+  
+      //normal residual computation (no source term)
+      //TODO:fluxes evaluation
+      //flux_right = (scheme==1) ? VanLeer(accuracy,field_loc,field_rnbor,mesh_ptr) : Roe(accuracy,field_loc,field_rnbor,mesh_ptr);
+      //flux_left = (scheme==1) ? VanLeer(accuracy,field_loc,field_lnbor) : Roe(accuracy,field_loc,field_lnbor);
+      //flux_top = (scheme==1) ? VanLeer(accuracy,field_loc,field_topnbor) : Roe(accuracy,field_loc,field_topnbor);
+      //flux_btm = (scheme==1) ? VanLeer(accuracy,field_loc,field_btmnbor) : Roe(accuracy,field_loc,field_btmnbor);
+
+      //area evaluation
+      area_right = mesh->GetInteriorCellArea(i,j,3);
+      area_left = mesh->GetInteriorCellArea(i,j,2);
+      area_top = mesh->GetInteriorCellArea(i,j,0);
+      area_btm = mesh->GetInteriorCellArea(i,j,1);
+
+      //residual calc.
+      for (int n=0;n<cell_imax;n++)
+        res[n] = (flux_right[n]*area_right-flux_left[n]*area_left) + (flux_top[n]*area_top - flux_btm[n]*area_btm);
+
+      fieldij(resid,i,j,cell_imax) = res;
+    }
+  }
 
   return;
 }
@@ -1276,9 +1309,51 @@ void Euler2DMMS::EvalSourceTerms(/*vector<array<double,4>>* &mms_source,*/SpaceV
 }
 
 //-----------------------------------------------------------
-void Euler2DMMS::ComputeResidual(vector<array<double,4>>* &resid){
+void Euler2DMMS::ComputeResidual(vector<array<double,4>>* &resid,vector<array<double,4>>* &field){
 
-  //evaluate source term
+
+  array<double,4> flux_right,flux_left,flux_top,flux_btm;
+  double area_right,area_left,area_btm,area_top;
+  double vol;
+  array<double,4> res;
+  array<double,4> field_loc;
+  array<double,4> field_rnbor,field_lnbor,field_topnbor,field_btmnbor;
+
+  array<double,4> mms;
+  
+
+  for (int j=0;j<cell_jmax;j++){
+    for (int i=0;i<cell_imax;i++){
+      //primitive vars. of current cell and nbor cells
+      field_loc = fieldij(field,i,j,cell_imax); 
+      field_rnbor = fieldij(field,i+1,j,cell_imax); 
+      field_lnbor = fieldij(field,i-1,j,cell_imax); 
+      field_topnbor = fieldij(field,i,j+1,cell_imax); 
+      field_btmnbor = fieldij(field,i,j-1,cell_imax); 
+  
+      //TODO:fluxes evaluation
+      //flux_right = (scheme==1) ? VanLeer(accuracy,field_loc,field_rnbor,mesh_ptr) : Roe(accuracy,field_loc,field_rnbor,mesh_ptr);
+      //flux_left = (scheme==1) ? VanLeer(accuracy,field_loc,field_lnbor) : Roe(accuracy,field_loc,field_lnbor);
+      //flux_top = (scheme==1) ? VanLeer(accuracy,field_loc,field_topnbor) : Roe(accuracy,field_loc,field_topnbor);
+      //flux_btm = (scheme==1) ? VanLeer(accuracy,field_loc,field_btmnbor) : Roe(accuracy,field_loc,field_btmnbor);
+      
+      //volume evaluation (for source term) + source term retrievel 
+      vol = mesh->GetCellVolume(i,j);
+      mms = fieldij(mms_source,i,j,cell_imax);
+
+      //area evaluation
+      area_right = mesh->GetInteriorCellArea(i,j,3);
+      area_left = mesh->GetInteriorCellArea(i,j,2);
+      area_top = mesh->GetInteriorCellArea(i,j,0);
+      area_btm = mesh->GetInteriorCellArea(i,j,1);
+
+      //residual calc.
+      for (int n=0;n<4;n++)
+        res[n] = (flux_right[n]*area_right-flux_left[n]*area_left) + (flux_top[n]*area_top - flux_btm[n]*area_btm) - mms[n]*vol;
+
+      fieldij(resid,i,j,cell_imax) = res;
+    }
+  }
 
   return;
 }

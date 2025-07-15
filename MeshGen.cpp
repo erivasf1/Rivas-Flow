@@ -21,6 +21,14 @@ void MeshGenBASE::OutputMesh(){}
 //-----------------------------------------------------------
 void MeshGenBASE::GenerateGhostCells(int ,int ,int ,int ){}
 //-----------------------------------------------------------
+double MeshGenBASE::GetInteriorCellArea(int &, int &, int) {
+  return 0.0;
+}
+//-----------------------------------------------------------
+double MeshGenBASE::GetCellVolume(int &, int &){
+  return 0.0;
+}
+//-----------------------------------------------------------
 array<double,2> MeshGenBASE::ComputeOutwardUnitVector(int,int,int){
   array<double,2> zero{0.0,0.0};
   return zero; //return a zero array by default
@@ -614,10 +622,23 @@ double MeshGen2D::GetGhostCellArea(int &i,int &j,int side){ //retrieves the area
   }
 
   else { //error handling
-    cerr<<"Error:Unkown side # when retrieving area fcn."<<endl;
+    cerr<<"Error:Unknown side # when retrieving area fcn."<<endl;
   }
 
   return area;
+}
+
+//-----------------------------------------------------------
+double MeshGen2D::GetCellVolume(int &i, int &j){
+
+  //length = left side & width = top side
+  double width = GetInteriorCellArea(i,j,0);
+  double length = GetInteriorCellArea(i,j,2);
+
+  double vol = length * width;
+
+  return vol;
+  
 }
 
 //-----------------------------------------------------------

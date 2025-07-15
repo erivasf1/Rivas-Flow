@@ -42,7 +42,7 @@ class EulerBASE {
   //Artificial Dissipation (JST Damping Only)
   //Source Term
   //Residual
-  virtual void ComputeResidual(vector<array<double,4>>* &resid);
+  virtual void ComputeResidual(vector<array<double,4>>* &resid,vector<array<double,4>>* &field);
   //MMS
   virtual void ManufacturedPrimitiveSols(vector<array<double,4>>* &field,SpaceVariables2D* &sols);
   virtual void EvalSourceTerms(SpaceVariables2D* &sols); //source terms for all governing equations
@@ -155,7 +155,7 @@ class Euler2D : public EulerBASE {
   void InitSolutions(vector<array<double,4>>* &field,int cellnum);
   void SetInitialConditions(vector<array<double,4>>* &field) override;
 
-  void ComputeResidual(vector<array<double,4>>* &resid) override;
+  void ComputeResidual(vector<array<double,4>>* &resid,vector<array<double,4>>* &field) override;
 
   ~Euler2D();
 
@@ -192,7 +192,7 @@ class Euler2DMMS : public EulerBASE {
   double YMomentumSourceTerm(double x,double y);
   double EnergySourceTerm(double x,double y);
   void EvalSourceTerms(SpaceVariables2D* &sols) override; //source terms for all governing equations
-  void ComputeResidual(vector<array<double,4>>* &resid) override;
+  void ComputeResidual(vector<array<double,4>>* &resid,vector<array<double,4>>* &field) override;
   ~Euler2DMMS();
 
 };
