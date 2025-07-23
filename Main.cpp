@@ -74,7 +74,7 @@ int main() {
 
   // Flux Specifications
   bool flux_scheme{false}; 
-  int flux_scheme1{1}; //0=JST, 1=Van Leer, 2 = Roe
+  int flux_scheme1{1}; //0=JST, 1=Van Leer, 2 = Roe (this will eventually be used!)
   bool upwind_scheme{false}; //true for Van Leer & false for Roe
   bool flux_accuracy{false}; 
   int flux_accuracy1{1}; //1=1st order, 2=2nd order

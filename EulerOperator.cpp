@@ -1068,6 +1068,42 @@ void Euler2D::SetInitialConditions(vector<array<double,4>>* &field){
 }
 
 //-----------------------------------------------------------
+array<double,4> Euler2D::ComputeSpatialFlux_UPWIND1stOrder(vector<array<double,4>>* field,int loci,int locj,int nbori,int nborj){
+  
+  //NOTE: assumes loc is left state and nbor is right state (for 1st order accuracy)
+  array<double,4> loc_state = fieldij(field,loci,locj,cell_imax);
+  array<double,4> nbor_state = fieldij(field,nbori,nborj,cell_imax);
+
+  array<double,4> flux; //total flux
+  [[maybe_unused]] array<double,4> flux_rtstate; //right state flux (for upwinding in +c wave speed)
+  [[maybe_unused]] array<double,4> flux_ltstate; //left state flux (for upwinding in -c wave speed)
+
+
+  if (flux_scheme == 1){ //Van Leer Method
+    //flux_rtstate = VanLeerCompute(right_state,false); //false for negative c case
+    //flux_ltstate = VanLeerCompute(left_state,true); //true for positive c case
+   
+    for (int n=0;n<3;n++) //summing up left and right state fluxes
+      flux[n] = flux_rtstate[n] + flux_ltstate[n];
+
+  }
+  else if (flux_scheme == 2){ //Roe's Method
+    //flux = ComputeRoeFlux(left_state,right_state);
+  }
+  else { //error handling
+    cerr<<"Error: Unknown flux specification!"<<endl;
+  }
+
+  return flux;
+
+}
+
+//-----------------------------------------------------------
+array<double,4> Euler2D::ComputeSpatialFlux_UPWIND2ndOrder(vector<array<double,4>>* field,int loci,int locj,int nbori,int nborj){}
+
+
+
+//-----------------------------------------------------------
 void Euler2D::ComputeResidual(vector<array<double,4>>* &resid,vector<array<double,4>>* &field){
 
   array<double,4> flux_right,flux_left,flux_top,flux_btm;
@@ -1076,21 +1112,26 @@ void Euler2D::ComputeResidual(vector<array<double,4>>* &resid,vector<array<doubl
   array<double,4> field_loc;
   array<double,4> field_rnbor,field_lnbor,field_topnbor,field_btmnbor;
 
+  //normal residual computation (no source term)
   for (int j=0;j<cell_jmax;j++){
     for (int i=0;i<cell_imax;i++){
-      //primitive vars. of current cell and nbor cells
-      field_loc = fieldij(field,i,j,cell_imax); 
-      field_rnbor = fieldij(field,i+1,j,cell_imax); 
-      field_lnbor = fieldij(field,i-1,j,cell_imax); 
-      field_topnbor = fieldij(field,i,j+1,cell_imax); 
-      field_btmnbor = fieldij(field,i,j-1,cell_imax); 
   
-      //normal residual computation (no source term)
       //TODO:fluxes evaluation
-      //flux_right = (scheme==1) ? VanLeer(accuracy,field_loc,field_rnbor,mesh_ptr) : Roe(accuracy,field_loc,field_rnbor,mesh_ptr);
-      //flux_left = (scheme==1) ? VanLeer(accuracy,field_loc,field_lnbor) : Roe(accuracy,field_loc,field_lnbor);
-      //flux_top = (scheme==1) ? VanLeer(accuracy,field_loc,field_topnbor) : Roe(accuracy,field_loc,field_topnbor);
-      //flux_btm = (scheme==1) ? VanLeer(accuracy,field_loc,field_btmnbor) : Roe(accuracy,field_loc,field_btmnbor);
+      if (flux_scheme==0){ //JST Damping
+      }
+      else if ((flux_scheme!=0) && (flux_accuracy==1)){ //1st order Upwind Schemes
+        flux_right = ComputeSpatialFlux_UPWIND1stOrder(field,i,j,i+1,j);
+        flux_left = ComputeSpatialFlux_UPWIND1stOrder(field,i-1,j,i,j);
+        flux_top = ComputeSpatialFlux_UPWIND1stOrder(field,i,j,i,j+1);
+        flux_btm = ComputeSpatialFlux_UPWIND1stOrder(field,i,j-1,i,j);
+      }
+      else if ((flux_scheme!=0) && (flux_accuracy==2)){ //2nd ordr Upwind Schemes w/ MUSCL extrapolation
+        flux_right = ComputeSpatialFlux_UPWIND2ndOrder(field,i,j,i+1,j);
+        flux_left = ComputeSpatialFlux_UPWIND2ndOrder(field,i-1,j,i,j);
+        flux_top = ComputeSpatialFlux_UPWIND2ndOrder(field,i,j,i,j+1);
+        flux_btm = ComputeSpatialFlux_UPWIND2ndOrder(field,i,j-1,i,j);
+      }
+      else {} //error handling
 
       //area evaluation
       area_right = mesh->GetInteriorCellArea(i,j,3);

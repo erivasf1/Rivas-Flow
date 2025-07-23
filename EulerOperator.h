@@ -155,6 +155,9 @@ class Euler2D : public EulerBASE {
   void InitSolutions(vector<array<double,4>>* &field,int cellnum);
   void SetInitialConditions(vector<array<double,4>>* &field) override;
 
+  array<double,4> ComputeSpatialFlux_UPWIND1stOrder(vector<array<double,4>>* field,int loci,int locj,int nbori,int nborj); //1st order upwind schemes
+  array<double,4> ComputeSpatialFlux_UPWIND2ndOrder(vector<array<double,4>>* field,int loci,int locj,int nbori,int nborj); //2nd order upwind schemes
+
   void ComputeResidual(vector<array<double,4>>* &resid,vector<array<double,4>>* &field) override;
 
   ~Euler2D();
