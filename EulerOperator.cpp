@@ -73,6 +73,122 @@ void EulerBASE::SetupBoundaryConditions(){
 
 }
 //-----------------------------------------------------------
+double EulerBASE::ComputeMachNumber(array<double,4> &sols){
+
+  //Using insentropic conditions only for thermodynamic variables (T)
+  double T = sols[3] / (sols[0]*R); //if T is negative than M will be -nan!!!
+
+  //using actual vel mag. value
+  double vel_mag = sqrt( pow(sols[1],2.0) + pow(sols[2],2.0) );
+  //
+  double M = vel_mag / sqrt(gamma * R * T); //M = u/a
+
+  return M;
+
+}
+//-----------------------------------------------------------
+double EulerBASE::GetGamma(){
+
+  return gamma;
+
+}
+//-----------------------------------------------------------
+double EulerBASE::GetC(double M,bool sign){
+
+  double alpha = GetAlpha(M,sign);
+  double beta = GetBeta(M);
+  double M_vl = GetVanLeerM(M,sign);
+
+  double C = alpha*(1.0+beta)*M - beta*M_vl;
+ 
+  return C;
+
+}
+
+//-----------------------------------------------------------
+double EulerBASE::GetAlpha(double M,bool sign){ 
+
+  //sign = true for positive and false for negative
+  double alpha = (sign == true) ? 0.5*(1.0+std::copysign(1.0,M)) : 0.5*(1.0-std::copysign(1.0,M));
+
+  return alpha;
+
+}
+
+//-----------------------------------------------------------
+double EulerBASE::GetBeta(double M) {
+
+  double beta = -std::max(0.0,1.0-(int)abs(M)); //(int) -- explicit type conversion
+
+  return beta;
+
+}
+
+//-----------------------------------------------------------
+double EulerBASE::GetVanLeerM(double M,bool sign){ 
+
+  double M_VL = (sign == true) ? 0.25*pow((M+1.0),2.0) : -0.25*pow((M-1.0),2.0);
+
+  return M_VL;
+}
+
+//-----------------------------------------------------------
+double EulerBASE::GetD(double M,bool sign){ 
+
+  double alpha = GetAlpha(M,sign);
+  double beta = GetBeta(M);
+  double p2bar = GetP2Bar(M,sign);
+
+  double D = alpha*(1.0+beta) - beta*p2bar;
+
+  return D;
+
+}
+
+//-----------------------------------------------------------
+double EulerBASE::GetP2Bar(double M,bool sign){ 
+
+  double M_vl = GetVanLeerM(M,sign);
+
+  double p2bar = (sign == true) ? M_vl*(-M+2.0) : M_vl*(-M-2.0);
+
+  return p2bar;
+
+}
+
+//-----------------------------------------------------------
+array<double,4> EulerBASE::VanLeerCompute(array<double,4> &field_state,bool sign){
+
+  array<double,4> flux;
+  //scalars
+  double M = ComputeMachNumber(field_state); //local Mach Number
+  double a = field_state[1] / M; //local speed of sound
+ 
+  //total energy term(h_t)
+  double ht = (gamma/(gamma-1.0))*(field_state[2]/field_state[0]); //pressure work
+  ht += pow(field_state[1],2.0) / 2.0; //kinetic energy
+
+  //vectors
+  array<double,4> convect_vec{1.0,field_state[1],field_state[2],ht}; //vector multiple for convective flux
+  array<double,4> pressure_vec{0.0,field_state[2],field_state[2],0.0}; //vector multiple for pressure flux
+
+  //Convective Flux
+  double C = GetC(M,sign);
+  for (int n=0;n<3;n++)
+    flux[n] = field_state[0]*a*C*convect_vec[n]; 
+
+  //Pressure Flux
+  double D = GetD(M,sign);
+  for (int n=0;n<3;n++)
+    flux[n] += D*pressure_vec[n];
+  
+
+  return flux;
+
+
+
+}
+//-----------------------------------------------------------
 void EulerBASE::ComputeResidual(vector<array<double,4>>* &,vector<array<double,4>>* &){
   return;
 }
@@ -1070,18 +1186,18 @@ void Euler2D::SetInitialConditions(vector<array<double,4>>* &field){
 //-----------------------------------------------------------
 array<double,4> Euler2D::ComputeSpatialFlux_UPWIND1stOrder(vector<array<double,4>>* field,int loci,int locj,int nbori,int nborj){
   
-  //NOTE: assumes loc is left state and nbor is right state (for 1st order accuracy)
+  //NOTE: assumes loc is left or btm state and nbor is right or top state (for 1st order accuracy)
   array<double,4> loc_state = fieldij(field,loci,locj,cell_imax);
   array<double,4> nbor_state = fieldij(field,nbori,nborj,cell_imax);
 
   array<double,4> flux; //total flux
-  [[maybe_unused]] array<double,4> flux_rtstate; //right state flux (for upwinding in +c wave speed)
-  [[maybe_unused]] array<double,4> flux_ltstate; //left state flux (for upwinding in -c wave speed)
+  //[[maybe_unused]] array<double,4> flux_rtstate; //right state flux (for upwinding in +c wave speed) -- VanLeer
+  //[[maybe_unused]] array<double,4> flux_ltstate; //left state flux (for upwinding in -c wave speed) VanLeer
 
 
   if (flux_scheme == 1){ //Van Leer Method
-    //flux_rtstate = VanLeerCompute(right_state,false); //false for negative c case
-    //flux_ltstate = VanLeerCompute(left_state,true); //true for positive c case
+    array<double,4> flux_rtstate = VanLeerCompute(nbor_state,false); //false for negative c case
+    array<double,4> flux_ltstate = VanLeerCompute(loc_state,true); //true for positive c case
    
     for (int n=0;n<3;n++) //summing up left and right state fluxes
       flux[n] = flux_rtstate[n] + flux_ltstate[n];
@@ -1269,6 +1385,7 @@ double Euler2DMMS::YMomentumSourceTerm(double x,double y){
 //-----------------------------------------------------------
 double Euler2DMMS::EnergySourceTerm(double x,double y){
 
+  double gamma = GetGamma();
   double source_term = 
 (uvel0 + uvely*cos((3.0*Pi*y)/(5.0*L)) + uvelx*sin((3.0*Pi*x)/(2.0*L)))*
     ((-2.0*Pi*pressx*sin((2.0*Pi*x)/L))/L + (rho0 + rhoy*cos((Pi*y)/(2.0*L)) + rhox*sin((Pi*x)/L))*

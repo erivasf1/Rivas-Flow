@@ -13,20 +13,28 @@ class EulerBASE {
   
   int top_cond,btm_cond,left_cond,right_cond; //boundary conds. of domain
 
+  const double Ru = 8314.0; // J/(kmol*K) -- universal gas constant   
+  const double gamma = 1.4; //specific heat ratio
+  const double MolMass = 28.96; // kg/kmol
 
   public:
   MeshGenBASE* mesh;
+
+  double R = Ru / MolMass; //specific gas constant
 
   vector<array<double,4>>* mms_source; //pointer to source terms
 
   int flux_scheme; //flux scheme id (0=JST, 1=VanLeer, 2=Roe)
   int flux_accuracy; //flux accuracy id (1=1st order, 2 = 2nd order)
 
-  double gamma = 1.4;
   int cell_imax; //NUMBER of cells in the i dir!
   int cell_jmax; //NUMBER of cells in the j dir!
-  //TODO: Make constructor to assign cell_imax and cell_jmax
+
   EulerBASE(int &cell_inum,int &cell_jnum,int &scheme,int &accuracy,int &top,int &btm,int &left,int &right,MeshGenBASE* &mesh_ptr,vector<array<double,4>>* &source);
+
+  double ComputeMachNumber(array<double,4> &sols);
+  double GetGamma();
+
   //Compute Conserved & Primitive Variables
   array<double,4> ComputeConserved(vector<array<double,4>>* &field,int &i,int &j);
   //Initial Conditions
@@ -38,6 +46,15 @@ class EulerBASE {
   //ComputeTopBoundaryCondition -- freestream
   //ComputeBottomBoundaryCondition -- slip wall
   //Spatial Fluxes
+  //VanLeer
+  array<double,4> VanLeerCompute(array<double,4> &field_state,bool sign);
+  double GetC(double M,bool sign); //c value
+  double GetAlpha(double M,bool sign); //alpha value
+  double GetBeta(double M); //beta value
+  double GetVanLeerM(double M,bool sign); //Van Leer MachNumber
+  double GetD(double M,bool sign); //D value
+  double GetP2Bar(double M,bool sign); //Pressure double bar
+  //Roe
   //MUSCL Extrapolation
   //Artificial Dissipation (JST Damping Only)
   //Source Term

@@ -58,7 +58,7 @@ class MeshGen2D : public MeshGenBASE { //reads in a non-uniform 2D mesh
   vector<double> right_xcoords,left_xcoords,top_xcoords,btm_xcoords;
   vector<double> right_ycoords,left_ycoords,top_ycoords,btm_ycoords;
 
-  //vector<array<double,4>> top_cells,btm_cells,right_cells,left_cells;
+  //TODO: vector<array<double,4>> top_cells,btm_cells,right_cells,left_cells; -- adds this in GenerateGhostCell fcn.!!!
 
   //NOTE: Make indexing of ghost cells consistent with the interior cells for the pertaining indice
   //size of top and btm cells are Nx*2 & size of right and left cells are 2*Ny
