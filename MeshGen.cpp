@@ -242,6 +242,7 @@ array<array<double,4>,2> MeshGen2D::GetCellCoords(int &i,int &j){
 //-----------------------------------------------------------
 void MeshGen2D::GenerateGhostCells(int left_id,int right_id,int btm_id,int top_id){
 
+  // Creating nodes
   //Bottom Boundary
   (btm_id == 1) ? ReflectGhostCoords(0) : ExtendGhostCoords(0);
   //Top Boundary
@@ -251,6 +252,15 @@ void MeshGen2D::GenerateGhostCells(int left_id,int right_id,int btm_id,int top_i
   //Right Boundary
   (right_id == 1) ? ReflectGhostCoords(3) : ExtendGhostCoords(3);
   
+  // Creating cells
+  vector<array<double,4>>[Nx-1] ghost_cellsx;
+  vector<array<double,4>>[Ny-1] ghost_cellsy;
+ 
+  right_cells = ghost_cellsx;left_cells = ghost_cellsx;
+  btm_cells = ghost_cellsy; top_cells = ghost_cellsy;
+
+
+
   return;
 
 }

@@ -73,6 +73,67 @@ void EulerBASE::SetupBoundaryConditions(){
 
 }
 //-----------------------------------------------------------
+array<double,4> EulerBASE::ComputeSpatialFlux_UPWIND1stOrder(vector<array<double,4>>* field,int loci,int locj,int nbori,int nborj){
+  
+  //NOTE: assumes loc is left or btm state and nbor is right or top state (for 1st order accuracy)
+    array<double,4> loc_state,nbor_state;
+  //checking if either loc or nbor is acessing ghost cells
+  if ( loci<0 || nbori>cell_imax || locj<0 || nborj>cell_jmax ){
+    if (loci<0){ //using 1st layer of ghost cells to the left (-i case)
+      loc_state = mesh->left_cells[j]; //TODO
+      nbor_state = fieldij(field,nbori,nborj,cell_imax);
+    }
+    else if (nbori>cell_imax){ //using 1st layer of ghost cells to the right (+i domain)
+      loc_state = fieldij(field,loci,locj,cell_imax);
+      nbor_state = mesh->right_cells[j]; //TODO
+      
+    }
+    else if (locj<0){ //using 1st layer of ghost cells to the btm (-j case)
+      loc_state = mesh->btm_cells[i];
+      nbor_state = fieldij(field,nbori,nborj,cell_imax);
+
+    }
+
+    else { //using 1st layer of ghost cells to the top (+j case)
+      loc_state = fieldij(field,loci,locj,cell_imax);
+      nbor_state = mesh->top_cells[j]; //TODO
+
+    }
+  }
+
+  else { //normal case (no use of ghost cells)
+    array<double,4> loc_state = fieldij(field,loci,locj,cell_imax);
+    array<double,4> nbor_state = fieldij(field,nbori,nborj,cell_imax);
+  }
+  array<double,4> flux; //total flux
+  //[[maybe_unused]] array<double,4> flux_rtstate; //right state flux (for upwinding in +c wave speed) -- VanLeer
+  //[[maybe_unused]] array<double,4> flux_ltstate; //left state flux (for upwinding in -c wave speed) VanLeer
+
+
+  if (flux_scheme == 1){ //Van Leer Method
+    array<double,4> flux_rtstate = VanLeerCompute(nbor_state,false); //false for negative c case
+    array<double,4> flux_ltstate = VanLeerCompute(loc_state,true); //true for positive c case
+   
+    for (int n=0;n<3;n++) //summing up left and right state fluxes
+      flux[n] = flux_rtstate[n] + flux_ltstate[n];
+
+  }
+  else if (flux_scheme == 2){ //Roe's Method
+    //flux = ComputeRoeFlux(left_state,right_state);
+  }
+  else { //error handling
+    cerr<<"Error: Unknown flux specification!"<<endl;
+  }
+
+  return flux;
+
+}
+
+//-----------------------------------------------------------
+array<double,4> EulerBASE::ComputeSpatialFlux_UPWIND2ndOrder(vector<array<double,4>>* field,int loci,int locj,int nbori,int nborj){}
+//-----------------------------------------------------------
+
+//-----------------------------------------------------------
 double EulerBASE::ComputeMachNumber(array<double,4> &sols){
 
   //Using insentropic conditions only for thermodynamic variables (T)
@@ -1182,42 +1243,6 @@ void Euler2D::SetInitialConditions(vector<array<double,4>>* &field){
   return;
 
 }
-
-//-----------------------------------------------------------
-array<double,4> Euler2D::ComputeSpatialFlux_UPWIND1stOrder(vector<array<double,4>>* field,int loci,int locj,int nbori,int nborj){
-  
-  //NOTE: assumes loc is left or btm state and nbor is right or top state (for 1st order accuracy)
-  array<double,4> loc_state = fieldij(field,loci,locj,cell_imax);
-  array<double,4> nbor_state = fieldij(field,nbori,nborj,cell_imax);
-
-  array<double,4> flux; //total flux
-  //[[maybe_unused]] array<double,4> flux_rtstate; //right state flux (for upwinding in +c wave speed) -- VanLeer
-  //[[maybe_unused]] array<double,4> flux_ltstate; //left state flux (for upwinding in -c wave speed) VanLeer
-
-
-  if (flux_scheme == 1){ //Van Leer Method
-    array<double,4> flux_rtstate = VanLeerCompute(nbor_state,false); //false for negative c case
-    array<double,4> flux_ltstate = VanLeerCompute(loc_state,true); //true for positive c case
-   
-    for (int n=0;n<3;n++) //summing up left and right state fluxes
-      flux[n] = flux_rtstate[n] + flux_ltstate[n];
-
-  }
-  else if (flux_scheme == 2){ //Roe's Method
-    //flux = ComputeRoeFlux(left_state,right_state);
-  }
-  else { //error handling
-    cerr<<"Error: Unknown flux specification!"<<endl;
-  }
-
-  return flux;
-
-}
-
-//-----------------------------------------------------------
-array<double,4> Euler2D::ComputeSpatialFlux_UPWIND2ndOrder(vector<array<double,4>>* field,int loci,int locj,int nbori,int nborj){}
-
-
 
 //-----------------------------------------------------------
 void Euler2D::ComputeResidual(vector<array<double,4>>* &resid,vector<array<double,4>>* &field){

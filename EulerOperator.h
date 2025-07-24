@@ -46,6 +46,8 @@ class EulerBASE {
   //ComputeTopBoundaryCondition -- freestream
   //ComputeBottomBoundaryCondition -- slip wall
   //Spatial Fluxes
+  array<double,4> ComputeSpatialFlux_UPWIND1stOrder(vector<array<double,4>>* field,int loci,int locj,int nbori,int nborj); //1st order upwind schemes
+  array<double,4> ComputeSpatialFlux_UPWIND2ndOrder(vector<array<double,4>>* field,int loci,int locj,int nbori,int nborj); //2nd order upwind schemes
   //VanLeer
   array<double,4> VanLeerCompute(array<double,4> &field_state,bool sign);
   double GetC(double M,bool sign); //c value
@@ -172,8 +174,6 @@ class Euler2D : public EulerBASE {
   void InitSolutions(vector<array<double,4>>* &field,int cellnum);
   void SetInitialConditions(vector<array<double,4>>* &field) override;
 
-  array<double,4> ComputeSpatialFlux_UPWIND1stOrder(vector<array<double,4>>* field,int loci,int locj,int nbori,int nborj); //1st order upwind schemes
-  array<double,4> ComputeSpatialFlux_UPWIND2ndOrder(vector<array<double,4>>* field,int loci,int locj,int nbori,int nborj); //2nd order upwind schemes
 
   void ComputeResidual(vector<array<double,4>>* &resid,vector<array<double,4>>* &field) override;
 
