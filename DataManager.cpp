@@ -231,7 +231,7 @@ SpaceVariables1D::~SpaceVariables1D(){}
 SpaceVariables2D::SpaceVariables2D()
 {}
 //-----------------------------------------------------------------------
-void SpaceVariables2D::ComputeCellCenteredCoordinate(vector<double> &xcoords,vector<double> &ycoords,vector<double> &cell_center_xcoords,vector<double> &cell_center_ycoords,int cell_imax){ //computes coord. cell center
+void SpaceVariables2D::ComputeInteriorCellCenteredCoordinate(vector<double> &xcoords,vector<double> &ycoords,vector<double> &cell_center_xcoords,vector<double> &cell_center_ycoords,int cell_imax){ //computes coord. cell center
 
   //Cell-Center is just an avg. of the 4 corner nodes of the cell
   double x_avg = 0.0;
@@ -280,6 +280,53 @@ void SpaceVariables2D::ComputeCellCenteredCoordinate(vector<double> &xcoords,vec
 
 
   return; 
+}
+//---------------------------------------------------------
+void SpaceVariables2D::ComputeGhostCellCenteredCoordinate(MeshGen2D* &mesh){
+  
+  double x1=0.0; double y1=0.0;
+  double x2=0.0; double y2=0.0;
+  array<double,2> avg_xy1,avg_xy2;
+  array<array<double,4>,2> cell_coords1,cell_coords2; //1&2 by doing corresponding sides at the same time (e.g. btm&top are done at the same time)
+
+  //NOTE: cells coords data structure cell_coords[0]=all x vals. and vice versa for [1]
+
+  //Btm + Top ghost cells
+  for (int j=0;j<2;j++){
+    for (int i=0;i<mesh->cell_imax;i++){
+      cell_coords1 = mesh->GetGhostCellCoords(i,j,0); //top
+      cell_coords2 = mesh->GetGhostCellCoords(i,j,1); //btm
+      for (int n=0;n<4;n++){
+        x1 += cell_coords1[0][n]; y1 += cell_coords1[1][n];
+        x2 += cell_coords2[0][n]; y2 += cell_coords2[1][n];
+      }
+      avg_xy1[0] = x1/4.0; avg_xy1[1] = y1/4.0;
+      avg_xy2[0] = x2/4.0; avg_xy2[1] = y2/4.0;
+       
+      mesh->top_cellcenter_coords[i+(j*mesh->cell_imax)] = avg_xy1;
+      mesh->btm_cellcenter_coords[i+(j*mesh->cell_imax)] = avg_xy2;
+    }
+  }
+
+  //Left + Right ghost cells
+  for (int i=0;i<2;i++){
+    for (int j=0;j<mesh->cell_jmax;j++){
+      cell_coords1 = mesh->GetGhostCellCoords(i,j,2); //left
+      cell_coords2 = mesh->GetGhostCellCoords(i,j,3); //right
+      for (int n=0;n<4;n++){
+        x1 += cell_coords1[0][n]; y1 += cell_coords1[1][n];
+        x2 += cell_coords2[0][n]; y2 += cell_coords2[1][n];
+
+      }
+      avg_xy1[0] = x1/4.0; avg_xy1[1] = y1/4.0;
+      avg_xy2[0] = x2/4.0; avg_xy2[1] = y2/4.0;
+       
+      mesh->left_cellcenter_coords[i+(j*mesh->cell_imax)] = avg_xy1;
+      mesh->right_cellcenter_coords[i+(j*mesh->cell_imax)] = avg_xy2;
+    }
+  }
+  return;
+
 }
 //---------------------------------------------------------
 SpaceVariables2D::~SpaceVariables2D(){}

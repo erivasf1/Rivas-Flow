@@ -8,16 +8,15 @@
 //Forward Declarations
 class SpaceVariables2D;
 
-//TODO: Make BASE Class
 class EulerBASE {
   
-  int top_cond,btm_cond,left_cond,right_cond; //boundary conds. of domain
-
   const double Ru = 8314.0; // J/(kmol*K) -- universal gas constant   
   const double gamma = 1.4; //specific heat ratio
   const double MolMass = 28.96; // kg/kmol
 
   public:
+
+  int top_cond,btm_cond,left_cond,right_cond; //boundary conds. of domain
   MeshGenBASE* mesh;
 
   double R = Ru / MolMass; //specific gas constant
@@ -40,8 +39,11 @@ class EulerBASE {
   //Initial Conditions
   virtual void SetInitialConditions(vector<array<double,4>>* &field); //Complete (tested)
   //TODO:Boundary Conditions -- refer to this paper:https://arc-aiaa-org.ezproxy.lib.vt.edu/doi/10.2514/3.11983  
-  void SetupBoundaryConditions();
-  //ComputeLeftBoundaryCondition -- inflow
+  void Setup2DBoundaryConditions(); 
+  virtual void Enforce2DBoundaryConditions(vector<array<double,4>>* &field);
+  virtual void ApplyInflow(vector<array<double,4>>* &field,MeshGenBASE* &mesh,int side); //MMS evaluates MS of ghost cells & 30 deg. inlet uses Mach number and T as inlet conditions
+  void ApplyOutflow(vector<array<double,4>>* &field,MeshGenBASE* &mesh,int side);
+  void ApplySlipWall(vector<array<double,4>>* &field,MeshGenBASE* &mesh,int side);
   //ComputeRightBoundaryCondition -- outflow
   //ComputeTopBoundaryCondition -- freestream
   //ComputeBottomBoundaryCondition -- slip wall
@@ -206,12 +208,15 @@ class Euler2DMMS : public EulerBASE {
   void SetInitialConditions(vector<array<double,4>>* &field) override; 
 
   void ManufacturedPrimitiveSols(vector<array<double,4>>* &field,SpaceVariables2D* &Sols) override;
+  void EvaluateGhostCellsMS(vector<array<double,4>>* &field,SpaceVariables2D* &Sols); //evaluates the manufactured sol. on the specified ghost cells
 
   double ContinuitySourceTerm(double x,double y);
   double XMomentumSourceTerm(double x,double y);
   double YMomentumSourceTerm(double x,double y);
   double EnergySourceTerm(double x,double y);
   void EvalSourceTerms(SpaceVariables2D* &sols) override; //source terms for all governing equations
+  void Enforce2DBoundaryConditions(vector<array<double,4>>* &field) override;
+  void ApplyMSInflow(int side); //TODO:
   void ComputeResidual(vector<array<double,4>>* &resid,vector<array<double,4>>* &field) override;
   ~Euler2DMMS();
 

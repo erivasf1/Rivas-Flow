@@ -38,18 +38,16 @@ void EulerBASE::SetInitialConditions([[maybe_unused]] vector<array<double,4>>* &
 
 //-----------------------------------------------------------
 void EulerBASE::EvalSourceTerms(SpaceVariables2D* &){
-//void EulerBASE::EvalSourceTerms(vector<array<double,4>>* &MMS_Source,SpaceVariables2D* &sols,MeshGenBASE* &mesh){
   return;
 }
 
 //-----------------------------------------------------------
 void EulerBASE::ManufacturedPrimitiveSols(vector<array<double,4>>* &,SpaceVariables2D* &){
-//void EulerBASE::ManufacturedPrimitiveSols(vector<array<double,4>>* &field,SpaceVariables2D* &sols,MeshGenBASE* &mesh){
   return;
 }
 
 //-----------------------------------------------------------
-void EulerBASE::SetupBoundaryConditions(){
+void EulerBASE::Setup2DBoundaryConditions(){
   //TODO: Should only include the GenerateGhostCells fcn. of MeshGen
   // & then initialize the ghost cells with a specified val.
   //cond: 0=Inflow, 1 = Outflow, 2 = Slip Wall
@@ -73,37 +71,56 @@ void EulerBASE::SetupBoundaryConditions(){
 
 }
 //-----------------------------------------------------------
+void EulerBASE::Enforce2DBoundaryConditions(vector<array<double,4>>* &){
+  return;
+}
+
+//-----------------------------------------------------------
+void EulerBASE::ApplyInflow(vector<array<double,4>>* &,MeshGenBASE* &,int ){
+
+  return;
+}
+
+//-----------------------------------------------------------
+void EulerBASE::ApplyOutflow(vector<array<double,4>>* &,MeshGenBASE* &,int){
+  return;
+}
+//-----------------------------------------------------------
+void EulerBASE::ApplySlipWall(vector<array<double,4>>* &,MeshGenBASE* &,int){
+  return;
+}
+//-----------------------------------------------------------
 array<double,4> EulerBASE::ComputeSpatialFlux_UPWIND1stOrder(vector<array<double,4>>* field,int loci,int locj,int nbori,int nborj){
   
   //NOTE: assumes loc is left or btm state and nbor is right or top state (for 1st order accuracy)
     array<double,4> loc_state,nbor_state;
-  //checking if either loc or nbor is acessing ghost cells
+  //checking if either loc or nbor is accessing ghost cells
   if ( loci<0 || nbori>cell_imax || locj<0 || nborj>cell_jmax ){
     if (loci<0){ //using 1st layer of ghost cells to the left (-i case)
-      loc_state = mesh->left_cells[j]; //TODO
+      loc_state = mesh->GetGhostCellVarVec(0,locj,2); //i set to 0 for 1st layer
       nbor_state = fieldij(field,nbori,nborj,cell_imax);
     }
     else if (nbori>cell_imax){ //using 1st layer of ghost cells to the right (+i domain)
       loc_state = fieldij(field,loci,locj,cell_imax);
-      nbor_state = mesh->right_cells[j]; //TODO
+      nbor_state = mesh->GetGhostCellVarVec(0,nborj,3); //i set to 0 for 1st layer
       
     }
     else if (locj<0){ //using 1st layer of ghost cells to the btm (-j case)
-      loc_state = mesh->btm_cells[i];
+      loc_state = mesh->GetGhostCellVarVec(loci,0,1); //j set to 0 for 1st layer
       nbor_state = fieldij(field,nbori,nborj,cell_imax);
 
     }
 
     else { //using 1st layer of ghost cells to the top (+j case)
       loc_state = fieldij(field,loci,locj,cell_imax);
-      nbor_state = mesh->top_cells[j]; //TODO
+      nbor_state = mesh->GetGhostCellVarVec(nbori,0,0); //j set to 0 for 1st layer
 
     }
   }
 
   else { //normal case (no use of ghost cells)
-    array<double,4> loc_state = fieldij(field,loci,locj,cell_imax);
-    array<double,4> nbor_state = fieldij(field,nbori,nborj,cell_imax);
+    loc_state = fieldij(field,loci,locj,cell_imax);
+    nbor_state = fieldij(field,nbori,nborj,cell_imax);
   }
   array<double,4> flux; //total flux
   //[[maybe_unused]] array<double,4> flux_rtstate; //right state flux (for upwinding in +c wave speed) -- VanLeer
@@ -130,8 +147,10 @@ array<double,4> EulerBASE::ComputeSpatialFlux_UPWIND1stOrder(vector<array<double
 }
 
 //-----------------------------------------------------------
-array<double,4> EulerBASE::ComputeSpatialFlux_UPWIND2ndOrder(vector<array<double,4>>* field,int loci,int locj,int nbori,int nborj){}
-//-----------------------------------------------------------
+array<double,4> EulerBASE::ComputeSpatialFlux_UPWIND2ndOrder([[maybe_unused]]vector<array<double,4>>* field,[[maybe_unused]]int loci,[[maybe_unused]]int locj,[[maybe_unused]]int nbori,[[maybe_unused]]int nborj){
+  array<double,4> res; 
+  return res;
+}
 
 //-----------------------------------------------------------
 double EulerBASE::ComputeMachNumber(array<double,4> &sols){
@@ -1250,8 +1269,6 @@ void Euler2D::ComputeResidual(vector<array<double,4>>* &resid,vector<array<doubl
   array<double,4> flux_right,flux_left,flux_top,flux_btm;
   double area_right,area_left,area_btm,area_top;
   array<double,4> res;
-  array<double,4> field_loc;
-  array<double,4> field_rnbor,field_lnbor,field_topnbor,field_btmnbor;
 
   //normal residual computation (no source term)
   for (int j=0;j<cell_jmax;j++){
@@ -1272,7 +1289,7 @@ void Euler2D::ComputeResidual(vector<array<double,4>>* &resid,vector<array<doubl
         flux_top = ComputeSpatialFlux_UPWIND2ndOrder(field,i,j,i,j+1);
         flux_btm = ComputeSpatialFlux_UPWIND2ndOrder(field,i,j-1,i,j);
       }
-      else {} //error handling
+      else {} //TODO:error handling
 
       //area evaluation
       area_right = mesh->GetInteriorCellArea(i,j,3);
@@ -1326,7 +1343,7 @@ void Euler2DMMS::ManufacturedPrimitiveSols(vector<array<double,4>>* &field,Space
   vector<double> cell_center_xcoords(mesh->cellnumber);
   vector<double> cell_center_ycoords(mesh->cellnumber);
 
-  sols->ComputeCellCenteredCoordinate(mesh->xcoords,mesh->ycoords,cell_center_xcoords,cell_center_ycoords,cell_imax);
+  sols->ComputeInteriorCellCenteredCoordinate(mesh->xcoords,mesh->ycoords,cell_center_xcoords,cell_center_ycoords,cell_imax);
 
   //int cell_imax = imax - 1; //last cell index in i-row
   //int cell_jmax = jmax - 1; //last cell index in j-row
@@ -1410,43 +1427,43 @@ double Euler2DMMS::YMomentumSourceTerm(double x,double y){
 //-----------------------------------------------------------
 double Euler2DMMS::EnergySourceTerm(double x,double y){
 
-  double gamma = GetGamma();
+  double Gamma = GetGamma();
   double source_term = 
 (uvel0 + uvely*cos((3.0*Pi*y)/(5.0*L)) + uvelx*sin((3.0*Pi*x)/(2.0*L)))*
     ((-2.0*Pi*pressx*sin((2.0*Pi*x)/L))/L + (rho0 + rhoy*cos((Pi*y)/(2.0*L)) + rhox*sin((Pi*x)/L))*
-       ((-2.0*Pi*pressx*sin((2.0*Pi*x)/L))/((-1.0 + gamma)*L*(rho0 + rhoy*cos((Pi*y)/(2.0*L)) + rhox*sin((Pi*x)/L))) + 
+       ((-2.0*Pi*pressx*sin((2.0*Pi*x)/L))/((-1.0 + Gamma)*L*(rho0 + rhoy*cos((Pi*y)/(2.0*L)) + rhox*sin((Pi*x)/L))) + 
          ((3.0*Pi*uvelx*cos((3.0*Pi*x)/(2.0*L))*(uvel0 + uvely*cos((3.0*Pi*y)/(5.0*L)) + uvelx*sin((3.0*Pi*x)/(2.0*L))))/L - 
             (Pi*vvelx*sin((Pi*x)/(2.0*L))*(vvel0 + vvelx*cos((Pi*x)/(2.0*L)) + vvely*sin((2.0*Pi*y)/(3.0*L))))/L)/2.0 - 
          (Pi*rhox*cos((Pi*x)/L)*(press0 + pressx*cos((2.0*Pi*x)/L) + pressy*sin((Pi*y)/L)))/
-          ((-1.0 + gamma)*L*pow(rho0 + rhoy*cos((Pi*y)/(2.0*L)) + rhox*sin((Pi*x)/L),2.0))) + 
+          ((-1.0 + Gamma)*L*pow(rho0 + rhoy*cos((Pi*y)/(2.0*L)) + rhox*sin((Pi*x)/L),2.0))) + 
       (Pi*rhox*cos((Pi*x)/L)*((pow(wvel0,2.0) + pow(uvel0 + uvely*cos((3.0*Pi*y)/(5.0*L)) + uvelx*sin((3.0*Pi*x)/(2.0*L)),2.0) + 
               pow(vvel0 + vvelx*cos((Pi*x)/(2.0*L)) + vvely*sin((2.0*Pi*y)/(3.0*L)),2.0))/2.0 + 
            (press0 + pressx*cos((2.0*Pi*x)/L) + pressy*sin((Pi*y)/L))/
-            ((-1.0 + gamma)*(rho0 + rhoy*cos((Pi*y)/(2.0*L)) + rhox*sin((Pi*x)/L)))))/L) + 
+            ((-1.0 + Gamma)*(rho0 + rhoy*cos((Pi*y)/(2.0*L)) + rhox*sin((Pi*x)/L)))))/L) + 
    (3.0*Pi*uvelx*cos((3.0*Pi*x)/(2.0*L))*(press0 + pressx*cos((2.0*Pi*x)/L) + pressy*sin((Pi*y)/L) + 
         (rho0 + rhoy*cos((Pi*y)/(2.0*L)) + rhox*sin((Pi*x)/L))*
          ((pow(wvel0,2.0) + pow(uvel0 + uvely*cos((3.0*Pi*y)/(5.0*L)) + uvelx*sin((3.0*Pi*x)/(2.0*L)),2.0) + 
               pow(vvel0 + vvelx*cos((Pi*x)/(2.0*L)) + vvely*sin((2.0*Pi*y)/(3.0*L)),2.0))/2.0 + 
            (press0 + pressx*cos((2.0*Pi*x)/L) + pressy*sin((Pi*y)/L))/
-            ((-1.0 + gamma)*(rho0 + rhoy*cos((Pi*y)/(2.0*L)) + rhox*sin((Pi*x)/L))))))/(2.0*L) + 
+            ((-1.0 + Gamma)*(rho0 + rhoy*cos((Pi*y)/(2.0*L)) + rhox*sin((Pi*x)/L))))))/(2.0*L) + 
    (2.0*Pi*vvely*cos((2.0*Pi*y)/(3.0*L))*(press0 + pressx*cos((2.0*Pi*x)/L) + pressy*sin((Pi*y)/L) + 
         (rho0 + rhoy*cos((Pi*y)/(2.0*L)) + rhox*sin((Pi*x)/L))*
          ((pow(wvel0,2.0) + pow(uvel0 + uvely*cos((3.0*Pi*y)/(5.0*L)) + uvelx*sin((3.0*Pi*x)/(2.0*L)),2.0) + 
               pow(vvel0 + vvelx*cos((Pi*x)/(2.0*L)) + vvely*sin((2.0*Pi*y)/(3.0*L)),2.0))/2.0 + 
            (press0 + pressx*cos((2.0*Pi*x)/L) + pressy*sin((Pi*y)/L))/
-            ((-1.0 + gamma)*(rho0 + rhoy*cos((Pi*y)/(2.0*L)) + rhox*sin((Pi*x)/L))))))/(3.0*L) + 
+            ((-1.0 + Gamma)*(rho0 + rhoy*cos((Pi*y)/(2.0*L)) + rhox*sin((Pi*x)/L))))))/(3.0*L) + 
    (vvel0 + vvelx*cos((Pi*x)/(2.0*L)) + vvely*sin((2.0*Pi*y)/(3.0*L)))*
     ((Pi*pressy*cos((Pi*y)/L))/L - (Pi*rhoy*sin((Pi*y)/(2.0*L))*
          ((pow(wvel0,2.0) + pow(uvel0 + uvely*cos((3.0*Pi*y)/(5.0*L)) + uvelx*sin((3.0*Pi*x)/(2.0*L)),2.0) + 
               pow(vvel0 + vvelx*cos((Pi*x)/(2.0*L)) + vvely*sin((2.0*Pi*y)/(3.0*L)),2.0))/2.0 + 
            (press0 + pressx*cos((2.0*Pi*x)/L) + pressy*sin((Pi*y)/L))/
-            ((-1.0 + gamma)*(rho0 + rhoy*cos((Pi*y)/(2.0*L)) + rhox*sin((Pi*x)/L)))))/(2.0*L) + 
+            ((-1.0 + Gamma)*(rho0 + rhoy*cos((Pi*y)/(2.0*L)) + rhox*sin((Pi*x)/L)))))/(2.0*L) + 
       (rho0 + rhoy*cos((Pi*y)/(2.0*L)) + rhox*sin((Pi*x)/L))*
-       ((Pi*pressy*cos((Pi*y)/L))/((-1.0 + gamma)*L*(rho0 + rhoy*cos((Pi*y)/(2.0*L)) + rhox*sin((Pi*x)/L))) + 
+       ((Pi*pressy*cos((Pi*y)/L))/((-1.0 + Gamma)*L*(rho0 + rhoy*cos((Pi*y)/(2.0*L)) + rhox*sin((Pi*x)/L))) + 
          ((-6.0*Pi*uvely*(uvel0 + uvely*cos((3.0*Pi*y)/(5.0*L)) + uvelx*sin((3.0*Pi*x)/(2.0*L)))*sin((3.0*Pi*y)/(5.0*L)))/(5.0*L) + 
             (4*Pi*vvely*cos((2.0*Pi*y)/(3.0*L))*(vvel0 + vvelx*cos((Pi*x)/(2.0*L)) + vvely*sin((2.0*Pi*y)/(3.0*L))))/(3.0*L))/2.0 + 
          (Pi*rhoy*sin((Pi*y)/(2.0*L))*(press0 + pressx*cos((2.0*Pi*x)/L) + pressy*sin((Pi*y)/L)))/
-          (2.0*(-1.0 + gamma)*L*pow(rho0 + rhoy*cos((Pi*y)/(2.0*L)) + rhox*sin((Pi*x)/L),2.0))));
+          (2.0*(-1.0 + Gamma)*L*pow(rho0 + rhoy*cos((Pi*y)/(2.0*L)) + rhox*sin((Pi*x)/L),2.0))));
 
 
   return source_term;
@@ -1464,7 +1481,7 @@ void Euler2DMMS::EvalSourceTerms(/*vector<array<double,4>>* &mms_source,*/SpaceV
   vector<double> cell_center_xcoords(mesh->cellnumber);
   vector<double> cell_center_ycoords(mesh->cellnumber);
 
-  sols->ComputeCellCenteredCoordinate(mesh->xcoords,mesh->ycoords,cell_center_xcoords,cell_center_ycoords,cell_imax);
+  sols->ComputeInteriorCellCenteredCoordinate(mesh->xcoords,mesh->ycoords,cell_center_xcoords,cell_center_ycoords,cell_imax);
 
   //Evaluating Source Terms
   
@@ -1489,6 +1506,84 @@ void Euler2DMMS::EvalSourceTerms(/*vector<array<double,4>>* &mms_source,*/SpaceV
     }
   }
 
+}
+
+//-----------------------------------------------------------
+void Euler2DMMS::Enforce2DBoundaryConditions(vector<array<double,4>>* &field){
+
+  //boundary id - 0:Inflow, 1:Outflow, 2:Slip-wall
+  //top boundary
+  for (int i=0;i<cell_imax;i++){
+    if (top_cond==0)
+      ApplyMSInflow(0);
+    else if (top_cond==1)
+      ApplyOutflow(field,mesh,0);
+    else if (top_cond==2)
+      ApplySlipWall(field,mesh,0);
+  }
+
+  //btm boundary 
+  for (int i=0;i<cell_imax;i++){
+    if (top_cond==0)
+      ApplyMSInflow(1);
+    else if (top_cond==1)
+      ApplyOutflow(field,mesh,1);
+    else if (top_cond==2)
+      ApplySlipWall(field,mesh,1);
+  }
+
+  //left boundary
+  for (int i=0;i<cell_imax;i++){
+    if (top_cond==0)
+      ApplyMSInflow(2);
+    else if (top_cond==1)
+      ApplyOutflow(field,mesh,2);
+    else if (top_cond==2)
+      ApplySlipWall(field,mesh,2);
+  }
+
+  //right boundary
+  for (int i=0;i<cell_imax;i++){
+    if (top_cond==0)
+      ApplyMSInflow(3);
+    else if (top_cond==1)
+      ApplyOutflow(field,mesh,3);
+    else if (top_cond==2)
+      ApplySlipWall(field,mesh,3);
+  }
+
+  return;
+
+}
+
+//-----------------------------------------------------------
+void Euler2DMMS::ApplyMSInflow(int side){
+
+  //NOTE: Evaluating manufactured sol. at cell-centered coord of ghost cell
+  double x,y;
+  //top ghost cells
+  if (side=0){
+
+  }
+  //btm ghost cells
+  else if (side==1){
+    for (int m=0;m<(int)mesh->btm_cells.size();m++){ 
+      x = mesh->btm_cellcenter_coords[m][0];
+      y = mesh->btm_cellcenter_coords[m][1];
+
+      //Rho
+      mesh->btm_cells[m][0] = rho0 + rhoy*cos((Pi*y)/(2.0*L)) + rhox*sin((Pi*x)/L);
+      //U
+      mesh->btm_cells[m][1] = uvel0 + uvely*cos((3.0*Pi*y)/(5.0*L)) + uvelx*sin((3.0*Pi*x)/(2.0*L)); 
+      //V
+      mesh->btm_cells[m][2] = vvel0 + vvelx*cos((Pi*x)/(2.0*L)) + vvely*sin((2.0*Pi*y)/(3.0*L));
+      //P
+      mesh->btm_cells[m][3] = press0 + pressx*cos((2.0*Pi*x)/L) + pressy*sin((Pi*y)/L);
+ 
+    }
+  }
+        
+  return;
 }
 
 //-----------------------------------------------------------

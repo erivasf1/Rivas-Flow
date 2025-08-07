@@ -29,6 +29,11 @@ double MeshGenBASE::GetCellVolume(int &, int &){
   return 0.0;
 }
 //-----------------------------------------------------------
+array<double,4> MeshGenBASE::GetGhostCellVarVec(int,int,int){
+  return {0.0,0.0,0.0,0.0};
+}
+
+//-----------------------------------------------------------
 array<double,2> MeshGenBASE::ComputeOutwardUnitVector(int,int,int){
   array<double,2> zero{0.0,0.0};
   return zero; //return a zero array by default
@@ -168,7 +173,8 @@ void MeshGen2D::ReadMeshFile(){
   //skipping first line for now
   //2nd line: 1st int refers to imax and 2nd int refers to jmax
 
-  cellnumber = (Nx-1) * (Ny-1); //1 more faces than each dir.
+  cell_imax = Nx-1; cell_jmax = Ny-1;
+  cellnumber = Nx*Ny;
 
 }
 //-----------------------------------------------------------
@@ -240,6 +246,88 @@ array<array<double,4>,2> MeshGen2D::GetCellCoords(int &i,int &j){
 }
 
 //-----------------------------------------------------------
+array<array<double,4>,2> MeshGen2D::GetGhostCellCoords(int &i,int &j, int tag){
+
+  //NOTE: 1st layer of ghost cell coords are not the same as the 1st/last layer of interior cell coords!
+  double x1,x2,x3,x4;
+  double y1,y2,y3,y4; 
+  int cell_id = i + (j*Nx);
+  int pt_id1,pt_id2,pt_id3,pt_id4;
+  
+  array<array<double,4>,2> cell_coords;
+
+  if (tag==0){ //top boundary ghost cells case
+    //note:j=0 spec. uses interior cell coords
+    pt_id1 = (j==0) ? i + ((Nx-1)*Nx) : i + (j-1)*Nx;
+    pt_id2 = (j==0) ? (i+1) + ((Nx-1)*Nx) : (i+1) + (j-1)*Nx;
+    pt_id3 = i + (j*Nx); pt_id4 = (i+1) + (j*Nx);
+
+    x1 = (j==0) ? xcoords[pt_id1] : top_xcoords[pt_id1];
+    y1 = (j==0) ? ycoords[pt_id1] : top_ycoords[pt_id1];
+    x2 = (j==0) ? xcoords[pt_id2] : top_xcoords[pt_id2];
+    y2 = (j==0) ? ycoords[pt_id2] : top_ycoords[pt_id2];
+    x3 = top_xcoords[pt_id3];y3 = top_ycoords[pt_id3];
+    x4 = top_xcoords[pt_id4];y4 = top_ycoords[pt_id4];
+  }
+
+  else if (tag==1){ //btm boundary ghost cells case
+    //note:j=0 spec. uses interior cell coords
+    pt_id1 = (j==0) ? i + (j*Nx) : i + (j-1)*Nx;
+    pt_id2 = (j==0) ? (i+1) + (j*Nx) : (i+1) + (j-1)*Nx;
+    pt_id3 = i + (j*Nx); pt_id4 = (i+1) + (j*Nx);
+
+    x1 = (j==0) ? xcoords[pt_id1] : btm_xcoords[pt_id1];
+    y1 = (j==0) ? ycoords[pt_id1] : btm_ycoords[pt_id1];
+    x2 = (j==0) ? xcoords[pt_id2] : btm_xcoords[pt_id2];
+    y2 = (j==0) ? ycoords[pt_id2] : btm_ycoords[pt_id2];
+    x3 = btm_xcoords[pt_id3];y3 = btm_ycoords[pt_id3];
+    x4 = btm_xcoords[pt_id4];y4 = btm_ycoords[pt_id4];
+
+  }
+  else if (tag==2){ //left boundary ghost cells case
+    //note: i=0 spec. uses interior cell coords
+    pt_id1 = (i==0) ? i + (j*Nx) : j + ((i-1)*Ny);
+    pt_id2 = (i==0) ? i + ((j+1)*Nx) : (j+1) + ((i-1)*Ny);
+    pt_id3 = j + (i*Ny); pt_id4 = (j+1) + (i*Ny);
+
+    x1 = (i==0) ? xcoords[pt_id1] : left_xcoords[pt_id1];
+    y1 = (i==0) ? ycoords[pt_id1] : left_ycoords[pt_id1];
+    x2 = (i==0) ? xcoords[pt_id2] : left_xcoords[pt_id2];
+    y2 = (i==0) ? ycoords[pt_id2] : left_ycoords[pt_id2];
+    x3 = left_xcoords[pt_id3]; y3 = left_ycoords[pt_id3];
+    x4 = left_xcoords[pt_id4]; y4 = left_ycoords[pt_id4];
+
+  }
+
+  else if (tag==3){ //right boundary ghost cells case
+
+    pt_id1 = (i==0) ? (Nx-1) + (j*Nx) : j + ((i-1)*Ny);
+    pt_id2 = (i==0) ? (Nx-1) + ((j+1)*Nx) : (j+1) + ((i-1)*Ny);
+    pt_id3 = j + (i*Ny); pt_id4 = (j+1) + (i*Ny);
+
+    x1 = (i==0) ? xcoords[pt_id1] : right_xcoords[pt_id1];
+    y1 = (i==0) ? ycoords[pt_id1] : right_ycoords[pt_id1];
+    x2 = (i==0) ? xcoords[pt_id2] : right_xcoords[pt_id2];
+    y2 = (i==0) ? ycoords[pt_id2] : right_ycoords[pt_id2];
+    x3 = right_xcoords[pt_id3]; y3 = right_ycoords[pt_id3];
+    x4 = right_xcoords[pt_id4]; y4 = right_ycoords[pt_id4];
+
+  }
+
+  else //error handling
+    cerr<<"Error: Unregonized tag boundary spec. in retrieving ghost cells!"<<endl;
+  
+  cell_coords[0][0] = x1;cell_coords[0][1] = x2; 
+  cell_coords[0][2] = x3; cell_coords[0][3] = x4;
+
+  cell_coords[1][0] = y1;cell_coords[1][1] = y2; 
+  cell_coords[1][2] = y3; cell_coords[1][3] = y4;
+
+  return cell_coords;
+
+}
+
+//-----------------------------------------------------------
 void MeshGen2D::GenerateGhostCells(int left_id,int right_id,int btm_id,int top_id){
 
   // Creating nodes
@@ -253,12 +341,18 @@ void MeshGen2D::GenerateGhostCells(int left_id,int right_id,int btm_id,int top_i
   (right_id == 1) ? ReflectGhostCoords(3) : ExtendGhostCoords(3);
   
   // Creating cells
-  vector<array<double,4>>[Nx-1] ghost_cellsx;
-  vector<array<double,4>>[Ny-1] ghost_cellsy;
+  vector<array<double,4>> ghost_cellsx(Nx-1);
+  vector<array<double,4>> ghost_cellsy(Nx-1);
  
   right_cells = ghost_cellsx;left_cells = ghost_cellsx;
   btm_cells = ghost_cellsy; top_cells = ghost_cellsy;
 
+  //Setting the size for the vectors that store the cell-centers of the ghost cells
+  vector<array<double,2>> cell_centers(Nx-1);
+  right_cellcenter_coords = cell_centers; 
+  left_cellcenter_coords = cell_centers; 
+  top_cellcenter_coords = cell_centers; 
+  btm_cellcenter_coords = cell_centers; 
 
 
   return;
@@ -703,6 +797,52 @@ array<double,2> MeshGen2D::ComputeOutwardUnitVector(int i,int j,int side){
   array<double,2> normals{nx,ny};
   return normals;
 
+}
+
+//-----------------------------------------------------------
+array<double,4> MeshGen2D::GetGhostCellVarVec(int i,int j,int side){
+  //NOTE: i=0 refers to 1st LAYER of ghost cells on both left and right sides && j=0 refers to 1st LAYER Of ghost cells on both top and btm sides
+
+  array<double,4> ans;
+  int index;
+  if (side==0){ //top side
+    index = i + (j*Nx);
+    ans = top_cells[index];  
+  }
+  else if (side==1){ //btm side
+    index = i + (j*Nx);
+    ans = btm_cells[index];
+  }
+  else if (side==2){ //left side
+    index = j + (i*Ny);
+    ans = right_cells[index];
+  }
+  else if (side==3){ //right side
+    index = j + (i*Ny);
+    ans = right_cells[index];
+  }
+  else{ //error handling
+    cerr<<"Invalid side spec for retrieving ghost cells!"<<endl;
+  }
+
+  return ans;
+}
+
+//-----------------------------------------------------------
+void MeshGen2D::AssignGhostCellVarVec(int i,int j,int side,array<double,4> &res){
+//TODO
+  if (side==0) //top wall
+    top_cells[i+(j*Nx)] = res;
+  else if (side==1) //btm wall
+    btm_cells[i+(j*Nx)] = res;
+  else if (side==2) //left wall
+    left_cells[j+(i*Ny)] = res;
+  else if (side==3) //right wall
+    right_cells[j+(i*Ny)] = res;
+  else
+    cerr<<"Invalid side ID when trying to assign vec. to ghost cells"<<endl; 
+
+  return;
 }
 
 //-----------------------------------------------------------

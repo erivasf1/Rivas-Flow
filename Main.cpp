@@ -262,26 +262,6 @@ int main() {
   Emma.AllOutputPrimitiveVariables(field_test,file,false,0,xcoords,ycoords,cellnum,mesh_2d->imax,mesh_2d->jmax);
   return 0;
   */ 
-  //! COMPUTING MANUFACTURED SOLUTION AND SOURCE TERMS
-  if (scenario == 3){
-    string mms_sol_filename = "ManufacturedSols.dat";
-    string mms_source_filename = "SourceTerms.dat";
-    euler_test->ManufacturedPrimitiveSols(field_ms,sols_test); //!< computing manufactured sol.
-    euler_test->EvalSourceTerms(sols_test); //!< computing manufactured source terms
-    error->OutputPrimitiveVariables(field_ms,mms_sol_filename,false,0,mesh->xcoords,mesh->ycoords,mesh->cellnumber,mesh->Nx,mesh->Ny);
-    error->OutputManufacturedSourceTerms(field_ms_source,mms_source_filename,false,0,mesh->xcoords,mesh->ycoords,mesh->cellnumber,mesh->Nx,mesh->Ny);
-
-    // 0 = extend ghost coords; 1 = reflect ghost coords; 
-    //int left_id = 0;int right_id = 0;int top_id = 1;int btm_id = 1;
-    //mesh->GenerateGhostCells(left_id,right_id,btm_id,top_id);
-    //int test_i=6; int test_j=0;
-    //array<double,2> unit_vec = mesh->ComputeOutwardUnitVector(test_i,test_j,3);
-    //Tools::print("unit_vec_comp of (%d,%d) is : (%f,%f)\n",test_i,test_j,unit_vec[0],unit_vec[1]);
- 
-    delete euler_test;
-    delete mesh;
-  }
-  return 0;
 
   //! SETTING INITIAL CONDITIONS
   //Tools::print("At initial conditions\n");
@@ -304,18 +284,30 @@ int main() {
     sols->ComputeCellAveragedSol(exact_faces,exact_sols,xcoords);
   }
 
-
   //Debug: Temporarily set initial conditions to exact solutions
   //Field = ExactField;
   //Debug: printing initial conditions w/ no BCs
   const char* filename = "InitialSolutions.txt";
   sols->OutputPrimitiveVariables(field,euler,filename);
 
-
   // SETTING BOUNDARY CONDITIONS
-  euler_test->SetupBoundaryConditions(); //set includes generating the ghost cells
+  euler_test->Setup2DBoundaryConditions(); //TODO: Get rid of this & use GenerateGhostCells + Enforce2DBoundaryConditions
 
   time->SolutionLimiter(field);
+
+  //! COMPUTING MANUFACTURED SOLUTION AND SOURCE TERMS (MMS ONLY)
+  if (scenario == 3){
+    string mms_sol_filename = "ManufacturedSols.dat";
+    string mms_source_filename = "SourceTerms.dat";
+    euler_test->ManufacturedPrimitiveSols(field_ms,sols_test); //!< computing manufactured sol.
+    euler_test->EvalSourceTerms(sols_test); //!< computing manufactured source terms
+    error->OutputPrimitiveVariables(field_ms,mms_sol_filename,false,0,mesh->xcoords,mesh->ycoords,mesh->cellnumber,mesh->Nx,mesh->Ny);
+    error->OutputManufacturedSourceTerms(field_ms_source,mms_source_filename,false,0,mesh->xcoords,mesh->ycoords,mesh->cellnumber,mesh->Nx,mesh->Ny);
+
+    delete euler_test;
+    delete mesh;
+  }
+  return 0;
 
   //!< Outputting initial solutions with BC's
   const char* filename2 = "InitSolutionswBCs.txt";
@@ -343,7 +335,7 @@ int main() {
   string it,name; //used for outputting file name
   int iter; //iteration number
 
-  //Opening File that stores residuals
+  //Opening file that stores residuals
   ofstream myresids;
   myresids.open("SolResids.dat");
   myresids<<"variables= \"Iteration num.\" \"Continuity\" \"Momentum\"  \"Energy\""<<endl;
