@@ -1563,6 +1563,20 @@ void Euler2DMMS::ApplyMSInflow(int side){
   double x,y;
   //top ghost cells
   if (side=0){
+    for (int m=0;m<(int)mesh->top_cells.size();m++){ 
+      x = mesh->top_cellcenter_coords[m][0];
+      y = mesh->top_cellcenter_coords[m][1];
+
+      //Rho
+      mesh->top_cells[m][0] = rho0 + rhoy*cos((Pi*y)/(2.0*L)) + rhox*sin((Pi*x)/L);
+      //U
+      mesh->top_cells[m][1] = uvel0 + uvely*cos((3.0*Pi*y)/(5.0*L)) + uvelx*sin((3.0*Pi*x)/(2.0*L)); 
+      //V
+      mesh->top_cells[m][2] = vvel0 + vvelx*cos((Pi*x)/(2.0*L)) + vvely*sin((2.0*Pi*y)/(3.0*L));
+      //P
+      mesh->top_cells[m][3] = press0 + pressx*cos((2.0*Pi*x)/L) + pressy*sin((Pi*y)/L);
+ 
+    }
 
   }
   //btm ghost cells
@@ -1581,6 +1595,45 @@ void Euler2DMMS::ApplyMSInflow(int side){
       mesh->btm_cells[m][3] = press0 + pressx*cos((2.0*Pi*x)/L) + pressy*sin((Pi*y)/L);
  
     }
+  }
+  //left ghost cells
+  else if (side==1){
+    for (int m=0;m<(int)mesh->left_cells.size();m++){ 
+      x = mesh->left_cellcenter_coords[m][0];
+      y = mesh->left_cellcenter_coords[m][1];
+
+      //Rho
+      mesh->left_cells[m][0] = rho0 + rhoy*cos((Pi*y)/(2.0*L)) + rhox*sin((Pi*x)/L);
+      //U
+      mesh->left_cells[m][1] = uvel0 + uvely*cos((3.0*Pi*y)/(5.0*L)) + uvelx*sin((3.0*Pi*x)/(2.0*L)); 
+      //V
+      mesh->left_cells[m][2] = vvel0 + vvelx*cos((Pi*x)/(2.0*L)) + vvely*sin((2.0*Pi*y)/(3.0*L));
+      //P
+      mesh->left_cells[m][3] = press0 + pressx*cos((2.0*Pi*x)/L) + pressy*sin((Pi*y)/L);
+ 
+    }
+  }
+  //right ghost cells
+  else if (side==1){
+    for (int m=0;m<(int)mesh->right_cells.size();m++){ 
+      x = mesh->right_cellcenter_coords[m][0];
+      y = mesh->right_cellcenter_coords[m][1];
+
+      //Rho
+      mesh->right_cells[m][0] = rho0 + rhoy*cos((Pi*y)/(2.0*L)) + rhox*sin((Pi*x)/L);
+      //U
+      mesh->right_cells[m][1] = uvel0 + uvely*cos((3.0*Pi*y)/(5.0*L)) + uvelx*sin((3.0*Pi*x)/(2.0*L)); 
+      //V
+      mesh->right_cells[m][2] = vvel0 + vvelx*cos((Pi*x)/(2.0*L)) + vvely*sin((2.0*Pi*y)/(3.0*L));
+      //P
+      mesh->right_cells[m][3] = press0 + pressx*cos((2.0*Pi*x)/L) + pressy*sin((Pi*y)/L);
+ 
+    }
+  }
+  //error handling
+  else {
+    cerr<<"ERROR: Unrecognized side spec. for applying MS inflow!"<<endl;
+    return;
   }
         
   return;

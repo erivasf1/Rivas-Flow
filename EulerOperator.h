@@ -40,8 +40,8 @@ class EulerBASE {
   virtual void SetInitialConditions(vector<array<double,4>>* &field); //Complete (tested)
   //TODO:Boundary Conditions -- refer to this paper:https://arc-aiaa-org.ezproxy.lib.vt.edu/doi/10.2514/3.11983  
   void Setup2DBoundaryConditions(); 
-  virtual void Enforce2DBoundaryConditions(vector<array<double,4>>* &field);
-  virtual void ApplyInflow(vector<array<double,4>>* &field,MeshGenBASE* &mesh,int side); //MMS evaluates MS of ghost cells & 30 deg. inlet uses Mach number and T as inlet conditions
+  virtual void Enforce2DBoundaryConditions(vector<array<double,4>>* &field); //MS uses unique inlet cond.
+  virtual void ApplyInflow(vector<array<double,4>>* &field,MeshGenBASE* &mesh,int side); //30 deg. inlet uses Mach number and T as inlet conditions
   void ApplyOutflow(vector<array<double,4>>* &field,MeshGenBASE* &mesh,int side);
   void ApplySlipWall(vector<array<double,4>>* &field,MeshGenBASE* &mesh,int side);
   //ComputeRightBoundaryCondition -- outflow
