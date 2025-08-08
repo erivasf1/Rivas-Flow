@@ -361,7 +361,7 @@ void Output::OutputManufacturedSourceTerms(vector<array<double,4>>* &field,strin
   return;
 }
 //-----------------------------------------------------------
-void Output::OutputGhostCells(string filename,vector<double> &xcoords,vector<double> &ycoords,int &Nx,int &Ny){
+void Output::OutputGhostCells(string filename,vector<double> &xcoords,vector<double> &ycoords,int Nx,int Ny){
 
   std::ofstream myfile(filename); //true for append
   //myfile.open(filename);

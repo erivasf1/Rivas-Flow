@@ -297,12 +297,12 @@ int main() {
   const char* left_ghost_coords = "LeftGhostCoords.dat";
   const char* top_ghost_coords = "TopGhostCoords.dat";
   const char* btm_ghost_coords = "BtmGhostCoords.dat";
-  error->OutputGhostCells(right_ghost_coords,mesh->right_xcoords,mesh->right_ycoords,mesh->Nx,mesh->Ny);
-  error->OutputGhostCells(left_ghost_coords,mesh->left_xcoords,mesh->left_ycoords,mesh->Nx,mesh->Ny);
-  error->OutputGhostCells(top_ghost_coords,mesh->top_xcoords,mesh->top_ycoords,mesh->Nx,mesh->Ny);
-  error->OutputGhostCells(btm_ghost_coords,mesh->btm_xcoords,mesh->btm_ycoords,mesh->Nx,mesh->Ny);
+  error->OutputGhostCells(right_ghost_coords,mesh->right_xcoords,mesh->right_ycoords,mesh->Ny,2);
+  error->OutputGhostCells(left_ghost_coords,mesh->left_xcoords,mesh->left_ycoords,mesh->Ny,2);
+  error->OutputGhostCells(top_ghost_coords,mesh->top_xcoords,mesh->top_ycoords,mesh->Nx,2);
+  error->OutputGhostCells(btm_ghost_coords,mesh->btm_xcoords,mesh->btm_ycoords,mesh->Nx,2);
   //euler_test->Setup2DBoundaryConditions(field_test); //TODO: Get rid of this & use GenerateGhostCells + Enforce2DBoundaryConditions
-  delete error; delete mesh; delete euler;
+  delete mesh; delete euler_test;
   return 0;
 
   time->SolutionLimiter(field);

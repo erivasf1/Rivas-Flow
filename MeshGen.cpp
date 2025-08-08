@@ -557,13 +557,15 @@ void MeshGen2D::ExtendGhostCoords(int tag){
       for (int i=0;i<Nx;i++){
         //extracting pts
         pt_id1 = i + (j*Nx); pt_id2 = i + (j+1)*Nx; 
+        //pt_id1 = i;
         x1 = xcoords[pt_id1];x2 = xcoords[pt_id2];
         y1 = ycoords[pt_id1];y2 = ycoords[pt_id2];
         //computing x+y diffs.
-        dx = x2-x1;
-        dy = y2-y1;
+        dx = x1-x2;
+        dy = y1-y2;
         //computing ghost cell coord.
-        x = x1 - dx; y = y1 - dy;
+        x = (j==0) ? x1+dx : btm_xcoords[i]+dx; //@ 2nd layer, difference is taken about the ghost coord
+        y = (j==0) ? y1+dy : btm_ycoords[i]+dy;
         //saving ghost cell coords to list
         btm_xcoords.push_back(x); 
         btm_ycoords.push_back(y); 
@@ -573,17 +575,19 @@ void MeshGen2D::ExtendGhostCoords(int tag){
 
   //top boundary
   if (tag==1){
-    for (int j=Ny-1;j<Ny-3;j--){
+    for (int j=Ny-1;j>Ny-3;j--){
       for (int i=0;i<Nx;i++){
         //extracting pts
         pt_id1 = i + (j*Nx); pt_id2 = i + (j-1)*Nx; 
         x1 = xcoords[pt_id1];x2 = xcoords[pt_id2];
         y1 = ycoords[pt_id1];y2 = ycoords[pt_id2];
         //computing x+y diffs.
-        dx = x2-x1;
-        dy = y2-y1;
+        dx = x1-x2;
+        dy = y1-y2;
         //computing ghost cell coord.
-        x = x1 - dx; y = y1 - dy;
+        x = (j==Ny-1) ? x1+dx : top_xcoords[i]+dx;
+        y = (j==Ny-1) ? y1+dy : top_ycoords[i]+dy;
+        //x = x1 + dx; y = y1 + dy;
         //saving ghost cell coords to list
         top_xcoords.push_back(x); 
         top_ycoords.push_back(y); 
@@ -600,10 +604,12 @@ void MeshGen2D::ExtendGhostCoords(int tag){
         x1 = xcoords[pt_id1];x2 = xcoords[pt_id2];
         y1 = ycoords[pt_id1];y2 = ycoords[pt_id2];
         //computing x+y diffs.
-        dx = x2-x1;
-        dy = y2-y1;
+        dx = x1-x2;
+        dy = y1-y2;
         //computing ghost cell coord.
-        x = x1 - dx; y = y1 - dy;
+        x = (i==0) ? x1+dx : left_xcoords[j]+dx;
+        y = (i==0) ? y1+dy : left_ycoords[j]+dy;
+        //x = x1 + dx; y = y1 + dy;
         //saving ghost cell coords to list
         left_xcoords.push_back(x); 
         left_ycoords.push_back(y); 
@@ -613,17 +619,19 @@ void MeshGen2D::ExtendGhostCoords(int tag){
 
   //right boundary
   if (tag==3){
-    for (int i=Nx-1;i<Nx-3;i--){
+    for (int i=Nx-1;i>Nx-3;i--){
       for (int j=0;j<Ny;j++){
         //extracting pts
         pt_id1 = i + (j*Nx); pt_id2 = (i-1) + (j*Nx); 
         x1 = xcoords[pt_id1];x2 = xcoords[pt_id2];
         y1 = ycoords[pt_id1];y2 = ycoords[pt_id2];
         //computing x+y diffs.
-        dx = x2-x1;
-        dy = y2-y1;
+        dx = x1-x2;
+        dy = y1-y2;
         //computing ghost cell coord.
-        x = x1 - dx; y = y1 - dy;
+        x = (i==Nx-1) ? x1+dx : right_xcoords[j]+dx;
+        y = (i==Nx-1) ? y1+dy : right_ycoords[j]+dy;
+        //x = x1 + dx; y = y1 - dy;
         //saving ghost cell coords to list
         right_xcoords.push_back(x); 
         right_ycoords.push_back(y); 
