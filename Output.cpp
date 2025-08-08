@@ -366,26 +366,28 @@ void Output::OutputGhostCells(string filename,vector<double> &xcoords,vector<dou
   std::ofstream myfile(filename); //true for append
   //myfile.open(filename);
 
+
   if (!myfile){ //checking if file opened successfully
     cerr<<"Error: Could Not Open File "<<filename<<endl;
     return;
   }
 
-  //Structured and number of coords. spec.
-  myfile<<"1"<<endl;
-  myfile<<Nx<<"\t"<<Ny<<endl;
+  //Title
+  myfile<<"TITLE = \" 2D Structured Mesh \""<<endl;
+  myfile<<"VARIABLES = \"X\",\"Y\""<<endl;
+  myfile<<"ZONE I="<<Nx<<", "<<"J="<<Ny<<endl;
+  myfile<<"DATAPACKING=BLOCK"<<endl;
 
+  //Coords
   int count = 0;
-  // Writing Xcoords
-  for (int n=0;n<(int)xcoords.size();n++){
+  for (int n=0;n<(int)xcoords.size();n++){ //xcoords
     count++;
     myfile<<std::setw(15)<<xcoords[n];
     if (count % 4 == 0)
       myfile<<endl;
   }
 
-  // Writing Ycoords
-  for (int n=0;n<(int)ycoords.size();n++){
+  for (int n=0;n<(int)ycoords.size();n++){ //ycoords
     count++;
     myfile<<std::setw(15)<<ycoords[n];
     if (count % 4 == 0)
