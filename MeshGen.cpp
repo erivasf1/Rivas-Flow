@@ -332,13 +332,13 @@ void MeshGen2D::GenerateGhostCells(int left_id,int right_id,int btm_id,int top_i
 
   // Creating nodes
   //Bottom Boundary
-  (btm_id == 1) ? ReflectGhostCoords(0) : ExtendGhostCoords(0);
+  (btm_id == 0) ? ReflectGhostCoords(0) : ExtendGhostCoords(0);
   //Top Boundary
-  (top_id == 1) ? ReflectGhostCoords(1) : ExtendGhostCoords(1);
+  (top_id == 0) ? ReflectGhostCoords(1) : ExtendGhostCoords(1);
   //Left Boundary
-  (left_id == 1) ? ReflectGhostCoords(2) : ExtendGhostCoords(2);
+  (left_id == 0) ? ReflectGhostCoords(2) : ExtendGhostCoords(2);
   //Right Boundary
-  (right_id == 1) ? ReflectGhostCoords(3) : ExtendGhostCoords(3);
+  (right_id == 0) ? ReflectGhostCoords(3) : ExtendGhostCoords(3);
   
   // Creating cells
   vector<array<double,4>> ghost_cellsx(Nx-1);

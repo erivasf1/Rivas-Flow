@@ -14,6 +14,9 @@ class MeshGenBASE {
   int Nx,Ny,Nz;
   int cell_imax,cell_jmax;
 
+  vector<double> right_xcoords,left_xcoords,top_xcoords,btm_xcoords;
+  vector<double> right_ycoords,left_ycoords,top_ycoords,btm_ycoords;
+
   vector<array<double,4>> top_cells,btm_cells,right_cells,left_cells; //ghost cells sub-domains
 
   vector<array<double,2>> right_cellcenter_coords,left_cellcenter_coords,top_cellcenter_coords,btm_cellcenter_coords;
@@ -58,8 +61,6 @@ class MeshGenNozzle : public MeshGenBASE { //creates a uniform mesh (in x)
 
 class MeshGen2D : public MeshGenBASE { //reads in a non-uniform 2D mesh
  
-  vector<double> right_xcoords,left_xcoords,top_xcoords,btm_xcoords;
-  vector<double> right_ycoords,left_ycoords,top_ycoords,btm_ycoords;
 
    //vector<array<double,4>> top_cells[Nx-1],btm_cells[Nx-1],right_cells[Nx-1],left_cells[Nx-1]; //ghost cells sub-domains
 

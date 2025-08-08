@@ -62,7 +62,7 @@ int main() {
   vector<double> xcoords; //stores the coords of the cell NODES!!! (i.e. size of xcoords is cellnum+1)!
   vector<double> ycoords; //stores the coords of the cell NODES!!! (i.e. size of xcoords is cellnum+1)!
   double dx;
-  const char* meshfile = "Grids/CurvilinearGrids/curv2d257.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
+  const char* meshfile = "Grids/CurvilinearGrids/curv2d9.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
   //const char* meshfile = NULL;
 
   // Temporal Specifications
@@ -291,7 +291,18 @@ int main() {
   sols->OutputPrimitiveVariables(field,euler,filename);
 
   // SETTING BOUNDARY CONDITIONS
-  euler_test->Setup2DBoundaryConditions(); //TODO: Get rid of this & use GenerateGhostCells + Enforce2DBoundaryConditions
+  //debug ghost cell generation
+  mesh->GenerateGhostCells(1,1,1,1);
+  const char* right_ghost_coords = "RightGhostCoords.txt";
+  const char* left_ghost_coords = "LeftGhostCoords.txt";
+  const char* top_ghost_coords = "TopGhostCoords.txt";
+  const char* btm_ghost_coords = "BtmGhostCoords.txt";
+  error->OutputGhostCells(right_ghost_coords,mesh->right_xcoords,mesh->right_ycoords,mesh->Nx,mesh->Ny);
+  error->OutputGhostCells(left_ghost_coords,mesh->left_xcoords,mesh->left_ycoords,mesh->Nx,mesh->Ny);
+  error->OutputGhostCells(top_ghost_coords,mesh->top_xcoords,mesh->top_ycoords,mesh->Nx,mesh->Ny);
+  error->OutputGhostCells(btm_ghost_coords,mesh->btm_xcoords,mesh->btm_ycoords,mesh->Nx,mesh->Ny);
+  //euler_test->Setup2DBoundaryConditions(field_test); //TODO: Get rid of this & use GenerateGhostCells + Enforce2DBoundaryConditions
+  return 0;
 
   time->SolutionLimiter(field);
 

@@ -47,25 +47,22 @@ void EulerBASE::ManufacturedPrimitiveSols(vector<array<double,4>>* &,SpaceVariab
 }
 
 //-----------------------------------------------------------
-void EulerBASE::Setup2DBoundaryConditions(){
+void EulerBASE::Setup2DBoundaryConditions(vector<array<double,4>>* &field){
   //TODO: Should only include the GenerateGhostCells fcn. of MeshGen
   // & then initialize the ghost cells with a specified val.
   //cond: 0=Inflow, 1 = Outflow, 2 = Slip Wall
-  //id: 0 = reflect, 1 = extend
+  //id: 0 = reflect, 1 = extend (for now only using extend)
+  /*
   int btm_id = (btm_cond==0 || btm_cond==1) ? 1:0;
   int top_id = (top_cond==0 || top_cond==1) ? 1:0;
   int left_id = (left_cond==0 || left_cond==1) ? 1:0;
   int right_id = (right_cond==0 || right_cond==1) ? 1:0;
+  */
   
-  mesh->GenerateGhostCells(left_id,right_id,btm_id,top_id);
+  mesh->GenerateGhostCells(1,1,1,1);
 
-  //initializing ghost cells
-/*
-  else{
-    cerr<<"Unknown Boundary Condition applied to Right Section!"<<endl;
-    return; 
-  }
-*/
+  Enforce2DBoundaryConditions(field);
+
   
   return;
 
