@@ -7,9 +7,13 @@
 #include "ExactNozzle.h"
 #include "MeshGen.h"
 #include "DataManager.h"
-#include "TimeIntegrator.h"
+//#include "TimeIntegrator.h"
 
 using namespace std;
+
+//Forward Declarations
+class SpaceVariables1D;
+class SpaceVariables2D;
 
 class Output {
 //  array<double,3>* &field;

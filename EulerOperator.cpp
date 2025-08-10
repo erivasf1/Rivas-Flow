@@ -47,20 +47,24 @@ void EulerBASE::ManufacturedPrimitiveSols(vector<array<double,4>>* &,SpaceVariab
 }
 
 //-----------------------------------------------------------
-void EulerBASE::Setup2DBoundaryConditions(vector<array<double,4>>* &field){
+void EulerBASE::Setup2DBoundaryConditions(vector<array<double,4>>* &field,Output* &error){
   //TODO: Should only include the GenerateGhostCells fcn. of MeshGen
   // & then initialize the ghost cells with a specified val.
   //cond: 0=Inflow, 1 = Outflow, 2 = Slip Wall
   //id: 0 = reflect, 1 = extend (for now only using extend)
-  /*
-  int btm_id = (btm_cond==0 || btm_cond==1) ? 1:0;
-  int top_id = (top_cond==0 || top_cond==1) ? 1:0;
-  int left_id = (left_cond==0 || left_cond==1) ? 1:0;
-  int right_id = (right_cond==0 || right_cond==1) ? 1:0;
-  */
   
+  //Generating ghost cells + outputting them for visualization
   mesh->GenerateGhostCells(1,1,1,1);
+  const char* right_ghost_coords = "RightGhostCoords.dat";
+  const char* left_ghost_coords = "LeftGhostCoords.dat";
+  const char* top_ghost_coords = "TopGhostCoords.dat";
+  const char* btm_ghost_coords = "BtmGhostCoords.dat";
+  error->OutputGhostCells(right_ghost_coords,mesh->right_xcoords,mesh->right_ycoords,mesh->Ny,2);
+  error->OutputGhostCells(left_ghost_coords,mesh->left_xcoords,mesh->left_ycoords,mesh->Ny,2);
+  error->OutputGhostCells(top_ghost_coords,mesh->top_xcoords,mesh->top_ycoords,mesh->Nx,2);
+  error->OutputGhostCells(btm_ghost_coords,mesh->btm_xcoords,mesh->btm_ycoords,mesh->Nx,2);
 
+  //Enforcing specified boundary conditions
   Enforce2DBoundaryConditions(field);
 
   
@@ -1559,7 +1563,7 @@ void Euler2DMMS::ApplyMSInflow(int side){
   //NOTE: Evaluating manufactured sol. at cell-centered coord of ghost cell
   double x,y;
   //top ghost cells
-  if (side=0){
+  if (side==0){
     for (int m=0;m<(int)mesh->top_cells.size();m++){ 
       x = mesh->top_cellcenter_coords[m][0];
       y = mesh->top_cellcenter_coords[m][1];

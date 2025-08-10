@@ -3,11 +3,15 @@
 #define _EULEROPERATOR_H_
 #include "ExactNozzle.h"
 #include "MeshGen.h"
+#include "Output.h"
 #include "DataManager.h"
 
 //Forward Declarations
+class SpaceVariables1D;
 class SpaceVariables2D;
+class Output;
 
+//EulerBASE Class
 class EulerBASE {
   
   const double Ru = 8314.0; // J/(kmol*K) -- universal gas constant   
@@ -39,7 +43,7 @@ class EulerBASE {
   //Initial Conditions
   virtual void SetInitialConditions(vector<array<double,4>>* &field); //Complete (tested)
   //TODO:Boundary Conditions -- refer to this paper:https://arc-aiaa-org.ezproxy.lib.vt.edu/doi/10.2514/3.11983  
-  void Setup2DBoundaryConditions(vector<array<double,4>>* &field); 
+  void Setup2DBoundaryConditions(vector<array<double,4>>* &field,Output* &error); 
   virtual void Enforce2DBoundaryConditions(vector<array<double,4>>* &field); //MS uses unique inlet cond.
   virtual void ApplyInflow(vector<array<double,4>>* &field,MeshGenBASE* &mesh,int side); //30 deg. inlet uses Mach number and T as inlet conditions
   void ApplyOutflow(vector<array<double,4>>* &field,MeshGenBASE* &mesh,int side);

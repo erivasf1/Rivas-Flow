@@ -1,4 +1,4 @@
-// Responsible for creating a Mesh (1D for now)
+// Responsible for integrating in time
 #ifndef _TIMEINTEGRATOR_H_
 #define _TIMEINTEGRATOR_H_
 #include "ExactNozzle.h"

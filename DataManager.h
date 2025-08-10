@@ -6,6 +6,8 @@
 
 //Forward Declarations
 class Euler1D;
+class Euler2D;
+class Euler2DMMS;
 
 //SpaceVariable Class stores the values of ALL flow quantities at all points
 

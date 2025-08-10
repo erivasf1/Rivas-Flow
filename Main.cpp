@@ -291,7 +291,7 @@ int main() {
   sols->OutputPrimitiveVariables(field,euler,filename);
 
   // SETTING BOUNDARY CONDITIONS
-  //debug ghost cell generation
+  /*
   mesh->GenerateGhostCells(1,1,1,1);
   const char* right_ghost_coords = "RightGhostCoords.dat";
   const char* left_ghost_coords = "LeftGhostCoords.dat";
@@ -302,6 +302,8 @@ int main() {
   error->OutputGhostCells(top_ghost_coords,mesh->top_xcoords,mesh->top_ycoords,mesh->Nx,2);
   error->OutputGhostCells(btm_ghost_coords,mesh->btm_xcoords,mesh->btm_ycoords,mesh->Nx,2);
   //euler_test->Setup2DBoundaryConditions(field_test); //TODO: Get rid of this & use GenerateGhostCells + Enforce2DBoundaryConditions
+  */
+  euler_test->Setup2DBoundaryConditions(field_test,error);
   delete mesh; delete euler_test;
   return 0;
 
