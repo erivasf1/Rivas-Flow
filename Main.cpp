@@ -303,7 +303,12 @@ int main() {
   error->OutputGhostCells(btm_ghost_coords,mesh->btm_xcoords,mesh->btm_ycoords,mesh->Nx,2);
   //euler_test->Setup2DBoundaryConditions(field_test); //TODO: Get rid of this & use GenerateGhostCells + Enforce2DBoundaryConditions
   */
+  //debug: MMS enforcing boundary conditions
+  //TODO: make a fcn. to visualize all the ghost cells (not just the last layer)
+  const char* filename_ghost = "Ghost_Cell_Solutions.dat";
+  vector<array<double,4>>* btm_ghost_cells = &mesh->btm_cells; //creating a pointer to use in output primitive variables fcn.
   euler_test->Setup2DBoundaryConditions(field_test,error);
+  error->OutputPrimitiveVariables(btm_ghost_cells,filename_ghost,false,0,mesh->btm_xcoords,mesh->btm_ycoords,(int)mesh->btm_cells.size(),mesh->cell_imax+1,2);
   delete mesh; delete euler_test;
   return 0;
 

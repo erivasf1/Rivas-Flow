@@ -1512,7 +1512,7 @@ void Euler2DMMS::EvalSourceTerms(/*vector<array<double,4>>* &mms_source,*/SpaceV
 //-----------------------------------------------------------
 void Euler2DMMS::Enforce2DBoundaryConditions(vector<array<double,4>>* &field){
 
-  //boundary id - 0:Inflow, 1:Outflow, 2:Slip-wall
+  //boundary id - 0:Top, 1:Btm, 2:Left, 3:Right
   //top boundary
   for (int i=0;i<cell_imax;i++){
     if (top_cond==0)
@@ -1525,31 +1525,31 @@ void Euler2DMMS::Enforce2DBoundaryConditions(vector<array<double,4>>* &field){
 
   //btm boundary 
   for (int i=0;i<cell_imax;i++){
-    if (top_cond==0)
+    if (btm_cond==0)
       ApplyMSInflow(1);
-    else if (top_cond==1)
+    else if (btm_cond==1)
       ApplyOutflow(field,mesh,1);
-    else if (top_cond==2)
+    else if (btm_cond==2)
       ApplySlipWall(field,mesh,1);
   }
 
   //left boundary
   for (int i=0;i<cell_imax;i++){
-    if (top_cond==0)
+    if (left_cond==0)
       ApplyMSInflow(2);
-    else if (top_cond==1)
+    else if (left_cond==1)
       ApplyOutflow(field,mesh,2);
-    else if (top_cond==2)
+    else if (left_cond==2)
       ApplySlipWall(field,mesh,2);
   }
 
   //right boundary
   for (int i=0;i<cell_imax;i++){
-    if (top_cond==0)
+    if (right_cond==0)
       ApplyMSInflow(3);
-    else if (top_cond==1)
+    else if (right_cond==1)
       ApplyOutflow(field,mesh,3);
-    else if (top_cond==2)
+    else if (right_cond==2)
       ApplySlipWall(field,mesh,3);
   }
 
@@ -1582,6 +1582,8 @@ void Euler2DMMS::ApplyMSInflow(int side){
   }
   //btm ghost cells
   else if (side==1){
+    if ((int)mesh->btm_cells.size()!=(int)mesh->btm_cellcenter_coords.size())
+      cerr<<"ERROR:Btm ghost cells & cell centers do not equal in size!"<<endl;
     for (int m=0;m<(int)mesh->btm_cells.size();m++){ 
       x = mesh->btm_cellcenter_coords[m][0];
       y = mesh->btm_cellcenter_coords[m][1];
@@ -1598,7 +1600,7 @@ void Euler2DMMS::ApplyMSInflow(int side){
     }
   }
   //left ghost cells
-  else if (side==1){
+  else if (side==2){
     for (int m=0;m<(int)mesh->left_cells.size();m++){ 
       x = mesh->left_cellcenter_coords[m][0];
       y = mesh->left_cellcenter_coords[m][1];
@@ -1615,7 +1617,7 @@ void Euler2DMMS::ApplyMSInflow(int side){
     }
   }
   //right ghost cells
-  else if (side==1){
+  else if (side==3){
     for (int m=0;m<(int)mesh->right_cells.size();m++){ 
       x = mesh->right_cellcenter_coords[m][0];
       y = mesh->right_cellcenter_coords[m][1];
