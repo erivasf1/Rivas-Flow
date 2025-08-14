@@ -49,10 +49,10 @@ int main() {
   double area_star = Tools::AreaVal(0.5*(xmin+xmax)); //area at throat
 
   // Boundary Conditions Specification
-  BOUNDARY_COND top_cond = INFLOW; //TEMP
+  BOUNDARY_COND top_cond = OUTFLOW; //TEMP
   BOUNDARY_COND btm_cond = INFLOW;
   BOUNDARY_COND left_cond = INFLOW;
-  BOUNDARY_COND right_cond = INFLOW;
+  BOUNDARY_COND right_cond = OUTFLOW;
 
   bool cond_loc{false}; //true for subsonic & false for supersonic (FOR EXACT SOL.)
   bool cond_bc{true}; //true for subsonic & false for supersonic (FOR OUTFLOW BC)
@@ -136,6 +136,8 @@ int main() {
   vector<array<double,3>> FieldStar(cellnum); //stores intermediate primitive variable sols.
   vector<array<double,3>> FieldStall(cellnum); //stores primitive variable sols. before stall (if detected)
   vector<array<double,4>> FieldTest(mesh->cellnumber); 
+  vector<array<double,4>> FieldStarTest(mesh->cellnumber); //stores intermediate primitive variable sols.
+  vector<array<double,4>> FieldStallTest(mesh->cellnumber); //stores primitive variable sols. before stall (if detected)
   vector<array<double,4>> FieldMS(mesh->cellnumber); //stores manufactured sol.
   vector<array<double,4>> FieldMS_Source(mesh->cellnumber); //stores manufactured source term for all cells
 
@@ -144,7 +146,10 @@ int main() {
 
   vector<array<double,3>> Residual(cellnum); //stores the local residuals per eq.
   vector<array<double,3>> ResidualStar(cellnum); //stores the intermediate stage of primtive variables
+  vector<array<double,4>> ResidualTest(mesh->cellnumber); //stores the local residuals per eq.
+  vector<array<double,4>> ResidualStarTest(mesh->cellnumber); //stores the intermediate stage of primtive variables
   vector<array<double,3>> InitResidual(cellnum); //stores the initial residual
+  vector<array<double,4>> InitResidualTest(mesh->cellnumber); //stores the initial residual
 
   vector<double> TimeSteps; //for storing the time step (delta_t) for each cell
   array<double,3> ResidualNorms; //for storing the global residual norms
@@ -155,6 +160,8 @@ int main() {
   vector<array<double,3>>* field_star = &FieldStar; //pointer to intermediate Field solutions
   vector<array<double,3>>* field_stall = &FieldStall; //pointer to intermediate Field solutions
   vector<array<double,4>>* field_test = &FieldTest; //pointer to intermediate Field solutions
+  vector<array<double,4>>* field_star_test = &FieldStarTest; //pointer to intermediate Field solutions
+  vector<array<double,4>>* field_stall_test = &FieldStallTest; //pointer to intermediate Field solutions
   vector<array<double,4>>* field_ms = &FieldMS; //pointer to intermediate Field solutions
   vector<array<double,4>>* field_ms_source = &FieldMS_Source; //pointer to intermediate Field solutions
   vector<array<double,3>>* exact_sols = &ExactField; //pointer to exact solution field values
@@ -162,6 +169,9 @@ int main() {
   vector<array<double,3>>* resid = &Residual; //pointer to residual field values per cell
   vector<array<double,3>>* resid_star = &ResidualStar; //pointer to intermediate residual field values per cell
   vector<array<double,3>>* init_resid = &InitResidual; //pointer to residual field values per cell
+  vector<array<double,4>>* resid_test = &ResidualTest; //pointer to residual field values per cell
+  vector<array<double,4>>* resid_star_test = &ResidualStarTest; //pointer to intermediate residual field values per cell
+  vector<array<double,4>>* init_resid_test = &InitResidualTest; //pointer to residual field values per cell
   vector<double>* time_steps = &TimeSteps;
 
   //!OBJECT INITIALIZATIONS
@@ -187,9 +197,9 @@ int main() {
   EulerBASE* euler_test;
   //Temp -- will add scenario == 1 once 1D section is fixed!
   if (scenario == 2) 
-    euler_test = new Euler2D(case_2d,mesh->Nx-1,mesh->Ny-1,flux_scheme1,flux_accuracy1,top_cond,btm_cond,left_cond,right_cond,mesh,field_ms_source);
+    euler_test = new Euler2D(case_2d,mesh->cell_imax,mesh->cell_jmax,flux_scheme1,flux_accuracy1,top_cond,btm_cond,left_cond,right_cond,mesh,field_ms_source);
   else if (scenario == 3)
-    euler_test = new Euler2DMMS(mesh->Nx-1,mesh->Ny-1,flux_scheme1,flux_accuracy1,top_cond,btm_cond,left_cond,right_cond,mesh,field_ms_source);
+    euler_test = new Euler2DMMS(mesh->cell_imax,mesh->cell_jmax,flux_scheme1,flux_accuracy1,top_cond,btm_cond,left_cond,right_cond,mesh,field_ms_source);
   else{
     cerr<<"Error: scenario # not recognized!"<<endl;
     return 0;
@@ -291,24 +301,10 @@ int main() {
   sols->OutputPrimitiveVariables(field,euler,filename);
 
   // SETTING BOUNDARY CONDITIONS
-  /*
-  mesh->GenerateGhostCells(1,1,1,1);
-  const char* right_ghost_coords = "RightGhostCoords.dat";
-  const char* left_ghost_coords = "LeftGhostCoords.dat";
-  const char* top_ghost_coords = "TopGhostCoords.dat";
-  const char* btm_ghost_coords = "BtmGhostCoords.dat";
-  error->OutputGhostCells(right_ghost_coords,mesh->right_xcoords,mesh->right_ycoords,mesh->Ny,2);
-  error->OutputGhostCells(left_ghost_coords,mesh->left_xcoords,mesh->left_ycoords,mesh->Ny,2);
-  error->OutputGhostCells(top_ghost_coords,mesh->top_xcoords,mesh->top_ycoords,mesh->Nx,2);
-  error->OutputGhostCells(btm_ghost_coords,mesh->btm_xcoords,mesh->btm_ycoords,mesh->Nx,2);
-  //euler_test->Setup2DBoundaryConditions(field_test); //TODO: Get rid of this & use GenerateGhostCells + Enforce2DBoundaryConditions
-  */
-  //debug: MMS enforcing boundary conditions
-  euler_test->Setup2DBoundaryConditions(field_test,error);
-  //delete mesh; delete euler_test; 
-  //return 0;
+  //generates ghost cells here too
+  euler_test->Setup2DBoundaryConditions(field_test,error); 
 
-  //time->SolutionLimiter(field);
+  //time->SolutionLimiter(field_test);
 
   //! COMPUTING MANUFACTURED SOLUTION AND SOURCE TERMS (MMS ONLY)
   if (scenario == 3){
@@ -319,10 +315,10 @@ int main() {
     error->OutputPrimitiveVariables(field_ms,mms_sol_filename,false,0,mesh->xcoords,mesh->ycoords,mesh->cellnumber,mesh->Nx,mesh->Ny);
     error->OutputManufacturedSourceTerms(field_ms_source,mms_source_filename,false,0,mesh->xcoords,mesh->ycoords,mesh->cellnumber,mesh->Nx,mesh->Ny);
 
-    delete euler_test;
-    delete mesh;
+    //delete euler_test;
+    //delete mesh;
   }
-  return 0;
+  //return 0;
 
   //!< Outputting initial solutions with BC's
   const char* filename2 = "InitSolutionswBCs.txt";
@@ -330,22 +326,29 @@ int main() {
 
   // COMPUTING INITIAL RESIDUAL NORMS
   // using ResidSols spacevariable
-  array<double,3> InitNorms;
+  array<double,4> InitNorms;
 
   //if (upwind_scheme == false && flux_accuracy == false) //reverting to 1st order if 2nd order Roe is selected
     //flux_accuracy = true;
 
-  euler->ComputeResidual(init_resid,field,field_stall,xcoords,dx,flux_scheme,flux_accuracy,upwind_scheme,epsilon,resid_stall); //computing upwind flux 1st order initially
+  euler_test->ComputeResidual(init_resid_test,field_test);
+  //euler->ComputeResidual(init_resid,field,field_stall,xcoords,dx,flux_scheme,flux_accuracy,upwind_scheme,epsilon,resid_stall); //computing upwind flux 1st order initially
   //euler_test->ComputeResidual(init_resid);
-  InitNorms = sols->ComputeSolutionNorms(init_resid); //computing L2 norm of residuals
+  InitNorms = sols_test->ComputeSolutionNorms(init_resid_test); //computing L2 norm of residuals
+  //InitNorms = sols->ComputeSolutionNorms(init_resid); //computing L2 norm of residuals
   Tools::print("-Initial Residual Norms\n");
   Tools::print("--Continuity:%e\n",InitNorms[0]);
   Tools::print("--X-Momentum:%e\n",InitNorms[1]);
-  Tools::print("--Energy:%e\n\n",InitNorms[2]);
+  Tools::print("--Y-Momentum:%e\n",InitNorms[2]);
+  Tools::print("--Energy:%e\n\n",InitNorms[3]);
 
+  delete euler_test;
+  delete mesh;
+  return 0;
 
+  array<double,3> initnorms;
   (*resid) = (*init_resid);//!< setting initial residual to intermediate
-  ResidualNorms = InitNorms;
+  ResidualNorms = initnorms;
 
   string it,name; //used for outputting file name
   int iter; //iteration number

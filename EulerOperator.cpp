@@ -114,25 +114,30 @@ array<double,4> EulerBASE::ComputeSpatialFlux_UPWIND1stOrder(vector<array<double
   //NOTE: assumes loc is left or btm state and nbor is right or top state (for 1st order accuracy)
     array<double,4> loc_state,nbor_state;
   //checking if either loc or nbor is accessing ghost cells
-  if ( loci<0 || nbori>cell_imax || locj<0 || nborj>cell_jmax ){
-    if (loci<0){ //using 1st layer of ghost cells to the left (-i case)
-      loc_state = mesh->GetGhostCellVarVec(0,locj,2); //i set to 0 for 1st layer
+  if ( loci<0 || nbori>=cell_imax || locj<0 || nborj>=cell_jmax ){
+
+    if (loci<0){ //using 1st layer of left ghost cells (-i case)
+      //loc_state = mesh->GetGhostCellVarVec(0,locj,2); //i set to 0 for 1st layer
+      loc_state = mesh->left_cells[locj];
       nbor_state = fieldij(field,nbori,nborj,cell_imax);
     }
-    else if (nbori>cell_imax){ //using 1st layer of ghost cells to the right (+i domain)
+    else if (nbori>=cell_imax){ //using 1st layer of right ghost cells (+i domain)
       loc_state = fieldij(field,loci,locj,cell_imax);
-      nbor_state = mesh->GetGhostCellVarVec(0,nborj,3); //i set to 0 for 1st layer
+      nbor_state = mesh->right_cells[locj];
+      //nbor_state = mesh->GetGhostCellVarVec(0,nborj,3); //i set to 0 for 1st layer
       
     }
-    else if (locj<0){ //using 1st layer of ghost cells to the btm (-j case)
-      loc_state = mesh->GetGhostCellVarVec(loci,0,1); //j set to 0 for 1st layer
+    else if (locj<0){ //using 1st layer of btm ghost cells (-j case)
+      //loc_state = mesh->GetGhostCellVarVec(loci,0,1); //j set to 0 for 1st layer
+      loc_state = mesh->btm_cells[loci]; //j set to 0 for 1st layer
       nbor_state = fieldij(field,nbori,nborj,cell_imax);
 
     }
 
-    else { //using 1st layer of ghost cells to the top (+j case)
+    else { //using 1st layer of top ghost cells (+j case)
       loc_state = fieldij(field,loci,locj,cell_imax);
-      nbor_state = mesh->GetGhostCellVarVec(nbori,0,0); //j set to 0 for 1st layer
+      nbor_state = mesh->top_cells[loci];
+      //nbor_state = mesh->GetGhostCellVarVec(nbori,0,0); //j set to 0 for 1st layer
 
     }
   }
@@ -1674,26 +1679,30 @@ void Euler2DMMS::ComputeResidual(vector<array<double,4>>* &resid,vector<array<do
   double area_right,area_left,area_btm,area_top;
   double vol;
   array<double,4> res;
-  array<double,4> field_loc;
-  array<double,4> field_rnbor,field_lnbor,field_topnbor,field_btmnbor;
+  //array<double,4> field_loc;
+  //array<double,4> field_rnbor,field_lnbor,field_topnbor,field_btmnbor;
 
   array<double,4> mms;
   
 
   for (int j=0;j<cell_jmax;j++){
     for (int i=0;i<cell_imax;i++){
-      //primitive vars. of current cell and nbor cells
-      field_loc = fieldij(field,i,j,cell_imax); 
-      field_rnbor = fieldij(field,i+1,j,cell_imax); 
-      field_lnbor = fieldij(field,i-1,j,cell_imax); 
-      field_topnbor = fieldij(field,i,j+1,cell_imax); 
-      field_btmnbor = fieldij(field,i,j-1,cell_imax); 
-  
-      //TODO:fluxes evaluation
-      //flux_right = (scheme==1) ? VanLeer(accuracy,field_loc,field_rnbor,mesh_ptr) : Roe(accuracy,field_loc,field_rnbor,mesh_ptr);
-      //flux_left = (scheme==1) ? VanLeer(accuracy,field_loc,field_lnbor) : Roe(accuracy,field_loc,field_lnbor);
-      //flux_top = (scheme==1) ? VanLeer(accuracy,field_loc,field_topnbor) : Roe(accuracy,field_loc,field_topnbor);
-      //flux_btm = (scheme==1) ? VanLeer(accuracy,field_loc,field_btmnbor) : Roe(accuracy,field_loc,field_btmnbor);
+      //fluxes evaluation
+      if (flux_scheme==0){ //JST Damping
+      }
+      else if ((flux_scheme!=0) && (flux_accuracy==1)){ //1st order Upwind Schemes
+        flux_right = ComputeSpatialFlux_UPWIND1stOrder(field,i,j,i+1,j);
+        flux_left = ComputeSpatialFlux_UPWIND1stOrder(field,i-1,j,i,j);
+        flux_top = ComputeSpatialFlux_UPWIND1stOrder(field,i,j,i,j+1);
+        flux_btm = ComputeSpatialFlux_UPWIND1stOrder(field,i,j-1,i,j);
+      }
+      else if ((flux_scheme!=0) && (flux_accuracy==2)){ //2nd ordr Upwind Schemes w/ MUSCL extrapolation
+        flux_right = ComputeSpatialFlux_UPWIND2ndOrder(field,i,j,i+1,j);
+        flux_left = ComputeSpatialFlux_UPWIND2ndOrder(field,i-1,j,i,j);
+        flux_top = ComputeSpatialFlux_UPWIND2ndOrder(field,i,j,i,j+1);
+        flux_btm = ComputeSpatialFlux_UPWIND2ndOrder(field,i,j-1,i,j);
+      }
+      else {} //TODO:error handling
       
       //volume evaluation (for source term) + source term retrievel 
       vol = mesh->GetCellVolume(i,j);

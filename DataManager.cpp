@@ -329,4 +329,43 @@ void SpaceVariables2D::ComputeGhostCellCenteredCoordinate(MeshGen2D* &mesh){
 
 }
 //---------------------------------------------------------
+array<double,4> SpaceVariables2D::ComputeSolutionNorms(vector<array<double,4>>* &resid){
+
+  array<double,4> norm{0.0,0.0,0.0,0.0};
+
+  double imax = (double)resid->size(); //number of interior nodes 
+
+  //using L2 norm  
+  //Tools::print("Calculating Global Norm\n");
+  for (int i=0;i<(int)resid->size();i++){
+    //Tools::print("Cell number: %d\n",i);
+    //continuity
+    //Tools::print("continuity res.: %e\n",Resid[i][0]);
+    norm[0]+= pow((*resid)[i][0],2);
+    //x-mom
+    //Tools::print("x-mom. res.: %e\n",Resid[i][1]);
+    norm[1]+= pow((*resid)[i][1],2);
+    //y-mom
+    //Tools::print("y-mom. res.: %e\n",Resid[i][1]);
+    norm[2]+= pow((*resid)[i][2],2);
+
+    //energy
+    //Tools::print("energy res.: %e\n",Resid[i][2]);
+    norm[3]+= pow((*resid)[i][3],2);
+
+  }
+  norm[0] = sqrt(norm[0]/imax); //normalizing by imax
+  norm[1] = sqrt(norm[1]/imax);
+  norm[2] = sqrt(norm[2]/imax);
+  norm[3] = sqrt(norm[3]/imax);
+
+  //Tools::print("Continuity res.: %e\n",norm[0]);
+  //Tools::print("X-Momentum res.: %e\n",norm[1]);
+  //Tools::print("Energy res.: %e\n",norm[2]);
+
+  return norm;
+
+
+}
+//---------------------------------------------------------
 SpaceVariables2D::~SpaceVariables2D(){}
