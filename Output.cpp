@@ -323,7 +323,7 @@ void Output::OutputManufacturedSourceTerms(vector<array<double,4>>* &field,strin
   }
 
 
-  // Writing Rho
+  // Writing Continuity
   for (int n=0;n<(int)cont.size();n++){
     count++;
     myfile<<std::setw(15)<<cont[n];
@@ -331,7 +331,7 @@ void Output::OutputManufacturedSourceTerms(vector<array<double,4>>* &field,strin
       myfile<<endl;
   }
   
-  // Writing U 
+  // Writing X-Momentum
   for (int n=0;n<(int)xmom.size();n++){
     count++;
     myfile<<std::setw(15)<<xmom[n];
@@ -339,7 +339,7 @@ void Output::OutputManufacturedSourceTerms(vector<array<double,4>>* &field,strin
       myfile<<endl;
   }
 
-  // Writing V 
+  // Writing Y-Momentum
   for (int n=0;n<(int)ymom.size();n++){
     count++;
     myfile<<std::setw(15)<<ymom[n];
@@ -347,7 +347,7 @@ void Output::OutputManufacturedSourceTerms(vector<array<double,4>>* &field,strin
       myfile<<endl;
   }
 
-  // Writing P
+  // Writing Energy
   for (int n=0;n<(int)energy.size();n++){
     count++;
     myfile<<std::setw(15)<<energy[n];
@@ -361,7 +361,7 @@ void Output::OutputManufacturedSourceTerms(vector<array<double,4>>* &field,strin
   return;
 }
 //-----------------------------------------------------------
-void Output::OutputGhostCells(string filename,vector<double> &xcoords,vector<double> &ycoords,int Nx,int Ny){
+void Output::OutputGhostCoords(string filename,vector<double> &xcoords,vector<double> &ycoords,int Nx,int Ny){
 
   std::ofstream myfile(filename); //true for append
   //myfile.open(filename);
@@ -373,7 +373,7 @@ void Output::OutputGhostCells(string filename,vector<double> &xcoords,vector<dou
   }
 
   //Title
-  myfile<<"TITLE = \" 2D Structured Mesh \""<<endl;
+  myfile<<"TITLE = \" 2D Ghost Cells \""<<endl;
   myfile<<"VARIABLES = \"X\",\"Y\""<<endl;
   myfile<<"ZONE I="<<Nx<<", "<<"J="<<Ny<<endl;
   myfile<<"DATAPACKING=BLOCK"<<endl;
@@ -393,6 +393,132 @@ void Output::OutputGhostCells(string filename,vector<double> &xcoords,vector<dou
     if (count % 4 == 0)
       myfile<<endl;
   }
+
+  return;
+
+}
+//-----------------------------------------------------------
+void Output::OutputGhostCells(vector<array<double,4>>* &ghost_cell,string filename,vector<double> &xcoords,vector<double> &ycoords,vector<double> &ghost_xcoords,vector<double> &ghost_ycoords,int Nx,int Ny,int ghost_Nx,int ghost_Ny,int side){
+
+  std::ofstream myfile(filename); //true for append
+  //myfile.open(filename);
+
+
+  if (!myfile){ //checking if file opened successfully
+    cerr<<"Error: Could Not Open File "<<filename<<endl;
+    return;
+  }
+
+  //Title
+  myfile<<"TITLE = \" 2D Ghost Cells \""<<endl;
+  myfile<<"VARIABLES = \"X\",\"Y\",\"Rho\",\"U\",\"V\",\"P\""<<endl;
+  myfile<<"ZONE I="<<ghost_Nx<<", "<<"J="<<ghost_Ny<<endl;
+  myfile<<"DATAPACKING=BLOCK"<<endl;
+  myfile<<"VARLOCATION=([3-6]=CELLCENTERED)"<<endl; //-> tells Tecplot this is cell-centered val (must be size (imax-1)*(jmax-1) size
+
+  //Grouping interior coords w/ ghost coords
+  vector<double> total_xcoords,total_ycoords;
+  //interior
+  if (side==0){ //for top ghost cells
+    for (int i=0;i<Nx;i++){
+      total_xcoords.push_back(xcoords[i+((Ny-1)*Nx)]);
+      total_ycoords.push_back(ycoords[i+((Ny-1)*Nx)]);
+    }
+
+  }
+  else if (side==1){ //for btm ghost cells
+    for (int i=0;i<Nx;i++){
+      total_xcoords.push_back(xcoords[i+(0*Nx)]);
+      total_ycoords.push_back(ycoords[i+(0*Nx)]);
+    }
+
+
+  }
+  else if (side==2){ //for left ghost cells
+    for (int j=0;j<Ny;j++){
+      total_xcoords.push_back(xcoords[0+(j*Nx)]);
+      total_ycoords.push_back(ycoords[0+(j*Nx)]);
+    }
+
+
+  }
+  else if (side==3){ //for right ghost cells
+    for (int j=0;j<Ny;j++){
+      total_xcoords.push_back(xcoords[(Nx-1)+(j*Nx)]);
+      total_ycoords.push_back(ycoords[(Nx-1)+(j*Nx)]);
+    }
+
+  }
+
+  else //error handling
+    cerr<<"ERROR:Invalid side selection for outputting ghost cells"<<endl;
+  //ghost coords
+  for (int n=0;n<(int)ghost_xcoords.size();n++){
+    total_xcoords.push_back(ghost_xcoords[n]);
+    total_ycoords.push_back(ghost_ycoords[n]);
+  }
+
+
+  //Writing coords to file
+  int count = 0;
+  for (int n=0;n<(int)total_xcoords.size();n++){ //xcoords
+    count++;
+    myfile<<std::setw(15)<<total_xcoords[n];
+    if (count % 4 == 0)
+      myfile<<endl;
+  }
+
+  for (int n=0;n<(int)total_ycoords.size();n++){ //ycoords
+    count++;
+    myfile<<std::setw(15)<<total_ycoords[n];
+    if (count % 4 == 0)
+      myfile<<endl;
+  }
+
+  //Writing primitive variables
+  vector<double> all_rho,all_u,all_v,all_p;
+
+  for (int i=0;i<(int)(*ghost_cell).size();i++){
+    all_rho.push_back((*ghost_cell)[i][0]);
+    all_u.push_back((*ghost_cell)[i][1]);
+    all_v.push_back((*ghost_cell)[i][2]);
+    all_p.push_back((*ghost_cell)[i][3]);
+  }
+
+  // Writing Rho
+  for (int n=0;n<(int)all_rho.size();n++){
+    count++;
+    myfile<<std::setw(15)<<all_rho[n];
+    if (count % 4 == 0)
+      myfile<<endl;
+  }
+  
+  // Writing U 
+  for (int n=0;n<(int)all_u.size();n++){
+    count++;
+    myfile<<std::setw(15)<<all_u[n];
+    if (count % 4 == 0)
+      myfile<<endl;
+  }
+
+  // Writing V 
+  for (int n=0;n<(int)all_v.size();n++){
+    count++;
+    myfile<<std::setw(15)<<all_v[n];
+    if (count % 4 == 0)
+      myfile<<endl;
+  }
+
+  // Writing P
+  for (int n=0;n<(int)all_p.size();n++){
+    count++;
+    myfile<<std::setw(15)<<all_p[n];
+    if (count % 4 == 0)
+      myfile<<endl;
+  }
+
+  myfile.close(); //closing file writing to it
+
 
   return;
 

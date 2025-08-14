@@ -29,6 +29,10 @@ double MeshGenBASE::GetCellVolume(int &, int &){
   return 0.0;
 }
 //-----------------------------------------------------------
+void MeshGenBASE::ComputeGhostCellCenteredCoordinate(){
+  return;
+}
+//-----------------------------------------------------------
 array<double,4> MeshGenBASE::GetGhostCellVarVec(int,int,int){
   return {0.0,0.0,0.0,0.0};
 }
@@ -174,7 +178,7 @@ void MeshGen2D::ReadMeshFile(){
   //2nd line: 1st int refers to imax and 2nd int refers to jmax
 
   cell_imax = Nx-1; cell_jmax = Ny-1;
-  cellnumber = Nx*Ny;
+  cellnumber = cell_imax*cell_jmax;
 
 }
 //-----------------------------------------------------------
@@ -330,7 +334,7 @@ array<array<double,4>,2> MeshGen2D::GetGhostCellCoords(int &i,int &j, int tag){
 //-----------------------------------------------------------
 void MeshGen2D::GenerateGhostCells(int left_id,int right_id,int btm_id,int top_id){
 
-  // Creating nodes
+  // CREATING NODES
   //Bottom Boundary
   (btm_id == 0) ? ReflectGhostCoords(0) : ExtendGhostCoords(0);
   //Top Boundary
@@ -340,20 +344,25 @@ void MeshGen2D::GenerateGhostCells(int left_id,int right_id,int btm_id,int top_i
   //Right Boundary
   (right_id == 0) ? ReflectGhostCoords(3) : ExtendGhostCoords(3);
   
-  // Creating cells
-  vector<array<double,4>> ghost_cellsx(Nx-1);
-  vector<array<double,4>> ghost_cellsy(Nx-1);
+  // CREATING CELLS
+  int ghost_cellnum_i = cell_imax*2; //ghost cellnum for btm&top
+  int ghost_cellnum_j = cell_jmax*2; //ghost cellnum for left&right
+  vector<array<double,4>> ghost_cells_btm_top(ghost_cellnum_i);
+  vector<array<double,4>> ghost_cells_left_right(ghost_cellnum_j);
  
-  right_cells = ghost_cellsx;left_cells = ghost_cellsx;
-  btm_cells = ghost_cellsy; top_cells = ghost_cellsy;
+  btm_cells = ghost_cells_btm_top; top_cells = btm_cells;
+  right_cells = ghost_cells_left_right;left_cells = right_cells;
 
   //Setting the size for the vectors that store the cell-centers of the ghost cells
-  vector<array<double,2>> cell_centers(Nx-1);
-  right_cellcenter_coords = cell_centers; 
-  left_cellcenter_coords = cell_centers; 
-  top_cellcenter_coords = cell_centers; 
-  btm_cellcenter_coords = cell_centers; 
+  vector<array<double,2>> cell_centers_i(ghost_cellnum_i);
+  vector<array<double,2>> cell_centers_j(ghost_cellnum_j);
+  right_cellcenter_coords = cell_centers_j; 
+  left_cellcenter_coords = cell_centers_j; 
+  top_cellcenter_coords = cell_centers_i; 
+  btm_cellcenter_coords = cell_centers_i; 
 
+  //Compute the cell-centers here
+  ComputeGhostCellCenteredCoordinate();
 
   return;
 
@@ -740,6 +749,54 @@ double MeshGen2D::GetGhostCellArea(int &i,int &j,int side){ //retrieves the area
   return area;
 }
 
+//-----------------------------------------------------------
+void MeshGen2D::ComputeGhostCellCenteredCoordinate(){
+
+  //NOTE: only use when ghost cell coordinates have been defined
+  double x1=0.0; double y1=0.0;
+  double x2=0.0; double y2=0.0;
+  array<double,2> avg_xy1,avg_xy2;
+  array<array<double,4>,2> cell_coords1,cell_coords2; //1&2 by doing corresponding sides at the same time (e.g. btm&top are done at the same time)
+
+  //NOTE: cells coords data structure cell_coords[0]=all x vals. and vice versa for [1]
+
+  //Btm + Top ghost cells
+  for (int j=0;j<2;j++){
+    for (int i=0;i<cell_imax;i++){
+      cell_coords1 = GetGhostCellCoords(i,j,0); //top
+      cell_coords2 = GetGhostCellCoords(i,j,1); //btm
+      for (int n=0;n<4;n++){
+        x1 += cell_coords1[0][n]; y1 += cell_coords1[1][n];
+        x2 += cell_coords2[0][n]; y2 += cell_coords2[1][n];
+      }
+      avg_xy1[0] = x1/4.0; avg_xy1[1] = y1/4.0;
+      avg_xy2[0] = x2/4.0; avg_xy2[1] = y2/4.0;
+       
+      top_cellcenter_coords[i+(j*cell_imax)] = avg_xy1;
+      btm_cellcenter_coords[i+(j*cell_imax)] = avg_xy2;
+    }
+  }
+
+  //Left + Right ghost cells
+  for (int i=0;i<2;i++){
+    for (int j=0;j<cell_jmax;j++){
+      cell_coords1 = GetGhostCellCoords(i,j,2); //left
+      cell_coords2 = GetGhostCellCoords(i,j,3); //right
+      for (int n=0;n<4;n++){
+        x1 += cell_coords1[0][n]; y1 += cell_coords1[1][n];
+        x2 += cell_coords2[0][n]; y2 += cell_coords2[1][n];
+
+      }
+      avg_xy1[0] = x1/4.0; avg_xy1[1] = y1/4.0;
+      avg_xy2[0] = x2/4.0; avg_xy2[1] = y2/4.0;
+       
+      left_cellcenter_coords[j+(i*cell_jmax)] = avg_xy1;
+      right_cellcenter_coords[j+(i*cell_jmax)] = avg_xy2;
+    }
+  }
+
+  return;
+}
 //-----------------------------------------------------------
 double MeshGen2D::GetCellVolume(int &i, int &j){
 

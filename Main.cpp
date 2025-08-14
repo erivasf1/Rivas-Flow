@@ -49,10 +49,10 @@ int main() {
   double area_star = Tools::AreaVal(0.5*(xmin+xmax)); //area at throat
 
   // Boundary Conditions Specification
-  BOUNDARY_COND top_cond = OUTFLOW;
+  BOUNDARY_COND top_cond = INFLOW; //TEMP
   BOUNDARY_COND btm_cond = INFLOW;
   BOUNDARY_COND left_cond = INFLOW;
-  BOUNDARY_COND right_cond = OUTFLOW;
+  BOUNDARY_COND right_cond = INFLOW;
 
   bool cond_loc{false}; //true for subsonic & false for supersonic (FOR EXACT SOL.)
   bool cond_bc{true}; //true for subsonic & false for supersonic (FOR OUTFLOW BC)
@@ -304,15 +304,11 @@ int main() {
   //euler_test->Setup2DBoundaryConditions(field_test); //TODO: Get rid of this & use GenerateGhostCells + Enforce2DBoundaryConditions
   */
   //debug: MMS enforcing boundary conditions
-  //TODO: make a fcn. to visualize all the ghost cells (not just the last layer)
-  const char* filename_ghost = "Ghost_Cell_Solutions.dat";
-  vector<array<double,4>>* btm_ghost_cells = &mesh->btm_cells; //creating a pointer to use in output primitive variables fcn.
   euler_test->Setup2DBoundaryConditions(field_test,error);
-  error->OutputPrimitiveVariables(btm_ghost_cells,filename_ghost,false,0,mesh->btm_xcoords,mesh->btm_ycoords,(int)mesh->btm_cells.size(),mesh->cell_imax+1,2);
-  delete mesh; delete euler_test;
-  return 0;
+  //delete mesh; delete euler_test; 
+  //return 0;
 
-  time->SolutionLimiter(field);
+  //time->SolutionLimiter(field);
 
   //! COMPUTING MANUFACTURED SOLUTION AND SOURCE TERMS (MMS ONLY)
   if (scenario == 3){

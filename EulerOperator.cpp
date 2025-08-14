@@ -59,13 +59,31 @@ void EulerBASE::Setup2DBoundaryConditions(vector<array<double,4>>* &field,Output
   const char* left_ghost_coords = "LeftGhostCoords.dat";
   const char* top_ghost_coords = "TopGhostCoords.dat";
   const char* btm_ghost_coords = "BtmGhostCoords.dat";
-  error->OutputGhostCells(right_ghost_coords,mesh->right_xcoords,mesh->right_ycoords,mesh->Ny,2);
-  error->OutputGhostCells(left_ghost_coords,mesh->left_xcoords,mesh->left_ycoords,mesh->Ny,2);
-  error->OutputGhostCells(top_ghost_coords,mesh->top_xcoords,mesh->top_ycoords,mesh->Nx,2);
-  error->OutputGhostCells(btm_ghost_coords,mesh->btm_xcoords,mesh->btm_ycoords,mesh->Nx,2);
+  error->OutputGhostCoords(right_ghost_coords,mesh->right_xcoords,mesh->right_ycoords,mesh->Ny,2);
+  error->OutputGhostCoords(left_ghost_coords,mesh->left_xcoords,mesh->left_ycoords,mesh->Ny,2);
+  error->OutputGhostCoords(top_ghost_coords,mesh->top_xcoords,mesh->top_ycoords,mesh->Nx,2);
+  error->OutputGhostCoords(btm_ghost_coords,mesh->btm_xcoords,mesh->btm_ycoords,mesh->Nx,2);
 
   //Enforcing specified boundary conditions
   Enforce2DBoundaryConditions(field);
+
+  //debug: for visulaization
+  //NOTE: assume there are 3 layers of ghost coords for fcn. to visualize them
+  //NOTE: for visualization do not swap the mesh->Nx&Ny parameters for left and right ghost coords as this is already taken care of in the ordering of the data.
+  //switching them will cause the connectivities of coordinates to not be displayed correctly!
+
+  const char* filename_topghost = "GhostCellSolutions/Top_Cell_Solutions.dat";
+  const char* filename_btmghost = "GhostCellSolutions/Btm_Cell_Solutions.dat";
+  const char* filename_leftghost = "GhostCellSolutions/Left_Cell_Solutions.dat";
+  const char* filename_rightghost = "GhostCellSolutions/Right_Cell_Solutions.dat";
+  vector<array<double,4>>* top_ghost_cells = &mesh->top_cells; //creating a pointer to use in output primitive variables fcn.
+  vector<array<double,4>>* btm_ghost_cells = &mesh->btm_cells; //creating a pointer to use in output primitive variables fcn.
+  vector<array<double,4>>* left_ghost_cells = &mesh->left_cells; //creating a pointer to use in output primitive variables fcn.
+  vector<array<double,4>>* right_ghost_cells = &mesh->right_cells; //creating a pointer to use in output primitive variables fcn.
+  error->OutputGhostCells(top_ghost_cells,filename_topghost,mesh->xcoords,mesh->ycoords,mesh->top_xcoords,mesh->top_ycoords,mesh->Nx,mesh->Ny,mesh->Nx,3,0);
+  error->OutputGhostCells(btm_ghost_cells,filename_btmghost,mesh->xcoords,mesh->ycoords,mesh->btm_xcoords,mesh->btm_ycoords,mesh->Nx,mesh->Ny,mesh->Nx,3,1);
+  error->OutputGhostCells(left_ghost_cells,filename_leftghost,mesh->xcoords,mesh->ycoords,mesh->left_xcoords,mesh->left_ycoords,mesh->Nx,mesh->Ny,mesh->Ny,3,2);
+  error->OutputGhostCells(right_ghost_cells,filename_rightghost,mesh->xcoords,mesh->ycoords,mesh->right_xcoords,mesh->right_ycoords,mesh->Nx,mesh->Ny,mesh->Ny,3,3);
 
   
   return;
@@ -1564,6 +1582,8 @@ void Euler2DMMS::ApplyMSInflow(int side){
   double x,y;
   //top ghost cells
   if (side==0){
+    if ((int)mesh->top_cells.size()!=(int)mesh->btm_cellcenter_coords.size())
+      cerr<<"ERROR:Top ghost cells & cell centers do not equal in size!"<<endl;
     for (int m=0;m<(int)mesh->top_cells.size();m++){ 
       x = mesh->top_cellcenter_coords[m][0];
       y = mesh->top_cellcenter_coords[m][1];
@@ -1601,6 +1621,8 @@ void Euler2DMMS::ApplyMSInflow(int side){
   }
   //left ghost cells
   else if (side==2){
+    if ((int)mesh->left_cells.size()!=(int)mesh->btm_cellcenter_coords.size())
+      cerr<<"ERROR:Left ghost cells & cell centers do not equal in size!"<<endl;
     for (int m=0;m<(int)mesh->left_cells.size();m++){ 
       x = mesh->left_cellcenter_coords[m][0];
       y = mesh->left_cellcenter_coords[m][1];
@@ -1618,6 +1640,8 @@ void Euler2DMMS::ApplyMSInflow(int side){
   }
   //right ghost cells
   else if (side==3){
+    if ((int)mesh->right_cells.size()!=(int)mesh->btm_cellcenter_coords.size())
+      cerr<<"ERROR:Btm ghost cells & cell centers do not equal in size!"<<endl;
     for (int m=0;m<(int)mesh->right_cells.size();m++){ 
       x = mesh->right_cellcenter_coords[m][0];
       y = mesh->right_cellcenter_coords[m][1];
