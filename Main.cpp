@@ -62,7 +62,7 @@ int main() {
   vector<double> xcoords; //stores the coords of the cell NODES!!! (i.e. size of xcoords is cellnum+1)!
   vector<double> ycoords; //stores the coords of the cell NODES!!! (i.e. size of xcoords is cellnum+1)!
   double dx;
-  const char* meshfile = "Grids/CurvilinearGrids/curv2d9.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
+  const char* meshfile = "Grids/CurvilinearGrids/curv2d257.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
   //const char* meshfile = NULL;
 
   // Temporal Specifications
@@ -102,7 +102,7 @@ int main() {
   }
   else if ((scenario == 2) || (scenario == 3)) {
     mesh = new MeshGen2D(meshfile);
-    mesh->OutputMesh(); //!< outputs mesh file for Tecplot visualization
+    mesh->OutputMesh(); //!< outputs mesh file for visualization
   }
   else{
     cerr<<"Unknown scenario number!"<<endl;

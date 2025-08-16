@@ -178,15 +178,22 @@ array<double,4> EulerBASE::ComputeSpatialFlux_UPWIND2ndOrder([[maybe_unused]]vec
 
 //-----------------------------------------------------------
 double EulerBASE::ComputeMachNumber(array<double,4> &sols){
+  double M;
+  //prevention of nans
+  if (sols[0] <= 0.0){
+    M = 1.0e-7;
+  }
 
-  //Using insentropic conditions only for thermodynamic variables (T)
-  double T = sols[3] / (sols[0]*R); //if T is negative than M will be -nan!!!
+  else{
+    //Using insentropic conditions only for thermodynamic variables (T)
+    double T = sols[3] / (sols[0]*R); //if T is negative than M will be -nan!!!
 
-  //using actual vel mag. value
-  double vel_mag = sqrt( pow(sols[1],2.0) + pow(sols[2],2.0) );
-  //
-  double M = vel_mag / sqrt(gamma * R * T); //M = u/a
+    //using actual vel mag. value
+    double vel_mag = sqrt( pow(sols[1],2.0) + pow(sols[2],2.0) );
+    //
+    M = vel_mag / sqrt(gamma * R * T); //M = u/a
 
+  }
   return M;
 
 }
@@ -1583,6 +1590,7 @@ void Euler2DMMS::Enforce2DBoundaryConditions(vector<array<double,4>>* &field){
 //-----------------------------------------------------------
 void Euler2DMMS::ApplyMSInflow(int side){
 
+  //TODO: This is not being evaluated correctly!!!
   //NOTE: Evaluating manufactured sol. at cell-centered coord of ghost cell
   double x,y;
   //top ghost cells
