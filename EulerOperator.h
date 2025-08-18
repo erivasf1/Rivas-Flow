@@ -46,7 +46,7 @@ class EulerBASE {
   void Setup2DBoundaryConditions(vector<array<double,4>>* &field,Output* &error); 
   virtual void Enforce2DBoundaryConditions(vector<array<double,4>>* &field); //MS uses unique inlet cond.
   virtual void ApplyInflow(vector<array<double,4>>* &field,MeshGenBASE* &mesh,int side); //30 deg. inlet uses Mach number and T as inlet conditions
-  void ApplyOutflow(vector<array<double,4>>* &field,MeshGenBASE* &mesh,int side);
+  void ApplyOutflow(vector<array<double,4>>* &field,int side);
   void ApplySlipWall(vector<array<double,4>>* &field,MeshGenBASE* &mesh,int side);
   //ComputeRightBoundaryCondition -- outflow
   //ComputeTopBoundaryCondition -- freestream
@@ -220,7 +220,7 @@ class Euler2DMMS : public EulerBASE {
   double EnergySourceTerm(double x,double y);
   void EvalSourceTerms(SpaceVariables2D* &sols) override; //source terms for all governing equations
   void Enforce2DBoundaryConditions(vector<array<double,4>>* &field) override;
-  void ApplyMSInflow(int side); //TODO:
+  void ApplyMSInflow(int side);
   void ComputeResidual(vector<array<double,4>>* &resid,vector<array<double,4>>* &field) override;
   ~Euler2DMMS();
 

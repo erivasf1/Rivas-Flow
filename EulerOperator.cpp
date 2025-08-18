@@ -101,7 +101,60 @@ void EulerBASE::ApplyInflow(vector<array<double,4>>* &,MeshGenBASE* &,int ){
 }
 
 //-----------------------------------------------------------
-void EulerBASE::ApplyOutflow(vector<array<double,4>>* &,MeshGenBASE* &,int){
+void EulerBASE::ApplyOutflow(vector<array<double,4>>* &field,int side){
+
+  //1st Order implementation
+  //u(ghost) = 2*u(nbor_close)-u(nbor_far)
+  array<double,4> nbor_close,nbor_far;
+
+  if (side==0){ //TOP GHOST CELLS
+    for (int m=0;m<(int)mesh->top_cells.size();m++){
+      //retrieving the nbor cells
+      nbor_close = (m<mesh->cell_imax) ? fieldij(field,m,mesh->cell_jmax-1,mesh->cell_imax) : mesh->top_cells[m-mesh->cell_imax];
+      nbor_far = (m<mesh->cell_imax) ? fieldij(field,m,mesh->cell_jmax-2,mesh->cell_imax) : fieldij(field,m-mesh->cell_imax,mesh->cell_jmax-1,mesh->cell_imax);
+
+      //applying first order extrapolation
+      for (int n=0;n<4;n++)
+        mesh->top_cells[m][n] = 2.0*nbor_close[n]-nbor_far[n];
+    }
+  }
+
+  if (side==1){ //BTM GHOST CELLS
+    for (int m=0;m<(int)mesh->btm_cells.size();m++){
+      //retrieving the nbor cells
+      nbor_close = (m<mesh->cell_imax) ? fieldij(field,m,0,mesh->cell_imax) : mesh->btm_cells[m-mesh->cell_imax];
+      nbor_far = (m<mesh->cell_imax) ? fieldij(field,m,1,mesh->cell_imax) : fieldij(field,m-mesh->cell_imax,0,mesh->cell_imax);
+
+      //applying first order extrapolation
+      for (int n=0;n<4;n++)
+        mesh->btm_cells[m][n] = 2.0*nbor_close[n]-nbor_far[n];
+    }
+  }
+
+  if (side==2){ //LEFT GHOST CELLS
+    for (int m=0;m<(int)mesh->left_cells.size();m++){
+      //retrieving the nbor cells
+      nbor_close = (m<mesh->cell_jmax) ? fieldij(field,0,m,mesh->cell_imax) : mesh->left_cells[m-mesh->cell_jmax];
+      nbor_far = (m<mesh->cell_jmax) ? fieldij(field,1,m,mesh->cell_imax) : fieldij(field,0,m-mesh->cell_jmax,mesh->cell_imax);
+
+      //applying first order extrapolation
+      for (int n=0;n<4;n++)
+        mesh->left_cells[m][n] = 2.0*nbor_close[n]-nbor_far[n];
+    }
+  }
+
+  if (side==3){ //RIGHT GHOST CELLS
+    for (int m=0;(int)m<mesh->right_cells.size();m++){
+      //retrieving the nbor cells
+      nbor_close = (m<mesh->cell_jmax) ? fieldij(field,mesh->cell_imax-1,m,mesh->cell_imax) : mesh->right_cells[m-mesh->cell_jmax];
+      nbor_far = (m<mesh->cell_jmax) ? fieldij(field,mesh->cell_imax-2,m,mesh->cell_imax) : fieldij(field,mesh->cell_imax-1,m-mesh->cell_jmax,mesh->cell_imax);
+
+      //applying first order extrapolation
+      for (int n=0;n<4;n++)
+        mesh->right_cells[m][n] = 2.0*nbor_close[n]-nbor_far[n];
+    }
+  }
+
   return;
 }
 //-----------------------------------------------------------
@@ -1544,45 +1597,40 @@ void Euler2DMMS::Enforce2DBoundaryConditions(vector<array<double,4>>* &field){
 
   //boundary id - 0:Top, 1:Btm, 2:Left, 3:Right
   //top boundary
-  for (int i=0;i<cell_imax;i++){
-    if (top_cond==0)
-      ApplyMSInflow(0);
-    else if (top_cond==1)
-      ApplyOutflow(field,mesh,0);
-    else if (top_cond==2)
-      ApplySlipWall(field,mesh,0);
-  }
+  if (top_cond==0)
+    ApplyMSInflow(0);
+  else if (top_cond==1)
+    ApplyOutflow(field,0);
+  else if (top_cond==2)
+    ApplySlipWall(field,mesh,0);
+  
 
   //btm boundary 
-  for (int i=0;i<cell_imax;i++){
-    if (btm_cond==0)
-      ApplyMSInflow(1);
-    else if (btm_cond==1)
-      ApplyOutflow(field,mesh,1);
-    else if (btm_cond==2)
-      ApplySlipWall(field,mesh,1);
-  }
+  if (btm_cond==0)
+    ApplyMSInflow(1);
+  else if (btm_cond==1)
+    ApplyOutflow(field,1);
+  else if (btm_cond==2)
+    ApplySlipWall(field,mesh,1);
+  
 
   //left boundary
-  for (int i=0;i<cell_imax;i++){
-    if (left_cond==0)
-      ApplyMSInflow(2);
-    else if (left_cond==1)
-      ApplyOutflow(field,mesh,2);
-    else if (left_cond==2)
-      ApplySlipWall(field,mesh,2);
-  }
+  if (left_cond==0)
+    ApplyMSInflow(2);
+  else if (left_cond==1)
+    ApplyOutflow(field,2);
+  else if (left_cond==2)
+    ApplySlipWall(field,mesh,2);
+  
 
   //right boundary
-  for (int i=0;i<cell_imax;i++){
-    if (right_cond==0)
-      ApplyMSInflow(3);
-    else if (right_cond==1)
-      ApplyOutflow(field,mesh,3);
-    else if (right_cond==2)
-      ApplySlipWall(field,mesh,3);
-  }
-
+  if (right_cond==0)
+    ApplyMSInflow(3);
+  else if (right_cond==1)
+    ApplyOutflow(field,3);
+  else if (right_cond==2)
+    ApplySlipWall(field,mesh,3);
+  
   return;
 
 }

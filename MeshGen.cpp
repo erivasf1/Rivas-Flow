@@ -774,6 +774,8 @@ void MeshGen2D::ComputeGhostCellCenteredCoordinate(){
        
       top_cellcenter_coords[i+(j*cell_imax)] = avg_xy1;
       btm_cellcenter_coords[i+(j*cell_imax)] = avg_xy2;
+
+      x1=0.0; x2=0.0; y1=0.0; y2=0.0; 
     }
   }
 
@@ -792,6 +794,8 @@ void MeshGen2D::ComputeGhostCellCenteredCoordinate(){
        
       left_cellcenter_coords[j+(i*cell_jmax)] = avg_xy1;
       right_cellcenter_coords[j+(i*cell_jmax)] = avg_xy2;
+
+      x1=0.0; x2=0.0; y1=0.0; y2=0.0; 
     }
   }
 
