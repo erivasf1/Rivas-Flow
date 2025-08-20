@@ -265,7 +265,7 @@ write(40,*) 'DT=(DOUBLE DOUBLE DOUBLE DOUBLE DOUBLE DOUBLE DOUBLE
     if (count % 4 == 0)
       myfile<<endl;
   }
-
+  myfile<<endl;
   myfile.close(); //closing file writing to it
   //myfile.flush();
 

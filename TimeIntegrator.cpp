@@ -65,22 +65,22 @@ void EulerExplicit::FWDEulerAdvance(vector<array<double,4>>* &field,vector<array
 
   double vol;
   array<double,4> conserve;
+  int cell_index;
   //use indexing of interior cells for Resid!
   // Field still has ghost cells
   //First, convert to conservative to compute conservative values at new time step
   //Second, extract primitive variables from newly calculated conservative variables
-  //for (int n=0;n<cellnumber;n++){ //i+2 to skip inflow ghost cells
-  for (int j=0;j<mesh->cell_jmax;j++){ //i+2 to skip inflow ghost cells
-    for (int i=0;i<mesh->cell_imax;i++){ //i+2 to skip inflow ghost cells
+  for (int j=0;j<mesh->cell_jmax;j++){ 
+    for (int i=0;i<mesh->cell_imax;i++){ 
 
-    vol = mesh->GetCellVolume(i,j); //acquiring cell vol
-    //Tools::print("Volume of cell %d:%f\n",i,vol);
-    conserve = euler->ComputeConserved(field,i,j); //!< computing conservative values
+      cell_index = i + (j*mesh->cell_imax);
+      vol = mesh->GetCellVolume(i,j); //acquiring cell vol
+      conserve = euler->ComputeConserved(field,i,j); //!< computing conservative values
 
-    for (int n=0;n<4;n++) // advancing to new timestep of conservative variable
-      conserve[n] -= Omega[n]*((*time_steps)[n] / vol) * (*resid)[n][n];
+      for (int n=0;n<4;n++) // advancing to new timestep of conservative variable
+        conserve[n] -= Omega[n]*((*time_steps)[n] / vol) * (*resid)[cell_index][n];
 
-    euler->ComputePrimitive(field,conserve,i,j); //!< extracting new primitive variables
+      euler->ComputePrimitive(field,conserve,i,j); //!< extracting new primitive variables
 
     }
   }

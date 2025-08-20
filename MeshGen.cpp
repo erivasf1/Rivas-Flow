@@ -831,7 +831,7 @@ array<double,2> MeshGen2D::ComputeOutwardUnitVector(int i,int j,int side){
     y1 = cell_coords[1][2]; y2 = cell_coords[1][3];
     area = GetInteriorCellArea(i,j,0);
     
-    nx = (y2-y1) / area; ny = -(x2-x1) / area;
+    nx = -(y2-y1) / area; ny = (x2-x1) / area;
     
   }
 
@@ -840,7 +840,7 @@ array<double,2> MeshGen2D::ComputeOutwardUnitVector(int i,int j,int side){
     y1 = cell_coords[1][0]; y2 = cell_coords[1][1];
     area = GetInteriorCellArea(i,j,1);
     
-    nx = -(y2-y1) / area; ny = (x2-x1) / area;
+    nx = (y2-y1) / area; ny = -(x2-x1) / area;
 
   }
 

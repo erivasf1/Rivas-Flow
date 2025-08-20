@@ -67,7 +67,7 @@ int main() {
   //const char* meshfile = NULL;
 
   // Temporal Specifications
-  const int iter_max = 2;
+  const int iter_max = 100;
   int iterout = 1; //number of iterations per solution output
   const double CFL = 0.1; //CFL number (must <= 1 for Euler Explicit integration)
   //const double CFL = 2.9e-4; //CFL number (must <= 1 for Euler Explicit integration)
@@ -233,12 +233,11 @@ int main() {
   (timestep == true) ? Tools::print("Local time-stepping\n") : Tools::print("Global time-stepping\n");  
   // Temporal Stats
   Tools::print("-Flux Statistics:");
-  if (flux_scheme == false){ //Upwind Schemes
-    if (flux_accuracy == true)//1st order
-      (upwind_scheme == true) ? Tools::print(" 1st Order Van Leer Scheme\n") : Tools::print(" 1st Order Roe's Scheme\n");
-    else if (flux_accuracy == false)//2nd order
-      (upwind_scheme == true) ? Tools::print(" 2nd Order Van Leer Scheme\n") : Tools::print(" 2nd Order Roe's Scheme\n");
-  }
+  if (flux_scheme == 1) //Van Leer Flux 
+    (flux_accuracy == 1) ? Tools::print(" 1st Order Van Leer Scheme\n") : Tools::print(" 2nd Order Van Leer Scheme\n");
+  else if (flux_scheme == 2) //Roe Flux
+    (flux_accuracy == 1) ? Tools::print(" 1st Order Roe's Scheme\n") : Tools::print(" 2nd Order Roe's Scheme\n");
+  
   else
     Tools::print(" JST Damping\n");
 
@@ -377,20 +376,21 @@ int main() {
 
 
     //! UNDER-RELAXATION CHECK
-    if (check[0]==true || check[1] == true || check[2] == true){ //perform under-relaxation if any of these are true
+    if (check[0]==true || check[1] == true || check[2] == true || check[3] == true){ //perform under-relaxation if any of these are true
       for (int j=0;j<subiter_max;j++){
         for (int i=0;i<4;i++) //!< reassigns omega to half of current value if under-relaxation detected
           Omega[i] = (check[i] == true) ?  Omega[i] /= 2.0 : Omega[i] = 1.0;
 
         (*field_star) = (*field); //resetting primitive variables to previous time step values
         time->FWDEulerAdvance(field_star,resid_star,time_steps,Omega); //advancing intermediate solution w/ under-relaxation factor 
+        time->SolutionLimiter(field_star); //temporarily reapplying the limiter
         euler->ComputeResidual(resid_star,field_star);
         ResidualStarNorms = sols->ComputeSolutionNorms(resid_star);
         time->UnderRelaxationCheck(ResidualNorms,ResidualStarNorms,C,check);
 
         //checking if new residuals do not need under-relaxation
-        if (check[0]==false && check[1] == false && check[2] == false){ 
-          for (int i=0;i<3;i++) //!< resetting omega to 1
+        if (check[0]==false && check[1] == false && check[2] == false && check[3] == false){ 
+          for (int i=0;i<4;i++) //!< resetting omega to 1
             Omega[i] = 1.0;
           break;
         }
@@ -425,7 +425,7 @@ int main() {
       name += it;
       name += ".txt";
       const char* filename_iter = name.c_str();
-      error->OutputPrimitiveVariables(field,filename_iter,true,iter,mesh->xcoords,mesh->ycoords,mesh->cellnumber,mesh->Nx,mesh->Ny);
+      error->OutputPrimitiveVariables(field,filename_totalsols,true,iter,mesh->xcoords,mesh->ycoords,mesh->cellnumber,mesh->Nx,mesh->Ny);
 
       //Printing to TECPLOT
       //error->OutputPrimitiveVariables(field,filename_totalsols,true,iter,xcoords);
