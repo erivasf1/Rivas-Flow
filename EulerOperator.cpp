@@ -227,6 +227,9 @@ array<double,4> EulerBASE::ComputeSpatialFlux_UPWIND1stOrder(vector<array<double
     for (int n=0;n<4;n++) //summing up left and right state fluxes
       flux[n] = flux_rtstate[n] + flux_ltstate[n];
 
+
+    
+
   }
   else if (flux_scheme == 2){ //Roe's Method
     //flux = ComputeRoeFlux(left_state,right_state);
@@ -360,7 +363,7 @@ array<double,4> EulerBASE::VanLeerCompute(array<double,4> &field_state,bool sign
   array<double,4> field_normal{field_state[0],field_state[1]*nx,field_state[2]*ny,field_state[3]}; //val. of primitive vars. with outward normal velocities
   //scalars
   double M = ComputeMachNumber(field_normal); //local outward Mach Number
-  double a = field_normal[1] / M; //local outward normal speed of sound
+  double a = sqrt(pow(field_normal[1],2.0) + pow(field_normal[2],2.0) ) / M; //local outward normal speed of sound
  
   //total energy term(h_t)
   double ht = (gamma/(gamma-1.0))*(field_state[2]/field_state[0]); //pressure work
@@ -368,7 +371,7 @@ array<double,4> EulerBASE::VanLeerCompute(array<double,4> &field_state,bool sign
 
   //vectors
   array<double,4> convect_vec{1.0,field_state[1],field_state[2],ht}; //vector multiple for convective flux
-  array<double,4> pressure_vec{0.0,field_state[2]*nx,field_state[2]*ny,0.0}; //vector multiple for pressure flux
+  array<double,4> pressure_vec{0.0,field_state[3]*nx,field_state[3]*ny,0.0}; //vector multiple for pressure flux
 
   //Convective Flux
   double C = GetC(M,sign);
@@ -1816,7 +1819,7 @@ void Euler2DMMS::ComputeResidual(vector<array<double,4>>* &resid,vector<array<do
         flux_btm = ComputeSpatialFlux_UPWIND2ndOrder(field,i,j-1,i,j);
       }
       else {} //TODO:error handling
-      
+
       //volume evaluation (for source term) + source term retrievel 
       vol = mesh->GetCellVolume(i,j);
       mms = fieldij(mms_source,i,j,cell_imax);
@@ -1828,8 +1831,9 @@ void Euler2DMMS::ComputeResidual(vector<array<double,4>>* &resid,vector<array<do
       area_btm = mesh->GetInteriorCellArea(i,j,1);
 
       //residual calc.
-      for (int n=0;n<4;n++)
+      for (int n=0;n<4;n++){
         res[n] = (flux_right[n]*area_right-flux_left[n]*area_left) + (flux_top[n]*area_top - flux_btm[n]*area_btm) - mms[n]*vol;
+      }
 
       fieldij(resid,i,j,cell_imax) = res;
     }

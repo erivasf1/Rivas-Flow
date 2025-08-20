@@ -226,7 +226,7 @@ array<array<double,4>,2> MeshGen2D::GetCellCoords(int &i,int &j){
   //int cell_imax = Nx-2;
   double x1,x2,x3,x4; 
   double y1,y2,y3,y4; 
-  int cell_id = i + (j*Nx);
+  int cell_id = i + (j*cell_imax);
   int pt_id1,pt_id2,pt_id3,pt_id4;
   
   array<array<double,4>,2> cell_coords;
@@ -257,7 +257,7 @@ array<array<double,4>,2> MeshGen2D::GetGhostCellCoords(int &i,int &j, int tag){
   //NOTE: 1st layer of ghost cell coords are not the same as the 1st/last layer of interior cell coords!
   double x1,x2,x3,x4;
   double y1,y2,y3,y4; 
-  int cell_id = i + (j*Nx);
+  //int cell_id = i + (j*Nx);
   int pt_id1,pt_id2,pt_id3,pt_id4;
   
   array<array<double,4>,2> cell_coords;
@@ -865,7 +865,7 @@ array<double,2> MeshGen2D::ComputeOutwardUnitVector(int i,int j,int side){
   else {
     cerr<<"Unknown side # specification!"<<endl;
   }
-  
+
   array<double,2> normals{nx,ny};
   return normals;
 
