@@ -221,6 +221,8 @@ void MeshGen2D::OutputMesh(){
 //-----------------------------------------------------------
 array<array<double,4>,2> MeshGen2D::GetCellCoords(int &i,int &j){
 
+  //NOTE: pt1 = i,j, pt2 = i+1,j, pt3 = i,j+1, pt4 = i+1,j+1
+  //NOTE: cell_coords[0]=all xcoords, cell_coords[1]=all ycoords
   //int cell_imax = Nx-2;
   double x1,x2,x3,x4; 
   double y1,y2,y3,y4; 
@@ -229,10 +231,10 @@ array<array<double,4>,2> MeshGen2D::GetCellCoords(int &i,int &j){
   
   array<array<double,4>,2> cell_coords;
     
-  pt_id1 = (j==0) ? cell_id : cell_id+j; //for j>0, cell nodes and pt nodes are offsetted by the # of j rows above j=0
+  pt_id1 = (j==0) ? cell_id : cell_id+j; //NOTE: for j>0, cell nodes and pt nodes are offsetted by the # of j rows above j=0
 
-  pt_id2 = cell_id+1; pt_id3 = cell_id + Nx;
-  pt_id4 = cell_id + (Nx+1);
+  pt_id2 = pt_id1+1; pt_id3 = pt_id1 + Nx;
+  pt_id4 = pt_id1 + (Nx+1);
 
   x1 = xcoords[pt_id1]; y1 = ycoords[pt_id1];
   x2 = xcoords[pt_id2]; y2 = ycoords[pt_id2];
@@ -817,40 +819,41 @@ double MeshGen2D::GetCellVolume(int &i, int &j){
 //-----------------------------------------------------------
 array<double,2> MeshGen2D::ComputeOutwardUnitVector(int i,int j,int side){
 
+  //NOTE: Refer to Sec.7, Slide 29
   //side refering to the side of the cell
   double nx,ny; //unit normal vector components
   double x1,y1,x2,y2;
   double area;
   array<array<double,4>,2> cell_coords = GetCellCoords(i,j);
 
-  if (side == 0){ //top side case
+  if (side == 0){ //top side case (outward unit vector aligned w/ +j)
     x1 = cell_coords[0][2]; x2 = cell_coords[0][3];
     y1 = cell_coords[1][2]; y2 = cell_coords[1][3];
     area = GetInteriorCellArea(i,j,0);
     
-    nx = (y2-y1) / area; ny = (x2-x1) / area;
+    nx = (y2-y1) / area; ny = -(x2-x1) / area;
     
   }
 
-  else if (side == 1){ //btm side case
+  else if (side == 1){ //btm side case (outward unit vector aligned w/ -j)
     x1 = cell_coords[0][0]; x2 = cell_coords[0][1];
     y1 = cell_coords[1][0]; y2 = cell_coords[1][1];
     area = GetInteriorCellArea(i,j,1);
     
-    nx = (y2-y1) / area; ny = -(x2-x1) / area;
+    nx = -(y2-y1) / area; ny = (x2-x1) / area;
 
   }
 
-  else if (side == 2){ //left side case
+  else if (side == 2){ //left side case (outward unit vector aligned w/ -i)
     x1 = cell_coords[0][0]; x2 = cell_coords[0][2];
     y1 = cell_coords[1][0]; y2 = cell_coords[1][2];
     area = GetInteriorCellArea(i,j,2);
     
-    nx = -(y2-y1) / area; ny = -(x2-x1) / area; //nx negative to point outward of cell
+    nx = -(y2-y1) / area; ny = (x2-x1) / area; //nx negative to point outward of cell
 
   }
 
-  else if (side == 3){ //right side case
+  else if (side == 3){ //right side case (outward unit vector aligned w/ +i)
     x1 = cell_coords[0][1]; x2 = cell_coords[0][3];
     y1 = cell_coords[1][1]; y2 = cell_coords[1][3];
     area = GetInteriorCellArea(i,j,3);

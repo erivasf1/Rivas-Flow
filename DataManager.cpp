@@ -368,4 +368,11 @@ array<double,4> SpaceVariables2D::ComputeSolutionNorms(vector<array<double,4>>* 
 
 }
 //---------------------------------------------------------
+double SpaceVariables2D::ComputeNormAvg(array<double,4> &norms){
+
+  double norms_avg = (norms[0]+norms[1]+norms[2]+norms[3]) / 4.0;
+  return norms_avg;
+
+}
+//---------------------------------------------------------
 SpaceVariables2D::~SpaceVariables2D(){}

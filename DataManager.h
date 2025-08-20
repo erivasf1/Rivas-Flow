@@ -50,6 +50,7 @@ class SpaceVariables2D { //TODO: Will replace SpaceVariables1D
   void ComputeInteriorCellCenteredCoordinate(vector<double> &xcoords,vector<double> &ycoords,vector<double> &cell_center_xcoords,vector<double> &cell_center_ycoords,int imax); //approximates cell-center avg. by averaging corner nodes of cell
   void ComputeGhostCellCenteredCoordinate(MeshGen2D* &mesh); //For Interior Cells Only
   array<double,4> ComputeSolutionNorms(vector<array<double,4>>* &resid);
+  double ComputeNormAvg(array<double,4> &norms);
 
   ~SpaceVariables2D();
 

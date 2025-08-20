@@ -4,72 +4,85 @@
 // EULEREXPLICIT DEFINITIONS
 
 //-----------------------------------------------------------
-EulerExplicit::EulerExplicit(int &c)
-: cellnumber(c)
+EulerExplicit::EulerExplicit(MeshGenBASE* &m,EulerBASE* &e,const double &c)
+: mesh(m),euler(e) ,CFL(c)
 {}
 
 //-----------------------------------------------------------
-vector<double> EulerExplicit::ComputeLocalTimeStep(vector<array<double,3>>* &field,Euler1D* &euler,const double &CFL,double &dx){
+vector<double> EulerExplicit::ComputeLocalTimeStep(vector<array<double,4>>* &field){
 
-  double lambda_max;
-  vector<double> time_steps(cellnumber);
+  //refer to Sec7-2D-Slide:36
+  array<double,2> lambda_max; //speed of sound + velocity
+  vector<double> time_steps(mesh->cellnumber);
+  double dx,dy;
+  int index;
 
-  //array<double,cellnumber> time_steps; //stores the computed time steps per interior cell
-  for (int i=0;i<euler->total_cellnum;i++){ //looping through all interior no|int nbor)
-    if ( (i==0) | (i==1) | (i==euler->total_cellnum-2) | (i==euler->total_cellnum-1) ) //skiping the ghost cells
-      continue;
+  for (int j=0;j<mesh->cell_jmax;j++){ //looping through all interior cells
+    for (int i=0;i<mesh->cell_imax;i++){ //looping through all interior cells
 
-    lambda_max = euler->GetLambdaMax(field,i); //obtaining largest eigenvalue per cell
-    if (std::isnan(lambda_max)){
+    index = i + (j*mesh->cell_imax);
+    lambda_max = euler->GetLambdaMax(field,index); //note: [0]:x & [1]:y
+
+    dx = mesh->GetInteriorCellArea(i,j,0);
+    dy = mesh->GetInteriorCellArea(i,j,2);
+
+    //error handling
+    if (std::isnan(lambda_max[0]) || isnan(lambda_max[1]) ){
       Tools::print("Infinitiy detected!\n");
       Tools::print("Velocity at loc(%d): %f\n",i,(*field)[i][0]);
-      Tools::print("Mach # at loc(%d): %f\n",i,euler->GetMachNumber(field,i));
+      //Tools::print("Mach # at loc(%d): %f\n",i,euler->ComputeMachNumber(field,i));
     }
-    time_steps[i-2] = CFL * (dx/lambda_max);
+
+    time_steps[index] = CFL * (dx*dy) / 
+                 ( (lambda_max[0]*dy)+(lambda_max[1]*dx) );
     //Tools::print("CFL:%f,dx: %f,lambda_max:%f\n",CFL,dx,lambda_max);
      
+    }
   }
 
   return time_steps;
 }
 
 //-----------------------------------------------------------
-vector<double> EulerExplicit::ComputeGlobalTimeStep(vector<array<double,3>>* &field,Euler1D* &euler,const double &CFL,double &dx){
+vector<double> EulerExplicit::ComputeGlobalTimeStep(vector<array<double,4>>* &field){
 
   //extracting smallest local time step of all cells
-  vector<double> time_steps = ComputeLocalTimeStep(field,euler,CFL,dx); //local time steps list for all cells
+  vector<double> time_steps = ComputeLocalTimeStep(field); //local time steps list for all cells
   double min_time_step = 1.0e5; //temp. value for min time_step
 
-  for (int n=0;n<cellnumber;n++){
+  for (int n=0;n<(int)time_steps.size();n++){
     if (time_steps[n] < min_time_step)
       min_time_step = time_steps[n];
   }
 
-  vector<double> global_time_steps(cellnumber,min_time_step);
+  vector<double> global_time_steps((int)time_steps.size(),min_time_step);
 
   return global_time_steps;
 
 }
 //-----------------------------------------------------------
-void EulerExplicit::FWDEulerAdvance(vector<array<double,3>>* &field,vector<array<double,3>>* &resid,Euler1D* &euler,vector<double>* &time_steps,array<double,3> &Omega,MeshGenBASE* &mesh){
+void EulerExplicit::FWDEulerAdvance(vector<array<double,4>>* &field,vector<array<double,4>>* &resid,vector<double>* &time_steps,array<double,4> &Omega){
 
   double vol;
-  array<double,3> conserve;
+  array<double,4> conserve;
   //use indexing of interior cells for Resid!
   // Field still has ghost cells
   //First, convert to conservative to compute conservative values at new time step
   //Second, extract primitive variables from newly calculated conservative variables
-  for (int n=0;n<cellnumber;n++){ //i+2 to skip inflow ghost cells
+  //for (int n=0;n<cellnumber;n++){ //i+2 to skip inflow ghost cells
+  for (int j=0;j<mesh->cell_jmax;j++){ //i+2 to skip inflow ghost cells
+    for (int i=0;i<mesh->cell_imax;i++){ //i+2 to skip inflow ghost cells
 
-    vol = mesh->GetCellVolume(n); //acquiring cell vol
+    vol = mesh->GetCellVolume(i,j); //acquiring cell vol
     //Tools::print("Volume of cell %d:%f\n",i,vol);
-    conserve = euler->ComputeConserved(field,n+2); //!< computing conservative values
+    conserve = euler->ComputeConserved(field,i,j); //!< computing conservative values
 
-    for (int i=0;i<3;i++) // advancing to new timestep of conservative variable
-      conserve[i] -= Omega[i]*((*time_steps)[i] / vol) * (*resid)[n][i];
+    for (int n=0;n<4;n++) // advancing to new timestep of conservative variable
+      conserve[n] -= Omega[n]*((*time_steps)[n] / vol) * (*resid)[n][n];
 
-    euler->ComputePrimitive(field,conserve,n+2); //!< extracting new primitive variables
+    euler->ComputePrimitive(field,conserve,i,j); //!< extracting new primitive variables
 
+    }
   }
   
   return;
@@ -77,27 +90,33 @@ void EulerExplicit::FWDEulerAdvance(vector<array<double,3>>* &field,vector<array
 }
 
 //-----------------------------------------------------------
-void EulerExplicit::SolutionLimiter(vector<array<double,3>>* &field){
+void EulerExplicit::SolutionLimiter(vector<array<double,4>>* &field){
 
   for (int n=0;n<(int)field->size();n++){
     //Density
     (*field)[n][0] = std::min(Density_max,std::max(Density_min,(*field)[n][0]));
 
-    //Velocity
+    //X-Velocity
     (*field)[n][1] = std::min(Velocity_max,std::max(Velocity_min,(*field)[n][1]));
 
+    //Y-Velocity
+    (*field)[n][2] = std::min(Velocity_max,std::max(Velocity_min,(*field)[n][2]));
+
     //Pressure
-    (*field)[n][2] = std::min(Pressure_max,std::max(Pressure_min,(*field)[n][2]));
+    (*field)[n][3] = std::min(Pressure_max,std::max(Pressure_min,(*field)[n][3]));
 
     //Printing out message if limiter kicks in
     if ((*field)[n][0] == Density_max || (*field)[n][0] == Density_min)
       Tools::print("Limiter was hit for density at cell %d | val is now:%e\n",n,(*field)[n][0]);
 
     if ((*field)[n][1] == Velocity_max || (*field)[n][1] == Velocity_min)
-      Tools::print("Limiter was hit for velocity at cell %d | val is now:%e\n",n,(*field)[n][1]);
+      Tools::print("Limiter was hit for x-velocity at cell %d | val is now:%e\n",n,(*field)[n][1]);
 
-    if ((*field)[n][2] == Pressure_max || (*field)[n][2] == Pressure_min)
-      Tools::print("Limiter was hit for pressure at cell %d | val is now:%e\n",n,(*field)[n][2]);
+    if ((*field)[n][2] == Velocity_max || (*field)[n][2] == Velocity_min)
+      Tools::print("Limiter was hit for y-velocity at cell %d | val is now:%e\n",n,(*field)[n][2]);
+
+    if ((*field)[n][3] == Pressure_max || (*field)[n][3] == Pressure_min)
+      Tools::print("Limiter was hit for pressure at cell %d | val is now:%e\n",n,(*field)[n][3]);
 
   }
 
@@ -106,9 +125,9 @@ void EulerExplicit::SolutionLimiter(vector<array<double,3>>* &field){
 }
 
 //-----------------------------------------------------------
-void EulerExplicit::UnderRelaxationCheck(array<double,3> ResidPrevNorm,array<double,3> ResidNorm,double C,array<bool,3> &check){
+void EulerExplicit::UnderRelaxationCheck(array<double,4> ResidPrevNorm,array<double,4> ResidNorm,double C,array<bool,4> &check){
 
-  for (int i=0;i<3;i++){
+  for (int i=0;i<4;i++){
     if (ResidNorm[i] > C*ResidPrevNorm[i])
       check[i] = true; //assigning true to corresponding equation
   }
@@ -118,7 +137,7 @@ void EulerExplicit::UnderRelaxationCheck(array<double,3> ResidPrevNorm,array<dou
 }
 
 //-----------------------------------------------------------
-bool EulerExplicit::CheckStallResids(int &count,array<double,3> &ResidNorms,array<double,3> &Prev_ResidualNorms,SpaceVariables1D* &sol){
+bool EulerExplicit::CheckStallResids(int &count,array<double,4> &ResidNorms,array<double,4> &Prev_ResidualNorms,SpaceVariables2D* &sol){
 
   int count_tol = 1e5; double diff_tol = 1.0e-2; 
   double resid_avg = sol->ComputeNormAvg(ResidNorms); 

@@ -27,7 +27,7 @@ class MeshGenBASE {
   virtual void GenerateMesh();
   virtual void ReadMeshFile();
   virtual void OutputMesh();
-  virtual void GenerateGhostCells(int left_id,int right_id,int top_id,int btm_id); //-- adds the extra ghost cells to the domain 
+  virtual void GenerateGhostCells(int left_id,int right_id,int top_id,int btm_id); //-- adds the extra ghost cells to the domain virtual double GetInteriorCellArea(int &i,int &j,int side);
   virtual double GetInteriorCellArea(int &i,int &j,int side);
   virtual double GetCellVolume(int &i,int &j);
   virtual void ComputeGhostCellCenteredCoordinate();

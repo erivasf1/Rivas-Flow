@@ -37,9 +37,11 @@ class EulerBASE {
 
   double ComputeMachNumber(array<double,4> &sols);
   double GetGamma();
+  array<double,2> GetLambdaMax(vector<array<double,4>>* &field,int index);
 
   //Compute Conserved & Primitive Variables
   array<double,4> ComputeConserved(vector<array<double,4>>* &field,int &i,int &j);
+  void ComputePrimitive(vector<array<double,4>>* &field,array<double,4> &conserved,int i,int j);
   //Initial Conditions
   virtual void SetInitialConditions(vector<array<double,4>>* &field); //Complete (tested)
   //TODO:Boundary Conditions -- refer to this paper:https://arc-aiaa-org.ezproxy.lib.vt.edu/doi/10.2514/3.11983  
@@ -48,14 +50,11 @@ class EulerBASE {
   virtual void ApplyInflow(vector<array<double,4>>* &field,MeshGenBASE* &mesh,int side); //30 deg. inlet uses Mach number and T as inlet conditions
   void ApplyOutflow(vector<array<double,4>>* &field,int side);
   void ApplySlipWall(vector<array<double,4>>* &field,MeshGenBASE* &mesh,int side);
-  //ComputeRightBoundaryCondition -- outflow
-  //ComputeTopBoundaryCondition -- freestream
-  //ComputeBottomBoundaryCondition -- slip wall
-  //Spatial Fluxes
-  array<double,4> ComputeSpatialFlux_UPWIND1stOrder(vector<array<double,4>>* field,int loci,int locj,int nbori,int nborj); //1st order upwind schemes
+  //SPATIAL FLUXES
+  array<double,4> ComputeSpatialFlux_UPWIND1stOrder(vector<array<double,4>>* field,int loci,int locj,int nbori,int nborj,array<double,2> &unitvec); //1st order upwind schemes
   array<double,4> ComputeSpatialFlux_UPWIND2ndOrder(vector<array<double,4>>* field,int loci,int locj,int nbori,int nborj); //2nd order upwind schemes
   //VanLeer
-  array<double,4> VanLeerCompute(array<double,4> &field_state,bool sign);
+  array<double,4> VanLeerCompute(array<double,4> &field_state,bool sign,double &nx,double &ny);
   double GetC(double M,bool sign); //c value
   double GetAlpha(double M,bool sign); //alpha value
   double GetBeta(double M); //beta value
@@ -66,11 +65,11 @@ class EulerBASE {
   //MUSCL Extrapolation
   //Artificial Dissipation (JST Damping Only)
   //Source Term
+  virtual void EvalSourceTerms(SpaceVariables2D* &sols); //source terms for all governing equations
   //Residual
   virtual void ComputeResidual(vector<array<double,4>>* &resid,vector<array<double,4>>* &field);
   //MMS
   virtual void ManufacturedPrimitiveSols(vector<array<double,4>>* &field,SpaceVariables2D* &sols);
-  virtual void EvalSourceTerms(SpaceVariables2D* &sols); //source terms for all governing equations
   virtual ~EulerBASE();
 };
 
