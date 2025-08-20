@@ -67,7 +67,7 @@ int main() {
   //const char* meshfile = NULL;
 
   // Temporal Specifications
-  const int iter_max = 100;
+  const int iter_max = 1e3;
   int iterout = 1; //number of iterations per solution output
   const double CFL = 0.1; //CFL number (must <= 1 for Euler Explicit integration)
   //const double CFL = 2.9e-4; //CFL number (must <= 1 for Euler Explicit integration)

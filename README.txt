@@ -69,3 +69,5 @@ TODO!!!:
   1.2) Bottom - Slip Wall
   1.3) Left - Inflow
   1.4) Right - Outflow
+--IDEAS:
+1) Set manufactured sol. as initial condition to start off
