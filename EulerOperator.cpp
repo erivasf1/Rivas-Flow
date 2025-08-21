@@ -19,14 +19,16 @@ array<double,4> EulerBASE::ComputeConserved(vector<array<double,4>>* &field,int 
   //density
   res[0] = (*field)[cell_id][0]; 
 
-  //x-mom.
+  //x-mom. (rho*u)
   res[1] = (*field)[cell_id][0] * (*field)[cell_id][1]; 
 
-  //y-mom.
+  //y-mom. (rho*v)
   res[2] = (*field)[cell_id][0] * (*field)[cell_id][2]; 
 
-  //energy
-  res[3] = (*field)[cell_id][2]/(gamma-1.0) + (0.5)* (*field)[cell_id][0]*pow((*field)[cell_id][1],2.0); //TODO: Fix this!
+  //energy (rho*e_t)
+  // rho*e_t = P/(gamma-1) + 0.5*rho*(u^2+v^2)
+  res[3] = (*field)[cell_id][3]/(gamma-1.0) + 
+           0.5*(*field)[cell_id][0]*( pow((*field)[cell_id][1],2.0) + pow((*field)[cell_id][2],2.0) ); 
 
   return res;
   
@@ -44,7 +46,9 @@ void EulerBASE::ComputePrimitive(vector<array<double,4>>* &field,array<double,4>
   fieldij(field,i,j,mesh->cell_imax)[2] = conserved[2] / conserved[0];
 
   //pressure -- using ideal gas law
-  fieldij(field,i,j,mesh->cell_imax)[3] = (gamma-1.0) * (conserved[3]-0.5*((pow(conserved[1],2.0)+pow(conserved[2],2.0))/conserved[0]));
+  //P = (gamma-1)*[rho*e_t - rho*0.5*(u^2+v^2)]
+  double u = conserved[1] /  conserved[0]; double v = conserved[2]/conserved[0];
+  fieldij(field,i,j,mesh->cell_imax)[3] = (gamma-1.0) * (conserved[3]-conserved[0]*0.5*((pow(u,2.0)+pow(v,2.0))));
 
   return;
 }
@@ -1454,10 +1458,10 @@ void Euler2DMMS::SetInitialConditions(vector<array<double,4>>* &field){
   int cellnum = cell_imax * cell_jmax;
 
   for (int i=0;i<cellnum;i++) {
-    (*field)[i][0] = 1.0;
-    (*field)[i][1] = 1.0;
-    (*field)[i][2] = 1.0;
-    (*field)[i][3] = 1.0;
+    (*field)[i][0] = 0.5;
+    (*field)[i][1] = 0.5;
+    (*field)[i][2] = 0.5;
+    (*field)[i][3] = 0.5;
   }
 
   return;
@@ -1833,6 +1837,8 @@ void Euler2DMMS::ComputeResidual(vector<array<double,4>>* &resid,vector<array<do
       //residual calc.
       for (int n=0;n<4;n++){
         res[n] = (flux_right[n]*area_right-flux_left[n]*area_left) + (flux_top[n]*area_top - flux_btm[n]*area_btm) - mms[n]*vol;
+        if (isnan(res[n]) == true)
+          Tools::print("Nan detected for resid in cell[%d,%d]\n",i,j);
       }
 
       fieldij(resid,i,j,cell_imax) = res;

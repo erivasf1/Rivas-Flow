@@ -252,9 +252,21 @@ int main() {
   return 0;
   */ 
 
+  //! COMPUTING MANUFACTURED SOLUTION AND SOURCE TERMS (MMS ONLY)
+  if (scenario == 3){
+    string mms_sol_filename = "ManufacturedSols.dat";
+    string mms_source_filename = "SourceTerms.dat";
+    euler->ManufacturedPrimitiveSols(field_ms,sols); //!< computing manufactured sol.
+    euler->EvalSourceTerms(sols); //!< computing manufactured source terms
+    error->OutputPrimitiveVariables(field_ms,mms_sol_filename,false,0,mesh->xcoords,mesh->ycoords,mesh->cellnumber,mesh->Nx,mesh->Ny);
+    error->OutputManufacturedSourceTerms(field_ms_source,mms_source_filename,false,0,mesh->xcoords,mesh->ycoords,mesh->cellnumber,mesh->Nx,mesh->Ny);
+
+  }
+
   //! SETTING INITIAL CONDITIONS
   //Tools::print("At initial conditions\n");
-  euler->SetInitialConditions(field);
+  //euler->SetInitialConditions(field);
+  Field = FieldMS; //for now, setting field to manufactured sol.
 
   //!TODO: COMPUTING EXACT SOLUTION -- ONLY FOR 1D QUASI-STEADY NOZZLE
   /*
@@ -287,16 +299,6 @@ int main() {
 
   //time->SolutionLimiter(field_test);
 
-  //! COMPUTING MANUFACTURED SOLUTION AND SOURCE TERMS (MMS ONLY)
-  if (scenario == 3){
-    string mms_sol_filename = "ManufacturedSols.dat";
-    string mms_source_filename = "SourceTerms.dat";
-    euler->ManufacturedPrimitiveSols(field_ms,sols); //!< computing manufactured sol.
-    euler->EvalSourceTerms(sols); //!< computing manufactured source terms
-    error->OutputPrimitiveVariables(field_ms,mms_sol_filename,false,0,mesh->xcoords,mesh->ycoords,mesh->cellnumber,mesh->Nx,mesh->Ny);
-    error->OutputManufacturedSourceTerms(field_ms_source,mms_source_filename,false,0,mesh->xcoords,mesh->ycoords,mesh->cellnumber,mesh->Nx,mesh->Ny);
-
-  }
 
   //!< Outputting initial solutions with BC's
   //const char* filename2 = "InitSolutionswBCs.txt";

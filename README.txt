@@ -71,3 +71,5 @@ TODO!!!:
   1.4) Right - Outflow
 --IDEAS:
 1) Set manufactured sol. as initial condition to start off
+---for visualization on Paraview
+1) write a fcn. that formats the data into .vts format (structured Paraview grid)
