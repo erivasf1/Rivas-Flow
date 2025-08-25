@@ -399,9 +399,8 @@ EulerBASE::~EulerBASE(){}
 //-----------------------------------------------------------
 // EULER1D DEFINITIONS
 
-Euler1D::Euler1D(int& cellnum,double &P0,double &BP,double &T0,double &g)
-  : interior_cellnum(cellnum), stag_pressure(P0) , back_pressure(BP), stag_temperature(T0) 
-  , gamma(g) {}
+Euler1D::Euler1D(int& cellnum)
+  : interior_cellnum(cellnum) {}
 
 
 //-----------------------------------------------------------
@@ -1454,10 +1453,10 @@ void Euler2DMMS::SetInitialConditions(vector<array<double,4>>* &field){
   int cellnum = cell_imax * cell_jmax;
 
   for (int i=0;i<cellnum;i++) {
-    (*field)[i][0] = 1.0;
-    (*field)[i][1] = 1.0;
-    (*field)[i][2] = 1.0;
-    (*field)[i][3] = 1.0;
+    (*field)[i][0] = 0.5;
+    (*field)[i][1] = 0.5;
+    (*field)[i][2] = 0.5;
+    (*field)[i][3] = 0.5;
   }
 
   return;

@@ -20,13 +20,12 @@
 
 using namespace std;
 
-enum CASE_2D { //For ease of defining parameters
-  INLET,AIRFOIL1,AIRFOIL2
-};
+//For ease of defining parameters
+enum CASE_2D { 
+  INLET,AIRFOIL1,AIRFOIL2};
 
 enum BOUNDARY_COND {
-  INFLOW,OUTFLOW,SLIP_WALL
-};
+  INFLOW,OUTFLOW,SLIP_WALL};
 
 
 int main() {
@@ -39,35 +38,26 @@ int main() {
   // Scenario
   int scenario = 3; //1 = 1D, 2 = 2D, 3 = 2D MMS
   CASE_2D case_2d = AIRFOIL1;
+
   // Constants for 1D case
   double xmin = -1.0;
   double xmax = 1.0;
-  //double stag_pressure = 300.0 * 1000.0; //kPa -> Pa
-  //double back_pressure = 120.0 * 1000.0; //kPa -> Pa (for subsonic outflow cond.)
-  //double stag_temp = 600.0; //K
-  //double gamma = 1.4; //specific heat ratio
-  //double area_star = Tools::AreaVal(0.5*(xmin+xmax)); //area at throat
 
   // Boundary Conditions Specification
-  BOUNDARY_COND top_cond = OUTFLOW; //TEMP
+  BOUNDARY_COND top_cond = INFLOW; //TEMP
   BOUNDARY_COND btm_cond = INFLOW;
   BOUNDARY_COND left_cond = INFLOW;
-  BOUNDARY_COND right_cond = OUTFLOW;
+  BOUNDARY_COND right_cond = INFLOW;
 
   [[maybe_unused]]bool cond_loc{false}; //true for subsonic & false for supersonic (FOR EXACT SOL.)
   [[maybe_unused]]bool cond_bc{true}; //true for subsonic & false for supersonic (FOR OUTFLOW BC)
 
   // Mesh Specifications
-
-  int cellnum = 100; //recommending an even number for cell face at the throat of nozzle (NOTE: will get reassigned val. if mesh is provided)
-  //vector<double> xcoords; //stores the coords of the cell NODES!!! (i.e. size of xcoords is cellnum+1)!
-  //vector<double> ycoords; //stores the coords of the cell NODES!!! (i.e. size of xcoords is cellnum+1)!
-  //double dx;
+  [[maybe_unused]]int cellnum = 100; //recommending an even number for cell face at the throat of nozzle (NOTE: will get reassigned val. if mesh is provided)
   const char* meshfile = "Grids/CurvilinearGrids/curv2d9.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
-  //const char* meshfile = NULL;
 
   // Temporal Specifications
-  const int iter_max = 1e3;
+  const int iter_max = 1e2;
   int iterout = 1; //number of iterations per solution output
   const double CFL = 0.1; //CFL number (must <= 1 for Euler Explicit integration)
   //const double CFL = 2.9e-4; //CFL number (must <= 1 for Euler Explicit integration)
@@ -85,15 +75,15 @@ int main() {
   // Under-Relaxation Parameters
   double C = 1.2; //residual norm check
   array<double,4> Omega{1.0,1.0,1.0,1.0}; //FWD Advance Limiter
-  //int subiter_max = 0; //max number of relaxation sub-iterations
   int subiter_max = 1e2; //max number of relaxation sub-iterations
+  array<bool,4> check{false,false,false,false}; //false by default to check if under-relaxation is needed
 
   // Governing Eq. Residuals
-  double cont_tol = 1.0e-10;
-  double xmom_tol = 1.0e-10;
-  double energy_tol = 1.0e-10;
+  double cont_tol = 1.0e-5;
+  double xmom_tol = 1.0e-5;
+  double energy_tol = 1.0e-5;
 
-  //! GENERATING MESH -- TODO: Employ polymorphism here too!
+  //! GENERATING MESH 
   MeshGenBASE* mesh; 
   if (scenario == 1){ //1D Nozzle Mesh Case
     mesh = new MeshGenNozzle(xmin,xmax,cellnum);
@@ -108,28 +98,7 @@ int main() {
     return 0;
   }
   
-
-  //MeshGen1D* mesh = &Mesh; //1D Mesh
-
-  /*if (meshfile){ //2D Mesh Case -- read from file
-    xcoords = mesh_2d->xcoords;
-    ycoords = mesh_2d->ycoords;
-    //zcoords = mesh_2d->zcoords;
-    cellnum = mesh_2d->cellnumber;
-    mesh_2d -> OutputMesh(); //outputs mesh for tecplot visualization
-  }
-  else{ //1D Mesh Case -- Uniform
-    mesh->GenerateMesh(xcoords); //stores all coords in xcoords list
-    dx = abs(xcoords[0]-xcoords[1]); //delta x distance
-  }
-  //debug:
-  //Tools::print("Size of xcoords: %d\n",xcoords.size());
-  //Tools::print("Size of ycoords: %d\n",ycoords.size());
-  //Tools::print("imax: %d & jmax: %d\n",mesh_2d->imax,mesh_2d->jmax);
-  */
-
   //! DATA ALLOCATION
-  //TODO: Change Field variable array size to 4
   //Field variables
   vector<array<double,4>> Field(cellnum); //stores primitive variable sols.
   vector<array<double,4>> FieldStar(cellnum); //stores intermediate primitive variable sols.
@@ -142,11 +111,12 @@ int main() {
 
   vector<array<double,4>> Residual(cellnum); //stores the local residuals per eq.
   vector<array<double,4>> ResidualStar(cellnum); //stores the intermediate stage of primtive variables
-  vector<array<double,4>> InitResidual(cellnum); //stores the initial residual
+  vector<array<double,4>> InitResidual(mesh->cellnumber); //stores the initial residual
 
   vector<double> TimeSteps; //for storing the time step (delta_t) for each cell
   array<double,4> ResidualNorms; //for storing the global residual norms
   array<double,4> Prev_ResidualNorms; //for storing the previous global residual norms
+  array<double,4> ResidualStarNorms; //stores the intermediate global residual norms
 
   //Pointers to Field variables
   vector<array<double,4>>* field = &Field; //pointer to Field solutions
@@ -162,7 +132,7 @@ int main() {
   vector<double>* time_steps = &TimeSteps;
 
   //!OBJECT INITIALIZATIONS
-
+  // Specifying EulerOperator
   EulerBASE* euler;
   //Temp -- will add scenario == 1 once 1D section is fixed!
   if (scenario == 2) 
@@ -174,11 +144,10 @@ int main() {
     return 0;
   }
   
-  SpaceVariables2D Sols; //for operating on Field variables
-
-  //Tools tool; //utilities object
-
+  //TODO: Specifying time integrator via Polymorphism
   EulerExplicit Time(mesh,euler,CFL); //for computing time steps
+
+  SpaceVariables2D Sols; //for operating on Field variables
 
   Output Error; //for discretization error operations
 
@@ -187,25 +156,8 @@ int main() {
   SpaceVariables2D* sols = &Sols;
 
 
-
-  //if (mesh_2d) //reassigns pointer to newly created 2D SpaceVariable
-    //sols = new SpaceVariables2D();
-
-  /*if (mesh_2d){ //reassigns pointer to newly created 2D Objects
-    euler = new Euler2D();
-    sols = new SpaceVariables2D();
-  }
-  else
-    sols = new SpaceVariables1D();
-  */
-
   EulerExplicit* time = &Time;
   Output* error = &Error;
-
-  //Intermediate variables for under-relaxation
-  array<double,4> ResidualStarNorms; //stores the intermediate global residual norms
-  array<bool,4> check{false,false,false,false}; //false by default to check if under-relaxation is needed
-
 
   //! PRINTING OUT SIMULATION INFO
   // Title
@@ -241,20 +193,22 @@ int main() {
   else
     Tools::print(" JST Damping\n");
 
-  //debug: for visualizing manufactured sol.
-  /* 
-  vector<array<double,4>> FieldTest(cellnum); 
-  vector<array<double,4>>* field_test = &FieldTest;
-  Euler2D Erick; SpaceVariables2D Emma;
-  string file = "2DSols.dat";
-  Erick.ManufacturedPrimitiveSols(field_test,mesh_2d->imax,mesh_2d->jmax,xcoords,ycoords,Emma,cellnum);
-  Emma.AllOutputPrimitiveVariables(field_test,file,false,0,xcoords,ycoords,cellnum,mesh_2d->imax,mesh_2d->jmax);
-  return 0;
-  */ 
+
+  //! COMPUTING MANUFACTURED SOLUTION AND SOURCE TERMS (MMS ONLY)
+  if (scenario == 3){
+    string mms_sol_filename = "ManufacturedSols.dat";
+    string mms_source_filename = "SourceTerms.dat";
+    euler->ManufacturedPrimitiveSols(field_ms,sols); //!< computing manufactured sol.
+    euler->EvalSourceTerms(sols); //!< computing manufactured source terms
+    error->OutputPrimitiveVariables(field_ms,mms_sol_filename,false,0,mesh->xcoords,mesh->ycoords,mesh->cellnumber,mesh->Nx,mesh->Ny);
+    error->OutputManufacturedSourceTerms(field_ms_source,mms_source_filename,false,0,mesh->xcoords,mesh->ycoords,mesh->cellnumber,mesh->Nx,mesh->Ny);
+
+  }
 
   //! SETTING INITIAL CONDITIONS
   //Tools::print("At initial conditions\n");
-  euler->SetInitialConditions(field);
+  //euler->SetInitialConditions(field);
+  field = field_ms; //setting field as manufactured sol. for now
 
   //!TODO: COMPUTING EXACT SOLUTION -- ONLY FOR 1D QUASI-STEADY NOZZLE
   /*
@@ -275,11 +229,6 @@ int main() {
   }
   */
 
-  //Debug: Temporarily set initial conditions to exact solutions
-  //Field = ExactField;
-  //Debug: printing initial conditions w/ no BCs
-  //const char* filename = "InitialSolutions.txt";
-  //sols->OutputPrimitiveVariables(field,euler,filename);
 
   // SETTING BOUNDARY CONDITIONS
   //generates ghost cells here too
@@ -287,20 +236,6 @@ int main() {
 
   //time->SolutionLimiter(field_test);
 
-  //! COMPUTING MANUFACTURED SOLUTION AND SOURCE TERMS (MMS ONLY)
-  if (scenario == 3){
-    string mms_sol_filename = "ManufacturedSols.dat";
-    string mms_source_filename = "SourceTerms.dat";
-    euler->ManufacturedPrimitiveSols(field_ms,sols); //!< computing manufactured sol.
-    euler->EvalSourceTerms(sols); //!< computing manufactured source terms
-    error->OutputPrimitiveVariables(field_ms,mms_sol_filename,false,0,mesh->xcoords,mesh->ycoords,mesh->cellnumber,mesh->Nx,mesh->Ny);
-    error->OutputManufacturedSourceTerms(field_ms_source,mms_source_filename,false,0,mesh->xcoords,mesh->ycoords,mesh->cellnumber,mesh->Nx,mesh->Ny);
-
-  }
-
-  //!< Outputting initial solutions with BC's
-  //const char* filename2 = "InitSolutionswBCs.txt";
-  //sols->OutputPrimitiveVariables(field,euler,filename2);
 
   // COMPUTING INITIAL RESIDUAL NORMS
   // using ResidSols spacevariable
@@ -318,11 +253,6 @@ int main() {
   Tools::print("--X-Momentum:%e\n",InitNorms[1]);
   Tools::print("--Y-Momentum:%e\n",InitNorms[2]);
   Tools::print("--Energy:%e\n\n",InitNorms[3]);
-
-
-  //array<double,3> initnorms;
-  (*resid) = (*init_resid);//!< setting initial residual to intermediate
-  ResidualNorms = InitNorms;
 
   string it,name; //used for outputting file name
   int iter; //iteration number
@@ -345,6 +275,9 @@ int main() {
   //Assigning Intermediate Field to Initial Field (including residuals)
   (*field_star) = (*field);
   (*resid_star) = (*resid);
+
+  (*resid) = (*init_resid);//!< setting initial residual to intermediate
+  ResidualNorms = InitNorms;
 
   //! BEGIN OF MAIN LOOP
   for (iter=1;iter<iter_max;iter++){
