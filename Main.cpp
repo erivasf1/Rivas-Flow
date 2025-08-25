@@ -65,7 +65,6 @@ int main() {
 
   // Flux Specifications
   int flux_scheme{1}; //0=JST, 1=Van Leer, 2 = Roe (this will eventually be used!)
-  bool upwind_scheme{false}; //true for Van Leer & false for Roe
   int flux_accuracy{1}; //1=1st order, 2=2nd order
   [[maybe_unused]] const double ramp_stop = 1.0e-7; //stopping criteria for ramping fcn. of transitioning from 1st to 2nd
   double epsilon = 1.0; //ramping value used to transition from 1st to 2nd order
@@ -100,17 +99,17 @@ int main() {
   
   //! DATA ALLOCATION
   //Field variables
-  vector<array<double,4>> Field(cellnum); //stores primitive variable sols.
-  vector<array<double,4>> FieldStar(cellnum); //stores intermediate primitive variable sols.
-  vector<array<double,4>> FieldStall(cellnum); //stores primitive variable sols. before stall (if detected)
+  vector<array<double,4>> Field(mesh->cellnumber); //stores primitive variable sols.
+  vector<array<double,4>> FieldStar(mesh->cellnumber); //stores intermediate primitive variable sols.
+  vector<array<double,4>> FieldStall(mesh->cellnumber); //stores primitive variable sols. before stall (if detected)
   vector<array<double,4>> FieldMS(mesh->cellnumber); //stores manufactured sol.
   vector<array<double,4>> FieldMS_Source(mesh->cellnumber); //stores manufactured source term for all cells
 
-  vector<array<double,4>> ExactField(cellnum); //stores exact cell-averaged primitve variable sols.
-  vector<array<double,4>> ExactFaces(cellnum+1); //stores exact primitve variable sols. at cell faces
+  vector<array<double,4>> ExactField(mesh->cellnumber); //stores exact cell-averaged primitve variable sols.
+  vector<array<double,4>> ExactFaces(mesh->cellnumber+1); //stores exact primitve variable sols. at cell faces
 
-  vector<array<double,4>> Residual(cellnum); //stores the local residuals per eq.
-  vector<array<double,4>> ResidualStar(cellnum); //stores the intermediate stage of primtive variables
+  vector<array<double,4>> Residual(mesh->cellnumber); //stores the local residuals per eq.
+  vector<array<double,4>> ResidualStar(mesh->cellnumber); //stores the intermediate stage of primtive variables
   vector<array<double,4>> InitResidual(mesh->cellnumber); //stores the initial residual
 
   vector<double> TimeSteps; //for storing the time step (delta_t) for each cell
@@ -208,7 +207,7 @@ int main() {
   //! SETTING INITIAL CONDITIONS
   //Tools::print("At initial conditions\n");
   //euler->SetInitialConditions(field);
-  field = field_ms; //setting field as manufactured sol. for now
+  Field = FieldMS; //setting field as manufactured sol. for now
 
   //!TODO: COMPUTING EXACT SOLUTION -- ONLY FOR 1D QUASI-STEADY NOZZLE
   /*
