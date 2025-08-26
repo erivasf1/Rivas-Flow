@@ -49,25 +49,19 @@ int main() {
   //double area_star = Tools::AreaVal(0.5*(xmin+xmax)); //area at throat
 
   // Boundary Conditions Specification
-  BOUNDARY_COND top_cond = OUTFLOW; //TEMP
+  BOUNDARY_COND top_cond = INFLOW; //TEMP
   BOUNDARY_COND btm_cond = INFLOW;
   BOUNDARY_COND left_cond = INFLOW;
-  BOUNDARY_COND right_cond = OUTFLOW;
+  BOUNDARY_COND right_cond = INFLOW;
 
   [[maybe_unused]]bool cond_loc{false}; //true for subsonic & false for supersonic (FOR EXACT SOL.)
   [[maybe_unused]]bool cond_bc{true}; //true for subsonic & false for supersonic (FOR OUTFLOW BC)
 
   // Mesh Specifications
-
-  int cellnum = 100; //recommending an even number for cell face at the throat of nozzle (NOTE: will get reassigned val. if mesh is provided)
-  //vector<double> xcoords; //stores the coords of the cell NODES!!! (i.e. size of xcoords is cellnum+1)!
-  //vector<double> ycoords; //stores the coords of the cell NODES!!! (i.e. size of xcoords is cellnum+1)!
-  //double dx;
   const char* meshfile = "Grids/CurvilinearGrids/curv2d9.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
-  //const char* meshfile = NULL;
 
   // Temporal Specifications
-  const int iter_max = 1e3;
+  const int iter_max = 1e2;
   int iterout = 1; //number of iterations per solution output
   const double CFL = 0.1; //CFL number (must <= 1 for Euler Explicit integration)
   //const double CFL = 2.9e-4; //CFL number (must <= 1 for Euler Explicit integration)
@@ -75,28 +69,28 @@ int main() {
 
   // Flux Specifications
   int flux_scheme{1}; //0=JST, 1=Van Leer, 2 = Roe (this will eventually be used!)
-  bool upwind_scheme{false}; //true for Van Leer & false for Roe
   int flux_accuracy{1}; //1=1st order, 2=2nd order
   [[maybe_unused]] const double ramp_stop = 1.0e-7; //stopping criteria for ramping fcn. of transitioning from 1st to 2nd
   double epsilon = 1.0; //ramping value used to transition from 1st to 2nd order
   bool resid_stall{false};//for detecting if residuals have stalled
-  int stall_count = 0;
+  [[maybe_unused]]int stall_count = 0;
 
   // Under-Relaxation Parameters
   double C = 1.2; //residual norm check
   array<double,4> Omega{1.0,1.0,1.0,1.0}; //FWD Advance Limiter
   //int subiter_max = 0; //max number of relaxation sub-iterations
   int subiter_max = 1e2; //max number of relaxation sub-iterations
+  array<bool,4> check{false,false,false,false}; //false by default to check if under-relaxation is needed
 
   // Governing Eq. Residuals
-  double cont_tol = 1.0e-10;
-  double xmom_tol = 1.0e-10;
-  double energy_tol = 1.0e-10;
+  double cont_tol = 1.0e-5;
+  double xmom_tol = 1.0e-5;
+  double energy_tol = 1.0e-5;
 
-  //! GENERATING MESH -- TODO: Employ polymorphism here too!
+  //! GENERATING MESH 
   MeshGenBASE* mesh; 
   if (scenario == 1){ //1D Nozzle Mesh Case
-    mesh = new MeshGenNozzle(xmin,xmax,cellnum);
+    mesh = new MeshGenNozzle(xmin,xmax,mesh->cellnumber);
     mesh->GenerateMesh();
   }
   else if ((scenario == 2) || (scenario == 3)) {
@@ -109,44 +103,26 @@ int main() {
   }
   
 
-  //MeshGen1D* mesh = &Mesh; //1D Mesh
-
-  /*if (meshfile){ //2D Mesh Case -- read from file
-    xcoords = mesh_2d->xcoords;
-    ycoords = mesh_2d->ycoords;
-    //zcoords = mesh_2d->zcoords;
-    cellnum = mesh_2d->cellnumber;
-    mesh_2d -> OutputMesh(); //outputs mesh for tecplot visualization
-  }
-  else{ //1D Mesh Case -- Uniform
-    mesh->GenerateMesh(xcoords); //stores all coords in xcoords list
-    dx = abs(xcoords[0]-xcoords[1]); //delta x distance
-  }
-  //debug:
-  //Tools::print("Size of xcoords: %d\n",xcoords.size());
-  //Tools::print("Size of ycoords: %d\n",ycoords.size());
-  //Tools::print("imax: %d & jmax: %d\n",mesh_2d->imax,mesh_2d->jmax);
-  */
-
   //! DATA ALLOCATION
   //TODO: Change Field variable array size to 4
   //Field variables
-  vector<array<double,4>> Field(cellnum); //stores primitive variable sols.
-  vector<array<double,4>> FieldStar(cellnum); //stores intermediate primitive variable sols.
-  vector<array<double,4>> FieldStall(cellnum); //stores primitive variable sols. before stall (if detected)
+  vector<array<double,4>> Field(mesh->cellnumber); //stores primitive variable sols.
+  vector<array<double,4>> FieldStar(mesh->cellnumber); //stores intermediate primitive variable sols.
+  vector<array<double,4>> FieldStall(mesh->cellnumber); //stores primitive variable sols. before stall (if detected)
   vector<array<double,4>> FieldMS(mesh->cellnumber); //stores manufactured sol.
   vector<array<double,4>> FieldMS_Source(mesh->cellnumber); //stores manufactured source term for all cells
 
-  vector<array<double,4>> ExactField(cellnum); //stores exact cell-averaged primitve variable sols.
-  vector<array<double,4>> ExactFaces(cellnum+1); //stores exact primitve variable sols. at cell faces
+  vector<array<double,4>> ExactField(mesh->cellnumber); //stores exact cell-averaged primitve variable sols.
+  vector<array<double,4>> ExactFaces(mesh->cellnumber+1); //stores exact primitve variable sols. at cell faces
 
-  vector<array<double,4>> Residual(cellnum); //stores the local residuals per eq.
-  vector<array<double,4>> ResidualStar(cellnum); //stores the intermediate stage of primtive variables
-  vector<array<double,4>> InitResidual(cellnum); //stores the initial residual
+  vector<array<double,4>> Residual(mesh->cellnumber); //stores the local residuals per eq.
+  vector<array<double,4>> ResidualStar(mesh->cellnumber); //stores the intermediate stage of primtive variables
+  vector<array<double,4>> InitResidual(mesh->cellnumber); //stores the initial residual
 
-  vector<double> TimeSteps; //for storing the time step (delta_t) for each cell
+  vector<double> TimeSteps(mesh->cellnumber); //for storing the time step (delta_t) for each cell
   array<double,4> ResidualNorms; //for storing the global residual norms
-  array<double,4> Prev_ResidualNorms; //for storing the previous global residual norms
+  array<double,4> ResidualStarNorms; //stores the intermediate global residual norms
+  [[maybe_unused]]array<double,4> Prev_ResidualNorms; //for storing the previous global residual norms
 
   //Pointers to Field variables
   vector<array<double,4>>* field = &Field; //pointer to Field solutions
@@ -163,6 +139,7 @@ int main() {
 
   //!OBJECT INITIALIZATIONS
 
+  //Euler Operator spec.
   EulerBASE* euler;
   //Temp -- will add scenario == 1 once 1D section is fixed!
   if (scenario == 2) 
@@ -174,38 +151,18 @@ int main() {
     return 0;
   }
   
-  SpaceVariables2D Sols; //for operating on Field variables
-
-  //Tools tool; //utilities object
-
+  //Time Integrator spec.
   EulerExplicit Time(mesh,euler,CFL); //for computing time steps
+
+  SpaceVariables2D Sols; //for operating on Field variables
 
   Output Error; //for discretization error operations
 
   //Pointers to Objects
-
   SpaceVariables2D* sols = &Sols;
-
-
-
-  //if (mesh_2d) //reassigns pointer to newly created 2D SpaceVariable
-    //sols = new SpaceVariables2D();
-
-  /*if (mesh_2d){ //reassigns pointer to newly created 2D Objects
-    euler = new Euler2D();
-    sols = new SpaceVariables2D();
-  }
-  else
-    sols = new SpaceVariables1D();
-  */
 
   EulerExplicit* time = &Time;
   Output* error = &Error;
-
-  //Intermediate variables for under-relaxation
-  array<double,4> ResidualStarNorms; //stores the intermediate global residual norms
-  array<bool,4> check{false,false,false,false}; //false by default to check if under-relaxation is needed
-
 
   //! PRINTING OUT SIMULATION INFO
   // Title
@@ -240,17 +197,6 @@ int main() {
   
   else
     Tools::print(" JST Damping\n");
-
-  //debug: for visualizing manufactured sol.
-  /* 
-  vector<array<double,4>> FieldTest(cellnum); 
-  vector<array<double,4>>* field_test = &FieldTest;
-  Euler2D Erick; SpaceVariables2D Emma;
-  string file = "2DSols.dat";
-  Erick.ManufacturedPrimitiveSols(field_test,mesh_2d->imax,mesh_2d->jmax,xcoords,ycoords,Emma,cellnum);
-  Emma.AllOutputPrimitiveVariables(field_test,file,false,0,xcoords,ycoords,cellnum,mesh_2d->imax,mesh_2d->jmax);
-  return 0;
-  */ 
 
   //! COMPUTING MANUFACTURED SOLUTION AND SOURCE TERMS (MMS ONLY)
   if (scenario == 3){
@@ -322,7 +268,6 @@ int main() {
   Tools::print("--Energy:%e\n\n",InitNorms[3]);
 
 
-  //array<double,3> initnorms;
   (*resid) = (*init_resid);//!< setting initial residual to intermediate
   ResidualNorms = InitNorms;
 
