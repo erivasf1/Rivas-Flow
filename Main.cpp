@@ -61,7 +61,7 @@ int main() {
   const char* meshfile = "Grids/CurvilinearGrids/curv2d9.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
 
   // Temporal Specifications
-  const int iter_max = 1e2;
+  const int iter_max = 1e5;
   int iterout = 1; //number of iterations per solution output
   const double CFL = 0.1; //CFL number (must <= 1 for Euler Explicit integration)
   //const double CFL = 2.9e-4; //CFL number (must <= 1 for Euler Explicit integration)
@@ -287,7 +287,7 @@ int main() {
 
   //Printing Primitive vars. for TECPLOT visualization
   std::string filename_totalsols = "AllSolutions.dat";
-  error->OutputPrimitiveVariables(field,filename_totalsols,false,0,mesh->xcoords,mesh->ycoords,mesh->cellnumber,mesh->cell_imax+1,mesh->cell_jmax+1);
+  error->OutputPrimitiveVariables(field,filename_totalsols,false,0,mesh->xcoords,mesh->ycoords,mesh->cellnumber,mesh->Nx,mesh->Ny);
 
   //Assigning Intermediate Field to Initial Field (including residuals)
   (*field_star) = (*field);
@@ -365,13 +365,15 @@ int main() {
     //epsilon = sols->ComputeRampValue(ResidualNorms,InitNorms,ramp_stop);
 
 
-    //! OUTPUT SOL. IN TEXT FILE EVERY "ITEROUT" STEPS
+    //! OUTPUT SOL. IN .DAT FILE EVERY "ITEROUT" STEPS
     if (iter % iterout == 0) {
       it = to_string(iter);
       name = "SolResults/Iteration";
       name += it;
-      name += ".txt";
+      name += ".dat";
       const char* filename_iter = name.c_str();
+      error->OutputPrimitiveVariables(field,filename_iter,false,iter,mesh->xcoords,mesh->ycoords,mesh->cellnumber,mesh->Nx,mesh->Ny);
+      //writing in 1 file
       error->OutputPrimitiveVariables(field,filename_totalsols,true,iter,mesh->xcoords,mesh->ycoords,mesh->cellnumber,mesh->Nx,mesh->Ny);
 
       //Printing to TECPLOT
