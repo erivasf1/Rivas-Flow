@@ -186,37 +186,32 @@ void EulerBASE::ApplySlipWall(vector<array<double,4>>* &,MeshGenBASE* &,int){
 array<double,4> EulerBASE::ComputeSpatialFlux_UPWIND1stOrder(vector<array<double,4>>* field,int loci,int locj,int nbori,int nborj,array<double,2> &unitvec){
   
   //NOTE: assumes loc is left/btm state and nbor is right/top state (for 1st order accuracy)
-    array<double,4> loc_state,nbor_state;
-  //checking if either loc or nbor is accessing ghost cells
+  array<double,4> loc_state,nbor_state;
+  //loc_state = fieldij(field,loci,locj,cell_imax);
+
+  //checking if nbor is accessing ghost cells
   if ( loci<0 || nbori>=cell_imax || locj<0 || nborj>=cell_jmax ){
 
     if (loci<0){ //using 1st layer of left ghost cells (-i case)
-      //loc_state = mesh->GetGhostCellVarVec(0,locj,2); //i set to 0 for 1st layer
-      loc_state = mesh->left_cells[locj];
+      loc_state = mesh->left_cells[nborj];
       nbor_state = fieldij(field,nbori,nborj,cell_imax);
-    }
-    else if (nbori>=cell_imax){ //using 1st layer of right ghost cells (+i domain)
+    } 
+    else if (nbori>=cell_imax){ //using 1st layer of right ghost cells (+i case)
       loc_state = fieldij(field,loci,locj,cell_imax);
-      nbor_state = mesh->right_cells[locj];
-      //nbor_state = mesh->GetGhostCellVarVec(0,nborj,3); //i set to 0 for 1st layer
-      
+      nbor_state = mesh->right_cells[nborj];
     }
     else if (locj<0){ //using 1st layer of btm ghost cells (-j case)
-      //loc_state = mesh->GetGhostCellVarVec(loci,0,1); //j set to 0 for 1st layer
       loc_state = mesh->btm_cells[loci]; //j set to 0 for 1st layer
       nbor_state = fieldij(field,nbori,nborj,cell_imax);
-
     }
-
-    else { //using 1st layer of top ghost cells (+j case)
+    
+    else{  //using 1st layer of top ghost cells (+j case)
       loc_state = fieldij(field,loci,locj,cell_imax);
       nbor_state = mesh->top_cells[loci];
-      //nbor_state = mesh->GetGhostCellVarVec(nbori,0,0); //j set to 0 for 1st layer
-
     }
   }
 
-  else { //normal case (no use of ghost cells)
+  else{  //normal case (no use of ghost cells)
     loc_state = fieldij(field,loci,locj,cell_imax);
     nbor_state = fieldij(field,nbori,nborj,cell_imax);
   }
@@ -231,8 +226,6 @@ array<double,4> EulerBASE::ComputeSpatialFlux_UPWIND1stOrder(vector<array<double
     for (int n=0;n<4;n++) //summing up left and right state fluxes
       flux[n] = flux_rtstate[n] + flux_ltstate[n];
 
-
-    
 
   }
   else if (flux_scheme == 2){ //Roe's Method
@@ -366,9 +359,12 @@ array<double,4> EulerBASE::VanLeerCompute(array<double,4> &field_state,bool sign
   array<double,4> flux;
   array<double,4> field_normal{field_state[0],field_state[1]*nx,field_state[2]*ny,field_state[3]}; //val. of primitive vars. with outward normal velocities
   //scalars
-  double M = ComputeMachNumber(field_normal); //local outward Mach Number
-  double a = sqrt(pow(field_normal[1],2.0) + pow(field_normal[2],2.0) ) / M; //local outward normal speed of sound
+  double T = field_state[3] / (field_state[0]*R);
+  double a = sqrt(gamma*R*T); //speed of sound
  
+  double vel_mag = sqrt( pow(field_normal[1],2.0) + pow(field_normal[2],2.0) );
+  double M = vel_mag / a; //local outward pointing mach #
+
   //total energy term(h_t)
   double ht = (gamma/(gamma-1.0))*(field_state[2]/field_state[0]); //pressure work
   ht += pow(field_state[1],2.0) / 2.0; //kinetic energy
@@ -1792,6 +1788,7 @@ void Euler2DMMS::ComputeResidual(vector<array<double,4>>* &resid,vector<array<do
 
   array<double,4> mms;
   
+  //NOTE: set as i,j as center of evaluating fluxes, only vary the nbor indices
 
   for (int j=0;j<cell_jmax;j++){
     for (int i=0;i<cell_imax;i++){
@@ -1836,7 +1833,7 @@ void Euler2DMMS::ComputeResidual(vector<array<double,4>>* &resid,vector<array<do
 
       //residual calc.
       for (int n=0;n<4;n++){
-        res[n] = (flux_right[n]*area_right-flux_left[n]*area_left) + (flux_top[n]*area_top - flux_btm[n]*area_btm) - mms[n]*vol;
+        res[n] = flux_right[n]*area_right - flux_left[n]*area_left + flux_top[n]*area_top - flux_btm[n]*area_btm - mms[n]*vol;
         if (isnan(res[n]) == true)
           Tools::print("Nan detected for resid in cell[%d,%d]\n",i,j);
       }

@@ -58,10 +58,10 @@ int main() {
   [[maybe_unused]]bool cond_bc{true}; //true for subsonic & false for supersonic (FOR OUTFLOW BC)
 
   // Mesh Specifications
-  const char* meshfile = "Grids/CurvilinearGrids/curv2d9.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
+  const char* meshfile = "Grids/CurvilinearGrids/curv2d257.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
 
   // Temporal Specifications
-  const int iter_max = 1e5;
+  const int iter_max = 50;
   int iterout = 1; //number of iterations per solution output
   const double CFL = 0.1; //CFL number (must <= 1 for Euler Explicit integration)
   //const double CFL = 2.9e-4; //CFL number (must <= 1 for Euler Explicit integration)
@@ -83,9 +83,10 @@ int main() {
   array<bool,4> check{false,false,false,false}; //false by default to check if under-relaxation is needed
 
   // Governing Eq. Residuals
-  double cont_tol = 1.0e-5;
-  double xmom_tol = 1.0e-5;
-  double energy_tol = 1.0e-5;
+  double cont_tol = 1.0e-8;
+  double xmom_tol = 1.0e-8;
+  double ymom_tol = 1.0e-8;
+  double energy_tol = 1.0e-8;
 
   //! GENERATING MESH 
   MeshGenBASE* mesh; 
@@ -259,6 +260,10 @@ int main() {
 
   euler->ComputeResidual(init_resid,field);
 
+  //debug: Residual
+  const char* resid_file = "InitialResiduals.dat"; 
+  error->OutputPrimitiveVariables(init_resid,resid_file,false,0,mesh->xcoords,mesh->ycoords,mesh->cellnumber,mesh->Nx,mesh->Ny);
+
   InitNorms = sols->ComputeSolutionNorms(init_resid); //computing L2 norm of residuals
   //InitNorms = sols->ComputeSolutionNorms(init_resid); //computing L2 norm of residuals
   Tools::print("-Initial Residual Norms\n");
@@ -313,8 +318,8 @@ int main() {
     time->SolutionLimiter(field_star); //applies solution limiter to all cells (including ghost cells)
 
     //! ENFORCE BOUNDARY CONDITIONS
-    euler->Enforce2DBoundaryConditions(field_star);
-    time->SolutionLimiter(field_star); //temporarily reapplying the limiter
+    //euler->Enforce2DBoundaryConditions(field_star);
+    //time->SolutionLimiter(field_star); //temporarily reapplying the limiter
 
 
     euler->ComputeResidual(resid_star,field_star);
@@ -381,7 +386,7 @@ int main() {
 
       //Printing Residual Norms to Screen
       Tools::print("------Iteration #: %d----------\n",iter);
-      Tools::print("Continuity:%e\nX-Momentum:%e\nEnergy:%e\n",ResidualNorms[0],ResidualNorms[1],ResidualNorms[2]);
+      Tools::print("Continuity:%e\nX-Momentum:%e\nY-Momentum:%e\nEnergy:%e\n",ResidualNorms[0],ResidualNorms[1],ResidualNorms[2],ResidualNorms[3]);
       //debug:
       Tools::print("Epsilon: %e\n",epsilon);
       if (resid_stall == true)
@@ -394,7 +399,8 @@ int main() {
 
 
     //! CHECK FOR CONVERGENCE (w/ respect to the intial residual norms)
-    if (ResidualNorms[0]/InitNorms[0] <= cont_tol && ResidualNorms[1]/InitNorms[1] <= xmom_tol && ResidualNorms[2]/InitNorms[2] <= energy_tol)
+    if (ResidualNorms[0]/InitNorms[0] <= cont_tol && ResidualNorms[1]/InitNorms[1] <= xmom_tol && 
+        ResidualNorms[2]/InitNorms[2] <= ymom_tol && ResidualNorms[3]/InitNorms[3] <= energy_tol)
       break;
 
   }
