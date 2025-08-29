@@ -399,9 +399,8 @@ EulerBASE::~EulerBASE(){}
 //-----------------------------------------------------------
 // EULER1D DEFINITIONS
 
-Euler1D::Euler1D(int& cellnum,double &P0,double &BP,double &T0,double &g)
-  : interior_cellnum(cellnum), stag_pressure(P0) , back_pressure(BP), stag_temperature(T0) 
-  , gamma(g) {}
+Euler1D::Euler1D(int& cellnum)
+  : interior_cellnum(cellnum) {}
 
 
 //-----------------------------------------------------------

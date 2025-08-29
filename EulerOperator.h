@@ -76,10 +76,10 @@ class EulerBASE {
 class Euler1D { //TODO: Make this into inherit class
   //vector<double> &xcoords;
   // parameters for 1D nozzle
-  double stag_pressure; //stagnation pressure
-  double back_pressure; //back pressure
-  double stag_temperature; //stagnation temperature
-  double gamma;
+  double stag_pressure = 300.0 * 1000.0; //stagnation pressure
+  double back_pressure = 120.0 * 1000.0; //back pressure
+  double stag_temperature = 600.0; //stagnation temperature
+  double gamma = 1.4;
   const double Ru = 8314.0; // J/(kmol*K) -- universal gas constant   
   const double MolMass = 28.96; // kg/kmol
  
@@ -95,7 +95,7 @@ class Euler1D { //TODO: Make this into inherit class
 
   Euler1D(); //empty constructor for unit testing
 
-  Euler1D(int &cellnum,double &P0,double &BP,double &T0,double &g); //constructor for Main file
+  Euler1D(int &cellnum); //constructor for Main file
 
   // Primitive & Conserved variables fcns.
   array<double,3> ComputeConserved(vector<array<double,3>>* &field,int loc);

@@ -20,13 +20,12 @@
 
 using namespace std;
 
-enum CASE_2D { //For ease of defining parameters
-  INLET,AIRFOIL1,AIRFOIL2
-};
+//For ease of defining parameters
+enum CASE_2D { 
+  INLET,AIRFOIL1,AIRFOIL2};
 
 enum BOUNDARY_COND {
-  INFLOW,OUTFLOW,SLIP_WALL
-};
+  INFLOW,OUTFLOW,SLIP_WALL};
 
 
 int main() {
@@ -39,14 +38,10 @@ int main() {
   // Scenario
   int scenario = 3; //1 = 1D, 2 = 2D, 3 = 2D MMS
   CASE_2D case_2d = AIRFOIL1;
+
   // Constants for 1D case
   double xmin = -1.0;
   double xmax = 1.0;
-  //double stag_pressure = 300.0 * 1000.0; //kPa -> Pa
-  //double back_pressure = 120.0 * 1000.0; //kPa -> Pa (for subsonic outflow cond.)
-  //double stag_temp = 600.0; //K
-  //double gamma = 1.4; //specific heat ratio
-  //double area_star = Tools::AreaVal(0.5*(xmin+xmax)); //area at throat
 
   // Boundary Conditions Specification
   BOUNDARY_COND top_cond = INFLOW; //TEMP
@@ -58,10 +53,18 @@ int main() {
   [[maybe_unused]]bool cond_bc{true}; //true for subsonic & false for supersonic (FOR OUTFLOW BC)
 
   // Mesh Specifications
+<<<<<<< HEAD
   const char* meshfile = "Grids/CurvilinearGrids/curv2d257.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
 
   // Temporal Specifications
   const int iter_max = 50;
+=======
+  [[maybe_unused]]int cellnum = 100; //recommending an even number for cell face at the throat of nozzle (NOTE: will get reassigned val. if mesh is provided)
+  const char* meshfile = "Grids/CurvilinearGrids/curv2d9.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
+
+  // Temporal Specifications
+  const int iter_max = 1e2;
+>>>>>>> bd9e5034d520767dc3608bfa4e04c4177fa49e84
   int iterout = 1; //number of iterations per solution output
   const double CFL = 0.1; //CFL number (must <= 1 for Euler Explicit integration)
   //const double CFL = 2.9e-4; //CFL number (must <= 1 for Euler Explicit integration)
@@ -78,15 +81,20 @@ int main() {
   // Under-Relaxation Parameters
   double C = 1.2; //residual norm check
   array<double,4> Omega{1.0,1.0,1.0,1.0}; //FWD Advance Limiter
-  //int subiter_max = 0; //max number of relaxation sub-iterations
   int subiter_max = 1e2; //max number of relaxation sub-iterations
   array<bool,4> check{false,false,false,false}; //false by default to check if under-relaxation is needed
 
   // Governing Eq. Residuals
+<<<<<<< HEAD
   double cont_tol = 1.0e-8;
   double xmom_tol = 1.0e-8;
   double ymom_tol = 1.0e-8;
   double energy_tol = 1.0e-8;
+=======
+  double cont_tol = 1.0e-5;
+  double xmom_tol = 1.0e-5;
+  double energy_tol = 1.0e-5;
+>>>>>>> bd9e5034d520767dc3608bfa4e04c4177fa49e84
 
   //! GENERATING MESH 
   MeshGenBASE* mesh; 
@@ -103,9 +111,11 @@ int main() {
     return 0;
   }
   
+<<<<<<< HEAD
 
+=======
+>>>>>>> bd9e5034d520767dc3608bfa4e04c4177fa49e84
   //! DATA ALLOCATION
-  //TODO: Change Field variable array size to 4
   //Field variables
   vector<array<double,4>> Field(mesh->cellnumber); //stores primitive variable sols.
   vector<array<double,4>> FieldStar(mesh->cellnumber); //stores intermediate primitive variable sols.
@@ -122,8 +132,13 @@ int main() {
 
   vector<double> TimeSteps(mesh->cellnumber); //for storing the time step (delta_t) for each cell
   array<double,4> ResidualNorms; //for storing the global residual norms
+<<<<<<< HEAD
   array<double,4> ResidualStarNorms; //stores the intermediate global residual norms
   [[maybe_unused]]array<double,4> Prev_ResidualNorms; //for storing the previous global residual norms
+=======
+  array<double,4> Prev_ResidualNorms; //for storing the previous global residual norms
+  array<double,4> ResidualStarNorms; //stores the intermediate global residual norms
+>>>>>>> bd9e5034d520767dc3608bfa4e04c4177fa49e84
 
   //Pointers to Field variables
   vector<array<double,4>>* field = &Field; //pointer to Field solutions
@@ -139,8 +154,12 @@ int main() {
   vector<double>* time_steps = &TimeSteps;
 
   //!OBJECT INITIALIZATIONS
+<<<<<<< HEAD
 
   //Euler Operator spec.
+=======
+  // Specifying EulerOperator
+>>>>>>> bd9e5034d520767dc3608bfa4e04c4177fa49e84
   EulerBASE* euler;
   //Temp -- will add scenario == 1 once 1D section is fixed!
   if (scenario == 2) 
@@ -152,7 +171,11 @@ int main() {
     return 0;
   }
   
+<<<<<<< HEAD
   //Time Integrator spec.
+=======
+  //TODO: Specifying time integrator via Polymorphism
+>>>>>>> bd9e5034d520767dc3608bfa4e04c4177fa49e84
   EulerExplicit Time(mesh,euler,CFL); //for computing time steps
 
   SpaceVariables2D Sols; //for operating on Field variables
@@ -162,6 +185,10 @@ int main() {
   //Pointers to Objects
   SpaceVariables2D* sols = &Sols;
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> bd9e5034d520767dc3608bfa4e04c4177fa49e84
   EulerExplicit* time = &Time;
   Output* error = &Error;
 
@@ -199,6 +226,10 @@ int main() {
   else
     Tools::print(" JST Damping\n");
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> bd9e5034d520767dc3608bfa4e04c4177fa49e84
   //! COMPUTING MANUFACTURED SOLUTION AND SOURCE TERMS (MMS ONLY)
   if (scenario == 3){
     string mms_sol_filename = "ManufacturedSols.dat";
@@ -213,7 +244,11 @@ int main() {
   //! SETTING INITIAL CONDITIONS
   //Tools::print("At initial conditions\n");
   //euler->SetInitialConditions(field);
+<<<<<<< HEAD
   Field = FieldMS; //for now, setting field to manufactured sol.
+=======
+  Field = FieldMS; //setting field as manufactured sol. for now
+>>>>>>> bd9e5034d520767dc3608bfa4e04c4177fa49e84
 
   //!TODO: COMPUTING EXACT SOLUTION -- ONLY FOR 1D QUASI-STEADY NOZZLE
   /*
@@ -234,11 +269,6 @@ int main() {
   }
   */
 
-  //Debug: Temporarily set initial conditions to exact solutions
-  //Field = ExactField;
-  //Debug: printing initial conditions w/ no BCs
-  //const char* filename = "InitialSolutions.txt";
-  //sols->OutputPrimitiveVariables(field,euler,filename);
 
   // SETTING BOUNDARY CONDITIONS
   //generates ghost cells here too
@@ -246,10 +276,13 @@ int main() {
 
   //time->SolutionLimiter(field_test);
 
+<<<<<<< HEAD
 
   //!< Outputting initial solutions with BC's
   //const char* filename2 = "InitSolutionswBCs.txt";
   //sols->OutputPrimitiveVariables(field,euler,filename2);
+=======
+>>>>>>> bd9e5034d520767dc3608bfa4e04c4177fa49e84
 
   // COMPUTING INITIAL RESIDUAL NORMS
   // using ResidSols spacevariable
@@ -272,10 +305,13 @@ int main() {
   Tools::print("--Y-Momentum:%e\n",InitNorms[2]);
   Tools::print("--Energy:%e\n\n",InitNorms[3]);
 
+<<<<<<< HEAD
 
   (*resid) = (*init_resid);//!< setting initial residual to intermediate
   ResidualNorms = InitNorms;
 
+=======
+>>>>>>> bd9e5034d520767dc3608bfa4e04c4177fa49e84
   string it,name; //used for outputting file name
   int iter; //iteration number
 
@@ -297,6 +333,9 @@ int main() {
   //Assigning Intermediate Field to Initial Field (including residuals)
   (*field_star) = (*field);
   (*resid_star) = (*resid);
+
+  (*resid) = (*init_resid);//!< setting initial residual to intermediate
+  ResidualNorms = InitNorms;
 
   //! BEGIN OF MAIN LOOP
   for (iter=1;iter<iter_max;iter++){

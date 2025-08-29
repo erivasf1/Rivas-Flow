@@ -1,4 +1,0 @@
-/home/erivas/Adv_CFD/2D-FVM-Euler-Equation-Solver/CMakeFiles/nozzle.dir
-/home/erivas/Adv_CFD/2D-FVM-Euler-Equation-Solver/CMakeFiles/testnozzle.dir
-/home/erivas/Adv_CFD/2D-FVM-Euler-Equation-Solver/CMakeFiles/edit_cache.dir
-/home/erivas/Adv_CFD/2D-FVM-Euler-Equation-Solver/CMakeFiles/rebuild_cache.dir
