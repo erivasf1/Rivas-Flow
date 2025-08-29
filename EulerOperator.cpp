@@ -1833,7 +1833,7 @@ void Euler2DMMS::ComputeResidual(vector<array<double,4>>* &resid,vector<array<do
 
       //residual calc.
       for (int n=0;n<4;n++){
-        res[n] = flux_right[n]*area_right - flux_left[n]*area_left + flux_top[n]*area_top - flux_btm[n]*area_btm - mms[n]*vol;
+        res[n] = flux_right[n]*area_right + flux_left[n]*area_left + flux_top[n]*area_top + flux_btm[n]*area_btm - mms[n]*vol;
         if (isnan(res[n]) == true)
           Tools::print("Nan detected for resid in cell[%d,%d]\n",i,j);
       }
