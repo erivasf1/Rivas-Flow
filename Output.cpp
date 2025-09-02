@@ -216,6 +216,7 @@ write(40,*) 'DT=(DOUBLE DOUBLE DOUBLE DOUBLE DOUBLE DOUBLE DOUBLE
     all_p.push_back((*field)[i][3]);
   }
 
+  //TODO: Reset count after each write of data type
   int count = 0;
   // Writing Xcoords
   for (int n=0;n<(int)xcoords.size();n++){

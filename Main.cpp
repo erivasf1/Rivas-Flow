@@ -36,35 +36,28 @@ int main() {
 
   //! INITIALIZATION
   // Scenario
-  int scenario = 3; //1 = 1D, 2 = 2D, 3 = 2D MMS
-  CASE_2D case_2d = AIRFOIL1;
+  int scenario = 2; //1 = 1D, 2 = 2D, 3 = 2D MMS
+  CASE_2D case_2d = INLET;
 
   // Constants for 1D case
   double xmin = -1.0;
   double xmax = 1.0;
 
   // Boundary Conditions Specification
-  BOUNDARY_COND top_cond = INFLOW; //TEMP
-  BOUNDARY_COND btm_cond = INFLOW;
+  BOUNDARY_COND top_cond = SLIP_WALL; //TEMP
+  BOUNDARY_COND btm_cond = SLIP_WALL;
   BOUNDARY_COND left_cond = INFLOW;
-  BOUNDARY_COND right_cond = INFLOW;
+  BOUNDARY_COND right_cond = OUTFLOW;
 
   [[maybe_unused]]bool cond_loc{false}; //true for subsonic & false for supersonic (FOR EXACT SOL.)
   [[maybe_unused]]bool cond_bc{true}; //true for subsonic & false for supersonic (FOR OUTFLOW BC)
 
   // Mesh Specifications
-<<<<<<< HEAD
-  const char* meshfile = "Grids/CurvilinearGrids/curv2d257.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
-
-  // Temporal Specifications
-  const int iter_max = 50;
-=======
+  const char* meshfile = "Grids/InletGrids/Inlet.53x17.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
   [[maybe_unused]]int cellnum = 100; //recommending an even number for cell face at the throat of nozzle (NOTE: will get reassigned val. if mesh is provided)
-  const char* meshfile = "Grids/CurvilinearGrids/curv2d9.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
 
   // Temporal Specifications
   const int iter_max = 1e2;
->>>>>>> bd9e5034d520767dc3608bfa4e04c4177fa49e84
   int iterout = 1; //number of iterations per solution output
   const double CFL = 0.1; //CFL number (must <= 1 for Euler Explicit integration)
   //const double CFL = 2.9e-4; //CFL number (must <= 1 for Euler Explicit integration)
@@ -85,16 +78,10 @@ int main() {
   array<bool,4> check{false,false,false,false}; //false by default to check if under-relaxation is needed
 
   // Governing Eq. Residuals
-<<<<<<< HEAD
   double cont_tol = 1.0e-8;
   double xmom_tol = 1.0e-8;
   double ymom_tol = 1.0e-8;
   double energy_tol = 1.0e-8;
-=======
-  double cont_tol = 1.0e-5;
-  double xmom_tol = 1.0e-5;
-  double energy_tol = 1.0e-5;
->>>>>>> bd9e5034d520767dc3608bfa4e04c4177fa49e84
 
   //! GENERATING MESH 
   MeshGenBASE* mesh; 
@@ -111,10 +98,6 @@ int main() {
     return 0;
   }
   
-<<<<<<< HEAD
-
-=======
->>>>>>> bd9e5034d520767dc3608bfa4e04c4177fa49e84
   //! DATA ALLOCATION
   //Field variables
   vector<array<double,4>> Field(mesh->cellnumber); //stores primitive variable sols.
@@ -132,13 +115,8 @@ int main() {
 
   vector<double> TimeSteps(mesh->cellnumber); //for storing the time step (delta_t) for each cell
   array<double,4> ResidualNorms; //for storing the global residual norms
-<<<<<<< HEAD
   array<double,4> ResidualStarNorms; //stores the intermediate global residual norms
-  [[maybe_unused]]array<double,4> Prev_ResidualNorms; //for storing the previous global residual norms
-=======
   array<double,4> Prev_ResidualNorms; //for storing the previous global residual norms
-  array<double,4> ResidualStarNorms; //stores the intermediate global residual norms
->>>>>>> bd9e5034d520767dc3608bfa4e04c4177fa49e84
 
   //Pointers to Field variables
   vector<array<double,4>>* field = &Field; //pointer to Field solutions
@@ -154,12 +132,9 @@ int main() {
   vector<double>* time_steps = &TimeSteps;
 
   //!OBJECT INITIALIZATIONS
-<<<<<<< HEAD
 
   //Euler Operator spec.
-=======
   // Specifying EulerOperator
->>>>>>> bd9e5034d520767dc3608bfa4e04c4177fa49e84
   EulerBASE* euler;
   //Temp -- will add scenario == 1 once 1D section is fixed!
   if (scenario == 2) 
@@ -171,11 +146,8 @@ int main() {
     return 0;
   }
   
-<<<<<<< HEAD
   //Time Integrator spec.
-=======
   //TODO: Specifying time integrator via Polymorphism
->>>>>>> bd9e5034d520767dc3608bfa4e04c4177fa49e84
   EulerExplicit Time(mesh,euler,CFL); //for computing time steps
 
   SpaceVariables2D Sols; //for operating on Field variables
@@ -185,10 +157,6 @@ int main() {
   //Pointers to Objects
   SpaceVariables2D* sols = &Sols;
 
-<<<<<<< HEAD
-=======
-
->>>>>>> bd9e5034d520767dc3608bfa4e04c4177fa49e84
   EulerExplicit* time = &Time;
   Output* error = &Error;
 
@@ -226,10 +194,7 @@ int main() {
   else
     Tools::print(" JST Damping\n");
 
-<<<<<<< HEAD
-=======
 
->>>>>>> bd9e5034d520767dc3608bfa4e04c4177fa49e84
   //! COMPUTING MANUFACTURED SOLUTION AND SOURCE TERMS (MMS ONLY)
   if (scenario == 3){
     string mms_sol_filename = "ManufacturedSols.dat";
@@ -243,12 +208,8 @@ int main() {
 
   //! SETTING INITIAL CONDITIONS
   //Tools::print("At initial conditions\n");
-  //euler->SetInitialConditions(field);
-<<<<<<< HEAD
-  Field = FieldMS; //for now, setting field to manufactured sol.
-=======
-  Field = FieldMS; //setting field as manufactured sol. for now
->>>>>>> bd9e5034d520767dc3608bfa4e04c4177fa49e84
+  euler->SetInitialConditions(field);
+  //Field = FieldMS; //for now, setting field to manufactured sol.
 
   //!TODO: COMPUTING EXACT SOLUTION -- ONLY FOR 1D QUASI-STEADY NOZZLE
   /*
@@ -276,13 +237,10 @@ int main() {
 
   //time->SolutionLimiter(field_test);
 
-<<<<<<< HEAD
 
   //!< Outputting initial solutions with BC's
   //const char* filename2 = "InitSolutionswBCs.txt";
   //sols->OutputPrimitiveVariables(field,euler,filename2);
-=======
->>>>>>> bd9e5034d520767dc3608bfa4e04c4177fa49e84
 
   // COMPUTING INITIAL RESIDUAL NORMS
   // using ResidSols spacevariable
@@ -305,13 +263,10 @@ int main() {
   Tools::print("--Y-Momentum:%e\n",InitNorms[2]);
   Tools::print("--Energy:%e\n\n",InitNorms[3]);
 
-<<<<<<< HEAD
 
   (*resid) = (*init_resid);//!< setting initial residual to intermediate
   ResidualNorms = InitNorms;
 
-=======
->>>>>>> bd9e5034d520767dc3608bfa4e04c4177fa49e84
   string it,name; //used for outputting file name
   int iter; //iteration number
 
@@ -357,7 +312,7 @@ int main() {
     time->SolutionLimiter(field_star); //applies solution limiter to all cells (including ghost cells)
 
     //! ENFORCE BOUNDARY CONDITIONS
-    //euler->Enforce2DBoundaryConditions(field_star);
+    euler->Enforce2DBoundaryConditions(field_star,false);
     //time->SolutionLimiter(field_star); //temporarily reapplying the limiter
 
 
@@ -416,6 +371,7 @@ int main() {
       name += it;
       name += ".dat";
       const char* filename_iter = name.c_str();
+      //writing all time-steps in unique files
       error->OutputPrimitiveVariables(field,filename_iter,false,iter,mesh->xcoords,mesh->ycoords,mesh->cellnumber,mesh->Nx,mesh->Ny);
       //writing in 1 file
       error->OutputPrimitiveVariables(field,filename_totalsols,true,iter,mesh->xcoords,mesh->ycoords,mesh->cellnumber,mesh->Nx,mesh->Ny);

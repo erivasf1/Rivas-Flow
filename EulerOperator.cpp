@@ -86,7 +86,7 @@ void EulerBASE::Setup2DBoundaryConditions(vector<array<double,4>>* &field,Output
   error->OutputGhostCoords(btm_ghost_coords,mesh->btm_xcoords,mesh->btm_ycoords,mesh->Nx,2);
 
   //Enforcing specified boundary conditions
-  Enforce2DBoundaryConditions(field);
+  Enforce2DBoundaryConditions(field,true);
 
   //debug: for visulaization
   //NOTE: assume there are 3 layers of ghost coords for fcn. to visualize them
@@ -111,12 +111,12 @@ void EulerBASE::Setup2DBoundaryConditions(vector<array<double,4>>* &field,Output
 
 }
 //-----------------------------------------------------------
-void EulerBASE::Enforce2DBoundaryConditions(vector<array<double,4>>* &){
+void EulerBASE::Enforce2DBoundaryConditions(vector<array<double,4>>* &,bool ){
   return;
 }
 
 //-----------------------------------------------------------
-void EulerBASE::ApplyInflow(vector<array<double,4>>* &,MeshGenBASE* &,int ){
+void EulerBASE::ApplyInflow(int ){
 
   return;
 }
@@ -180,6 +180,8 @@ void EulerBASE::ApplyOutflow(vector<array<double,4>>* &field,int side){
 }
 //-----------------------------------------------------------
 void EulerBASE::ApplySlipWall(vector<array<double,4>>* &,MeshGenBASE* &,int){
+  //TODO
+
   return;
 }
 //-----------------------------------------------------------
@@ -1329,22 +1331,22 @@ Euler2D::Euler2D(int case_2d,int cell_inum,int cell_jnum,int scheme,int accuracy
   //Case assignments
   if (case_2d == 0){ //30 deg inlet case
     Mach_bc = 4.0;
-    P_stag = 12270.0;
-    T_stag = 217.0;
+    P_bc = 12270.0; //Pa
+    T_bc = 217.0; //K
     alpha = 0.0;
 
   }
   else if (case_2d == 1){ // 0 deg AOA airfoil
     Mach_bc = 0.84;
-    P_stag = 65855.8;
-    T_stag = 300.0;
+    P_bc = 65855.8;
+    T_bc = 300.0;
     alpha = 0.0;
 
   }
   else if (case_2d == 2){ // 8 deg AOA airfoil
     Mach_bc = 0.75;
-    P_stag = 67243.5;
-    T_stag = 300.0;
+    P_bc = 67243.5;
+    T_bc = 300.0;
     alpha = 8.0;
 
   }
@@ -1373,16 +1375,109 @@ void Euler2D::SetInitialConditions(vector<array<double,4>>* &field){
   int cellnum = cell_imax * cell_jmax;
   //Setting w/ arb. sin function
   for (int i=0;i<cellnum;i++) {
-    (*field)[i][0] = 1.0 + sin(i);
-    (*field)[i][1] = 2.0 + sin(i);
-    (*field)[i][2] = 3.0 + sin(i);
-    (*field)[i][3] = 4.0 + sin(i);
+    (*field)[i][0] = 1.0;
+    (*field)[i][1] = 1.0;
+    (*field)[i][2] = 1.0;
+    (*field)[i][3] = 1.0;
   }
 
   return;
 
 }
 
+//-----------------------------------------------------------
+void Euler2D::Enforce2DBoundaryConditions(vector<array<double,4>>* &field,bool setup){
+
+  //NOTE: only enforcing inflow during setup to save CPU time
+  //boundary id - 0:Top, 1:Btm, 2:Left, 3:Right
+  //top boundary
+  if ((top_cond==0) && (setup==true))
+    ApplyInflow(0);
+  else if (top_cond==1)
+    ApplyOutflow(field,0);
+  else if (top_cond==2)
+    ApplySlipWall(field,mesh,0);
+
+  //btm boundary 
+  if ((btm_cond==0) && (setup==true))
+    ApplyInflow(1);
+  else if (btm_cond==1)
+    ApplyOutflow(field,1);
+  else if (btm_cond==2)
+    ApplySlipWall(field,mesh,1);
+  
+
+  //left boundary
+  if ((left_cond==0) && (setup==true))
+    ApplyInflow(2);
+  else if (left_cond==1)
+    ApplyOutflow(field,2);
+  else if (left_cond==2)
+    ApplySlipWall(field,mesh,2);
+  
+
+  //right boundary
+  if (right_cond==0 && (setup==true))
+    ApplyInflow(3);
+  else if (right_cond==1)
+    ApplyOutflow(field,3);
+  else if (right_cond==2)
+    ApplySlipWall(field,mesh,3);
+  
+
+  return;
+}
+//-----------------------------------------------------------
+void Euler2D::ApplyInflow(int side){
+
+  //NOTE: boundary conditions are specified as only in the x-direction
+  double rho_bc = P_bc / (R*T_bc); //boundary condition density
+
+  double Gamma = GetGamma();
+  double a_bc = sqrt(Gamma*R*T_bc); 
+  double uvel_bc = Mach_bc * a_bc; //boundary condition x-velocity
+  double vvel_bc = 0.0; //boundary condition y-velocity
+
+  if (side == 0){ //top ghost cells
+    for (int n=0;n<cell_imax;n++){
+      mesh->top_cells[n][0] = rho_bc;
+      mesh->top_cells[n][1] = uvel_bc;
+      mesh->top_cells[n][2] = vvel_bc;
+      mesh->top_cells[n][3] = P_bc;
+    }
+  }
+
+  else if (side == 1){ //btm ghost cells
+    for (int n=0;n<cell_imax;n++){
+      mesh->btm_cells[n][0] = rho_bc;
+      mesh->btm_cells[n][1] = uvel_bc;
+      mesh->btm_cells[n][2] = vvel_bc;
+      mesh->btm_cells[n][3] = P_bc;
+    }
+  }
+  else if (side == 2){ //left ghost cells
+    for (int n=0;n<cell_imax;n++){
+      mesh->left_cells[n][0] = rho_bc;
+      mesh->left_cells[n][1] = uvel_bc;
+      mesh->left_cells[n][2] = vvel_bc;
+      mesh->left_cells[n][3] = P_bc;
+    }
+  }
+  else if (side == 3){ //right ghost cells
+    for (int n=0;n<cell_imax;n++){
+      mesh->right_cells[n][0] = rho_bc;
+      mesh->right_cells[n][1] = uvel_bc;
+      mesh->right_cells[n][2] = vvel_bc;
+      mesh->right_cells[n][3] = P_bc;
+    }
+  }
+
+  else{
+    cerr<<"Error: Unknown side spec. for enforcing inflow BC"<<endl;
+  } 
+
+  return;
+}
 //-----------------------------------------------------------
 void Euler2D::ComputeResidual(vector<array<double,4>>* &resid,vector<array<double,4>>* &field){
 
@@ -1431,7 +1526,7 @@ void Euler2D::ComputeResidual(vector<array<double,4>>* &resid,vector<array<doubl
 
       //residual calc.
       for (int n=0;n<cell_imax;n++)
-        res[n] = (flux_right[n]*area_right-flux_left[n]*area_left) + (flux_top[n]*area_top - flux_btm[n]*area_btm);
+        res[n] = (flux_right[n]*area_right+flux_left[n]*area_left) + (flux_top[n]*area_top + flux_btm[n]*area_btm);
 
       fieldij(resid,i,j,cell_imax) = res;
     }
@@ -1641,11 +1736,11 @@ void Euler2DMMS::EvalSourceTerms(/*vector<array<double,4>>* &mms_source,*/SpaceV
 }
 
 //-----------------------------------------------------------
-void Euler2DMMS::Enforce2DBoundaryConditions(vector<array<double,4>>* &field){
+void Euler2DMMS::Enforce2DBoundaryConditions(vector<array<double,4>>* &field,bool setup){
 
   //boundary id - 0:Top, 1:Btm, 2:Left, 3:Right
   //top boundary
-  if (top_cond==0)
+  if ((top_cond==0) && (setup==true))
     ApplyMSInflow(0);
   else if (top_cond==1)
     ApplyOutflow(field,0);
@@ -1654,7 +1749,7 @@ void Euler2DMMS::Enforce2DBoundaryConditions(vector<array<double,4>>* &field){
   
 
   //btm boundary 
-  if (btm_cond==0)
+  if ((btm_cond==0) && (setup==true))
     ApplyMSInflow(1);
   else if (btm_cond==1)
     ApplyOutflow(field,1);
@@ -1663,7 +1758,7 @@ void Euler2DMMS::Enforce2DBoundaryConditions(vector<array<double,4>>* &field){
   
 
   //left boundary
-  if (left_cond==0)
+  if ((left_cond==0) && (setup==true))
     ApplyMSInflow(2);
   else if (left_cond==1)
     ApplyOutflow(field,2);
@@ -1672,7 +1767,7 @@ void Euler2DMMS::Enforce2DBoundaryConditions(vector<array<double,4>>* &field){
   
 
   //right boundary
-  if (right_cond==0)
+  if (right_cond==0 && (setup==true))
     ApplyMSInflow(3);
   else if (right_cond==1)
     ApplyOutflow(field,3);

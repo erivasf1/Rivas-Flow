@@ -45,11 +45,14 @@ class EulerBASE {
   //Initial Conditions
   virtual void SetInitialConditions(vector<array<double,4>>* &field); //Complete (tested)
   //TODO:Boundary Conditions -- refer to this paper:https://arc-aiaa-org.ezproxy.lib.vt.edu/doi/10.2514/3.11983  
+
+  //BOUNDARY CONDITIONS
   void Setup2DBoundaryConditions(vector<array<double,4>>* &field,Output* &error); 
-  virtual void Enforce2DBoundaryConditions(vector<array<double,4>>* &field); //MS uses unique inlet cond.
-  virtual void ApplyInflow(vector<array<double,4>>* &field,MeshGenBASE* &mesh,int side); //30 deg. inlet uses Mach number and T as inlet conditions
+  virtual void Enforce2DBoundaryConditions(vector<array<double,4>>* &field,bool setup); //MS uses unique inlet cond.
+  virtual void ApplyInflow(int side); //30 deg. inlet uses Mach number and T as inlet conditions
   void ApplyOutflow(vector<array<double,4>>* &field,int side);
   void ApplySlipWall(vector<array<double,4>>* &field,MeshGenBASE* &mesh,int side);
+
   //SPATIAL FLUXES
   array<double,4> ComputeSpatialFlux_UPWIND1stOrder(vector<array<double,4>>* field,int loci,int locj,int nbori,int nborj,array<double,2> &unitvec); //1st order upwind schemes
   array<double,4> ComputeSpatialFlux_UPWIND2ndOrder(vector<array<double,4>>* field,int loci,int locj,int nbori,int nborj); //2nd order upwind schemes
@@ -172,13 +175,14 @@ class Euler2D : public EulerBASE {
   
 
   public:
-  double Mach_bc,T_stag,P_stag,alpha; //free-stream and initial conditions, depending on case
+  double Mach_bc,T_bc,P_bc,alpha; //free-stream and initial conditions, assigned in constructor
   
   Euler2D(int case_2d,int scheme,int accuracy,int cell_inum,int cell_jnum,int top,int btm,int left,int right,MeshGenBASE* &mesh_ptr,vector<array<double,4>>* &source); //constructor determines val. of const. parameters (e.g. freestream Mach #, angle-of-attack)
 
   void InitSolutions(vector<array<double,4>>* &field,int cellnum);
   void SetInitialConditions(vector<array<double,4>>* &field) override;
-
+  void Enforce2DBoundaryConditions(vector<array<double,4>>* &field,bool setup) override;
+  void ApplyInflow(int side) override;
 
   void ComputeResidual(vector<array<double,4>>* &resid,vector<array<double,4>>* &field) override;
 
@@ -218,7 +222,7 @@ class Euler2DMMS : public EulerBASE {
   double YMomentumSourceTerm(double x,double y);
   double EnergySourceTerm(double x,double y);
   void EvalSourceTerms(SpaceVariables2D* &sols) override; //source terms for all governing equations
-  void Enforce2DBoundaryConditions(vector<array<double,4>>* &field) override;
+  void Enforce2DBoundaryConditions(vector<array<double,4>>* &field,bool setup) override;
   void ApplyMSInflow(int side);
   void ComputeResidual(vector<array<double,4>>* &resid,vector<array<double,4>>* &field) override;
   ~Euler2DMMS();
