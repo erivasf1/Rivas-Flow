@@ -1562,7 +1562,7 @@ void Euler2D::ApplyInflow(int side){
   double vvel_bc = 0.0; //boundary condition y-velocity
 
   if (side == 0){ //top ghost cells
-    for (int n=0;n<cell_imax;n++){
+    for (int n=0;n<(int)mesh->top_cells.size();n++){
       mesh->top_cells[n][0] = rho_bc;
       mesh->top_cells[n][1] = uvel_bc;
       mesh->top_cells[n][2] = vvel_bc;
@@ -1571,7 +1571,7 @@ void Euler2D::ApplyInflow(int side){
   }
 
   else if (side == 1){ //btm ghost cells
-    for (int n=0;n<cell_imax;n++){
+    for (int n=0;n<(int)mesh->btm_cells.size();n++){
       mesh->btm_cells[n][0] = rho_bc;
       mesh->btm_cells[n][1] = uvel_bc;
       mesh->btm_cells[n][2] = vvel_bc;
@@ -1579,7 +1579,7 @@ void Euler2D::ApplyInflow(int side){
     }
   }
   else if (side == 2){ //left ghost cells
-    for (int n=0;n<cell_jmax;n++){
+    for (int n=0;n<(int)mesh->left_cells.size();n++){
       mesh->left_cells[n][0] = rho_bc;
       mesh->left_cells[n][1] = uvel_bc;
       mesh->left_cells[n][2] = vvel_bc;
@@ -1587,7 +1587,7 @@ void Euler2D::ApplyInflow(int side){
     }
   }
   else if (side == 3){ //right ghost cells
-    for (int n=0;n<cell_jmax;n++){
+    for (int n=0;n<(int)mesh->right_cells.size();n++){
       mesh->right_cells[n][0] = rho_bc;
       mesh->right_cells[n][1] = uvel_bc;
       mesh->right_cells[n][2] = vvel_bc;
@@ -1654,9 +1654,7 @@ void Euler2D::ComputeResidual(vector<array<double,4>>* &resid,vector<array<doubl
       fieldij(resid,i,j,cell_imax) = res;
     }
   }
-
-  return;
-}
+return; }
 
 //-----------------------------------------------------------
 Euler2D::~Euler2D(){}

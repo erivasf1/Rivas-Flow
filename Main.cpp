@@ -44,7 +44,7 @@ int main() {
   double xmax = 1.0;
 
   // Boundary Conditions Specification
-  BOUNDARY_COND top_cond = SLIP_WALL; //TEMP
+  BOUNDARY_COND top_cond = INFLOW; 
   BOUNDARY_COND btm_cond = SLIP_WALL;
   BOUNDARY_COND left_cond = INFLOW;
   BOUNDARY_COND right_cond = OUTFLOW;
@@ -57,9 +57,9 @@ int main() {
   [[maybe_unused]]int cellnum = 100; //recommending an even number for cell face at the throat of nozzle (NOTE: will get reassigned val. if mesh is provided)
 
   // Temporal Specifications
-  const int iter_max = 1;
+  const int iter_max = 1e3;
   int iterout = 1; //number of iterations per solution output
-  const double CFL = 0.1; //CFL number (must <= 1 for Euler Explicit integration)
+  const double CFL = 0.6; //CFL number (must <= 1 for Euler Explicit integration)
   //const double CFL = 2.9e-4; //CFL number (must <= 1 for Euler Explicit integration)
   bool timestep{false}; //true = local time stepping; false = global time stepping
 
