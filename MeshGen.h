@@ -80,7 +80,7 @@ class MeshGen2D : public MeshGenBASE { //reads in a non-uniform 2D mesh
   void OutputMesh();
 
   array<array<double,4>,2> GetCellCoords(int &i,int &j); //fcn. to retrieve coords; indexing: [btm_left,btm_right,top_left,top_right]!
-  array<array<double,4>,2> GetGhostCellCoords(int &i,int &j,int tag); 
+  array<array<double,4>,2> GetGhostCellCoords(int i,int j,int tag); 
   //double GetCellVolume(int cell_id) override;
   
   void GenerateGhostCells(int left_id,int right_id,int btm_id,int top_id) override; //main fcn. that generates ghost nodes to each pertaining bounds

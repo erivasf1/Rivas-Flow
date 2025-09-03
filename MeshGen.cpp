@@ -252,7 +252,7 @@ array<array<double,4>,2> MeshGen2D::GetCellCoords(int &i,int &j){
 }
 
 //-----------------------------------------------------------
-array<array<double,4>,2> MeshGen2D::GetGhostCellCoords(int &i,int &j, int tag){
+array<array<double,4>,2> MeshGen2D::GetGhostCellCoords(int i,int j, int tag){
 
   //NOTE: 1st layer of ghost cell coords are not the same as the 1st/last layer of interior cell coords!
   double x1,x2,x3,x4;
@@ -264,8 +264,8 @@ array<array<double,4>,2> MeshGen2D::GetGhostCellCoords(int &i,int &j, int tag){
 
   if (tag==0){ //top boundary ghost cells case
     //note:j=0 spec. uses interior cell coords
-    pt_id1 = (j==0) ? i + ((Nx-1)*Nx) : i + (j-1)*Nx;
-    pt_id2 = (j==0) ? (i+1) + ((Nx-1)*Nx) : (i+1) + (j-1)*Nx;
+    pt_id1 = (j==0) ? i + ((Ny-1)*Nx) : i + (j-1)*Nx;
+    pt_id2 = (j==0) ? (i+1) + ((Ny-1)*Nx) : (i+1) + (j-1)*Nx;
     pt_id3 = i + (j*Nx); pt_id4 = (i+1) + (j*Nx);
 
     x1 = (j==0) ? xcoords[pt_id1] : top_xcoords[pt_id1];

@@ -211,7 +211,7 @@ void EulerBASE::ApplySlipWall(vector<array<double,4>>* &field,int side){
         return;
 
       //computing density
-      T = p_nbor1 / (fieldij(field,n,mesh->cell_jmax,mesh->cell_imax)[0]*R);
+      T = p_nbor1 / (fieldij(field,n,mesh->cell_jmax-1,mesh->cell_imax)[0]*R);
       mesh->top_cells[n][0] = mesh->top_cells[n][3] / (R*T);
 
     }
@@ -1579,7 +1579,7 @@ void Euler2D::ApplyInflow(int side){
     }
   }
   else if (side == 2){ //left ghost cells
-    for (int n=0;n<cell_imax;n++){
+    for (int n=0;n<cell_jmax;n++){
       mesh->left_cells[n][0] = rho_bc;
       mesh->left_cells[n][1] = uvel_bc;
       mesh->left_cells[n][2] = vvel_bc;
@@ -1587,7 +1587,7 @@ void Euler2D::ApplyInflow(int side){
     }
   }
   else if (side == 3){ //right ghost cells
-    for (int n=0;n<cell_imax;n++){
+    for (int n=0;n<cell_jmax;n++){
       mesh->right_cells[n][0] = rho_bc;
       mesh->right_cells[n][1] = uvel_bc;
       mesh->right_cells[n][2] = vvel_bc;
@@ -1648,7 +1648,7 @@ void Euler2D::ComputeResidual(vector<array<double,4>>* &resid,vector<array<doubl
       area_btm = mesh->GetInteriorCellArea(i,j,1);
 
       //residual calc.
-      for (int n=0;n<cell_imax;n++)
+      for (int n=0;n<4;n++)
         res[n] = (flux_right[n]*area_right+flux_left[n]*area_left) + (flux_top[n]*area_top + flux_btm[n]*area_btm);
 
       fieldij(resid,i,j,cell_imax) = res;
