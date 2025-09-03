@@ -179,8 +179,131 @@ void EulerBASE::ApplyOutflow(vector<array<double,4>>* &field,int side){
   return;
 }
 //-----------------------------------------------------------
-void EulerBASE::ApplySlipWall(vector<array<double,4>>* &,MeshGenBASE* &,int){
-  //TODO
+void EulerBASE::ApplySlipWall(vector<array<double,4>>* &field,int side){
+
+  //NOTE: using notes from Lecture 7,Slide 41
+  //Velocity eq. comes from ChatGPT and wikipedia page under "vector rejection"
+
+  array<double,2> unit_normal;
+  double x_vel,y_vel; //neighboring interior cell velocities
+  double T; //Temp. of ghost cell
+  [[maybe_unused]] double p_nbor1,p_nbor2; //neighboring interior cell pressures
+
+  //TOP SIDE
+  if (side == 0){ //top side
+    for (int n=0;n<mesh->cell_imax;n++){
+      //calculating outward unit normal vec.
+      unit_normal = mesh->ComputeOutwardUnitVector(n,mesh->cell_jmax-1,0);//aligned in +i dir.
+      //computing ghost cell velocity
+      x_vel = fieldij(field,n,mesh->cell_jmax-1,mesh->cell_imax)[1]; y_vel = fieldij(field,n,mesh->cell_jmax-1,mesh->cell_imax)[2]; 
+      mesh->top_cells[n][1] = x_vel - 2.0* (x_vel*unit_normal[0] + y_vel*unit_normal[1] )*unit_normal[0];
+      mesh->top_cells[n][2] = y_vel - 2.0* (x_vel*unit_normal[0] + y_vel*unit_normal[1] )*unit_normal[1];
+    
+      //extrapolating pressure
+      p_nbor1 = fieldij(field,n,mesh->cell_jmax-1,mesh->cell_imax)[3]; 
+      if (flux_accuracy == 1)
+        mesh->top_cells[n][3] = p_nbor1;
+      else if (flux_accuracy == 2){
+        p_nbor2 = fieldij(field,n,mesh->cell_jmax-2,mesh->cell_imax)[3]; 
+        mesh->top_cells[n][3] = p_nbor1 - 0.5*(p_nbor2-p_nbor1);
+      }
+      else //error handling
+        return;
+
+      //computing density
+      T = p_nbor1 / (fieldij(field,n,mesh->cell_jmax,mesh->cell_imax)[0]*R);
+      mesh->top_cells[n][0] = mesh->top_cells[n][3] / (R*T);
+
+    }
+  }
+
+
+  //BTM SIDE
+  else if (side == 1){ 
+    for (int n=0;n<mesh->cell_imax;n++){
+      //calculating outward unit normal vec.
+      unit_normal = mesh->ComputeOutwardUnitVector(n,0,1);//aligned in +i dir.
+      //computing ghost cell velocity
+      x_vel = fieldij(field,n,0,mesh->cell_imax)[1]; y_vel = fieldij(field,n,0,mesh->cell_imax)[2]; 
+      mesh->btm_cells[n][1] = x_vel - 2.0* (x_vel*unit_normal[0] + y_vel*unit_normal[1] )*unit_normal[0];
+      mesh->btm_cells[n][2] = y_vel - 2.0* (x_vel*unit_normal[0] + y_vel*unit_normal[1] )*unit_normal[1];
+    
+      //extrapolating pressure
+      p_nbor1 = fieldij(field,n,0,mesh->cell_imax)[3]; 
+      if (flux_accuracy == 1) //1st order
+        mesh->btm_cells[n][3] = p_nbor1;
+      else if (flux_accuracy == 2){ //2nd order
+        p_nbor2 = fieldij(field,n,1,mesh->cell_imax)[3]; 
+        mesh->btm_cells[n][3] = p_nbor1 - 0.5*(p_nbor2-p_nbor1);
+      }
+      else //error handling
+        return;
+
+      //computing density
+      T = p_nbor1 / (fieldij(field,n,0,mesh->cell_imax)[0]*R);
+      mesh->btm_cells[n][0] = mesh->btm_cells[n][3] / (R*T);
+
+    }
+  }
+
+  //LEFT SIDE
+  else if (side == 2){ 
+    for (int n=0;n<mesh->cell_jmax;n++){
+      //calculating outward unit normal vec.
+      unit_normal = mesh->ComputeOutwardUnitVector(0,n,2);//aligned in +i dir.
+      //computing ghost cell velocity
+      x_vel = fieldij(field,0,n,mesh->cell_imax)[1]; y_vel = fieldij(field,0,n,mesh->cell_imax)[2]; 
+      mesh->left_cells[n][1] = x_vel - 2.0* (x_vel*unit_normal[0] + y_vel*unit_normal[1] )*unit_normal[0];
+      mesh->left_cells[n][2] = y_vel - 2.0* (x_vel*unit_normal[0] + y_vel*unit_normal[1] )*unit_normal[1];
+    
+      //extrapolating pressure
+      p_nbor1 = fieldij(field,0,n,mesh->cell_imax)[3]; 
+      if (flux_accuracy == 1) //1st order
+        mesh->left_cells[n][3] = p_nbor1;
+      else if (flux_accuracy == 2){ //2nd order
+        p_nbor2 = fieldij(field,1,n,mesh->cell_imax)[3]; 
+        mesh->left_cells[n][3] = p_nbor1 - 0.5*(p_nbor2-p_nbor1);
+      }
+      else //error handling
+        return;
+
+      //computing density
+      T = p_nbor1 / (fieldij(field,0,n,mesh->cell_imax)[0]*R);
+      mesh->btm_cells[n][0] = mesh->btm_cells[n][3] / (R*T);
+
+    }
+  }
+
+  //RIGHT SIDE
+  else if (side == 3){
+    for (int n=0;n<mesh->cell_jmax;n++){
+      //calculating outward unit normal vec.
+      unit_normal = mesh->ComputeOutwardUnitVector(mesh->cell_imax-1,n,3);//aligned in +i dir.
+      //computing ghost cell velocity
+      x_vel = fieldij(field,mesh->cell_imax-1,n,mesh->cell_imax)[1]; y_vel = fieldij(field,mesh->cell_imax-1,n,mesh->cell_imax)[2]; 
+      mesh->right_cells[n][1] = x_vel - 2.0* (x_vel*unit_normal[0] + y_vel*unit_normal[1] )*unit_normal[0];
+      mesh->right_cells[n][2] = y_vel - 2.0* (x_vel*unit_normal[0] + y_vel*unit_normal[1] )*unit_normal[1];
+    
+      //extrapolating pressure
+      p_nbor1 = fieldij(field,mesh->cell_imax-1,n,mesh->cell_imax)[3]; 
+      if (flux_accuracy == 1) //1st order
+        mesh->right_cells[n][3] = p_nbor1;
+      else if (flux_accuracy == 2){ //2nd order
+        p_nbor2 = fieldij(field,mesh->cell_imax-2,n,mesh->cell_imax)[3]; 
+        mesh->right_cells[n][3] = p_nbor1 - 0.5*(p_nbor2-p_nbor1);
+      }
+      else //error handling
+        return;
+
+      //computing density
+      T = p_nbor1 / (fieldij(field,mesh->cell_imax-1,n,mesh->cell_imax)[0]*R);
+      mesh->right_cells[n][0] = mesh->right_cells[n][3] / (R*T);
+
+    }
+  }
+
+  else 
+    cerr<<"Error: Unknown side specification in SlipWall Boundary Condition!"<<endl;
 
   return;
 }
@@ -1396,7 +1519,7 @@ void Euler2D::Enforce2DBoundaryConditions(vector<array<double,4>>* &field,bool s
   else if (top_cond==1)
     ApplyOutflow(field,0);
   else if (top_cond==2)
-    ApplySlipWall(field,mesh,0);
+    ApplySlipWall(field,0);
 
   //btm boundary 
   if ((btm_cond==0) && (setup==true))
@@ -1404,7 +1527,7 @@ void Euler2D::Enforce2DBoundaryConditions(vector<array<double,4>>* &field,bool s
   else if (btm_cond==1)
     ApplyOutflow(field,1);
   else if (btm_cond==2)
-    ApplySlipWall(field,mesh,1);
+    ApplySlipWall(field,1);
   
 
   //left boundary
@@ -1413,7 +1536,7 @@ void Euler2D::Enforce2DBoundaryConditions(vector<array<double,4>>* &field,bool s
   else if (left_cond==1)
     ApplyOutflow(field,2);
   else if (left_cond==2)
-    ApplySlipWall(field,mesh,2);
+    ApplySlipWall(field,2);
   
 
   //right boundary
@@ -1422,7 +1545,7 @@ void Euler2D::Enforce2DBoundaryConditions(vector<array<double,4>>* &field,bool s
   else if (right_cond==1)
     ApplyOutflow(field,3);
   else if (right_cond==2)
-    ApplySlipWall(field,mesh,3);
+    ApplySlipWall(field,3);
   
 
   return;
@@ -1745,7 +1868,7 @@ void Euler2DMMS::Enforce2DBoundaryConditions(vector<array<double,4>>* &field,boo
   else if (top_cond==1)
     ApplyOutflow(field,0);
   else if (top_cond==2)
-    ApplySlipWall(field,mesh,0);
+    ApplySlipWall(field,0);
   
 
   //btm boundary 
@@ -1754,7 +1877,7 @@ void Euler2DMMS::Enforce2DBoundaryConditions(vector<array<double,4>>* &field,boo
   else if (btm_cond==1)
     ApplyOutflow(field,1);
   else if (btm_cond==2)
-    ApplySlipWall(field,mesh,1);
+    ApplySlipWall(field,1);
   
 
   //left boundary
@@ -1763,7 +1886,7 @@ void Euler2DMMS::Enforce2DBoundaryConditions(vector<array<double,4>>* &field,boo
   else if (left_cond==1)
     ApplyOutflow(field,2);
   else if (left_cond==2)
-    ApplySlipWall(field,mesh,2);
+    ApplySlipWall(field,2);
   
 
   //right boundary
@@ -1772,7 +1895,7 @@ void Euler2DMMS::Enforce2DBoundaryConditions(vector<array<double,4>>* &field,boo
   else if (right_cond==1)
     ApplyOutflow(field,3);
   else if (right_cond==2)
-    ApplySlipWall(field,mesh,3);
+    ApplySlipWall(field,3);
   
   return;
 
