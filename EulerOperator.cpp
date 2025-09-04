@@ -183,6 +183,7 @@ void EulerBASE::ApplySlipWall(vector<array<double,4>>* &field,int side){
 
   //NOTE: using notes from Lecture 7,Slide 41
   //Velocity eq. comes from ChatGPT and wikipedia page under "vector rejection"
+  //TODO: extrapolate to ghost cells
 
   array<double,2> unit_normal;
   double x_vel,y_vel; //neighboring interior cell velocities
@@ -269,7 +270,7 @@ void EulerBASE::ApplySlipWall(vector<array<double,4>>* &field,int side){
 
       //computing density
       T = p_nbor1 / (fieldij(field,0,n,mesh->cell_imax)[0]*R);
-      mesh->btm_cells[n][0] = mesh->btm_cells[n][3] / (R*T);
+      mesh->left_cells[n][0] = mesh->left_cells[n][3] / (R*T);
 
     }
   }
@@ -1649,7 +1650,7 @@ void Euler2D::ComputeResidual(vector<array<double,4>>* &resid,vector<array<doubl
 
       //residual calc.
       for (int n=0;n<4;n++)
-        res[n] = (flux_right[n]*area_right+flux_left[n]*area_left) + (flux_top[n]*area_top + flux_btm[n]*area_btm);
+        res[n] = (flux_right[n]*area_right+flux_left[n]*area_left) + (flux_top[n]*area_top - flux_btm[n]*area_btm);
 
       fieldij(resid,i,j,cell_imax) = res;
     }

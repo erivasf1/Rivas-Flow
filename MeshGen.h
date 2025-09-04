@@ -28,8 +28,8 @@ class MeshGenBASE {
   virtual void ReadMeshFile();
   virtual void OutputMesh();
   virtual void GenerateGhostCells(int left_id,int right_id,int top_id,int btm_id); //-- adds the extra ghost cells to the domain virtual double GetInteriorCellArea(int &i,int &j,int side);
-  virtual double GetInteriorCellArea(int &i,int &j,int side);
-  virtual double GetCellVolume(int &i,int &j);
+  virtual double GetInteriorCellArea(int i,int j,int side);
+  virtual double GetCellVolume(int i,int j);
   virtual void ComputeGhostCellCenteredCoordinate();
   virtual array<double,2> ComputeOutwardUnitVector(int i,int j,int side);
   virtual array<double,4> GetGhostCellVarVec(int i,int j,int side);
@@ -86,10 +86,10 @@ class MeshGen2D : public MeshGenBASE { //reads in a non-uniform 2D mesh
   void GenerateGhostCells(int left_id,int right_id,int btm_id,int top_id) override; //main fcn. that generates ghost nodes to each pertaining bounds
   void ReflectGhostCoords(int tag); //used for slip wall treatments
   void ExtendGhostCoords(int tag); //used for inflow and outflow treatments
-  double GetInteriorCellArea(int &i,int &j,int side) override; //retrieves the area of the specified side of an interior cell (really just a length); side =0(top),1(btm),2(left),3(right)
-  double GetGhostCellArea(int &i,int &j,int side); //side refers to the boundary of the domain (instead of the side of the cell)
+  double GetInteriorCellArea(int i,int j,int side) override; //retrieves the area of the specified side of an interior cell (really just a length); side =0(top),1(btm),2(left),3(right)
+  double GetGhostCellArea(int i,int j,int side); //side refers to the boundary of the domain (instead of the side of the cell)
   void ComputeGhostCellCenteredCoordinate() override; //computes+stores the ghost cell center coordinates 
-  double GetCellVolume(int &i,int &j);
+  double GetCellVolume(int i,int j) override;
   array<double,2> ComputeOutwardUnitVector(int i,int j,int side) override;
   array<double,4> GetGhostCellVarVec(int i,int j,int side) override; //extracts vector of primitive vars. from the specified ghost cell
   void AssignGhostCellVarVec(int i,int j,int side,array<double,4> &res);

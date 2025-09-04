@@ -21,11 +21,11 @@ void MeshGenBASE::OutputMesh(){}
 //-----------------------------------------------------------
 void MeshGenBASE::GenerateGhostCells(int ,int ,int ,int ){}
 //-----------------------------------------------------------
-double MeshGenBASE::GetInteriorCellArea(int &, int &, int) {
+double MeshGenBASE::GetInteriorCellArea(int , int , int) {
   return 0.0;
 }
 //-----------------------------------------------------------
-double MeshGenBASE::GetCellVolume(int &, int &){
+double MeshGenBASE::GetCellVolume(int , int ){
   return 0.0;
 }
 //-----------------------------------------------------------
@@ -655,7 +655,7 @@ void MeshGen2D::ExtendGhostCoords(int tag){
 }
 
 //-----------------------------------------------------------
-double MeshGen2D::GetInteriorCellArea(int &i,int &j,int side){
+double MeshGen2D::GetInteriorCellArea(int i,int j,int side){
   //side: top = 0, btm = 1, left = 2, right = 3
   double node1_x,node1_y,node2_x,node2_y;
   int node1_id,node2_id;
@@ -705,7 +705,7 @@ double MeshGen2D::GetInteriorCellArea(int &i,int &j,int side){
 }
 
 //-----------------------------------------------------------
-double MeshGen2D::GetGhostCellArea(int &i,int &j,int side){ //retrieves the area of the specified side of the domain
+double MeshGen2D::GetGhostCellArea(int i,int j,int side){ //retrieves the area of the specified side of the domain
 
   //side: top = 0, btm = 1, left = 2, right = 3
   double node1_x,node1_y,node2_x,node2_y;
@@ -804,7 +804,7 @@ void MeshGen2D::ComputeGhostCellCenteredCoordinate(){
   return;
 }
 //-----------------------------------------------------------
-double MeshGen2D::GetCellVolume(int &i, int &j){
+double MeshGen2D::GetCellVolume(int i, int j){
 
   //length = left side & width = top side
   double width = GetInteriorCellArea(i,j,0);
