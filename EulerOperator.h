@@ -51,7 +51,7 @@ class EulerBASE {
   virtual void Enforce2DBoundaryConditions(vector<array<double,4>>* &field,bool setup); //MS uses unique inlet cond.
   virtual void ApplyInflow(int side); //30 deg. inlet uses Mach number and T as inlet conditions
   void ApplyOutflow(vector<array<double,4>>* &field,int side);
-  void ApplySlipWall(vector<array<double,4>>* &field,int side);
+  virtual void ApplySlipWall(vector<array<double,4>>* &field,int side);
 
   //SPATIAL FLUXES
   array<double,4> ComputeSpatialFlux_UPWIND1stOrder(vector<array<double,4>>* field,int loci,int locj,int nbori,int nborj,array<double,2> &unitvec); //1st order upwind schemes
@@ -184,6 +184,7 @@ class Euler2D : public EulerBASE {
   void SetInitialConditions(vector<array<double,4>>* &field) override;
   void Enforce2DBoundaryConditions(vector<array<double,4>>* &field,bool setup) override;
   void ApplyInflow(int side) override;
+  void ApplySlipWall(vector<array<double,4>>* &field, int side) override;
 
   void ComputeResidual(vector<array<double,4>>* &resid,vector<array<double,4>>* &field) override;
 

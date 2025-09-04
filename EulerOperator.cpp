@@ -1515,12 +1515,23 @@ void Euler2D::Enforce2DBoundaryConditions(vector<array<double,4>>* &field,bool s
   //NOTE: only enforcing inflow during setup to save CPU time
   //boundary id - 0:Top, 1:Btm, 2:Left, 3:Right
   //top boundary
-  if ((top_cond==0) && (setup==true))
-    ApplyInflow(0);
-  else if (top_cond==1)
-    ApplyOutflow(field,0);
-  else if (top_cond==2)
-    ApplySlipWall(field,0);
+  if (scenario_2d != 0){ //non-inlet case
+    if ((top_cond==0) && (setup==true))
+      ApplyInflow(0);
+    else if (top_cond==1)
+      ApplyOutflow(field,0);
+    else if (top_cond==2)
+      ApplySlipWall(field,0);
+  }
+  else{ //INLET CASE -- splitting top boundary into inflow + slipwall
+    if (setup == true){ 
+      ApplyInflow(0);
+      ApplySlipWall(field,0);
+    }
+    else
+      ApplySlipWall(field,0);
+
+  }
 
   //btm boundary 
   if ((btm_cond==0) && (setup==true))
@@ -1622,6 +1633,152 @@ void Euler2D::ApplyInflow(int side){
   else{
     cerr<<"Error: Unknown side spec. for enforcing inflow BC"<<endl;
   } 
+
+  return;
+}
+//-----------------------------------------------------------
+void Euler2D::ApplySlipWall(vector<array<double,4>>* &field,int side){
+
+  //NOTE: using notes from Lecture 7,Slide 41
+  //Velocity eq. comes from ChatGPT and wikipedia page under "vector rejection"
+  //TODO: extrapolate to ghost cells
+
+  array<double,2> unit_normal;
+  double x_vel,y_vel; //neighboring interior cell velocities
+  double T; //Temp. of ghost cell
+  [[maybe_unused]] double p_nbor1,p_nbor2; //neighboring interior cell pressures
+
+  [[maybe_unused]] array<double,2> pt_split{0.5,0.6}; // for inlet case
+  [[maybe_unused]] array<array<double,4>,2> pt_current;
+
+  //TOP SIDE
+  if (side == 0){ //top side
+    for (int n=0;n<mesh->cell_imax;n++){
+         
+      if (scenario_2d == 0){ //INLET CASE
+        pt_current = mesh->GetGhostCellCoords(n,0,0);
+
+        if (pt_current[0][3] <= pt_split[0]) //skipping ghost cells to the left of the split point
+          continue;
+      } 
+
+      //calculating outward unit normal vec.
+      unit_normal = mesh->ComputeOutwardUnitVector(n,mesh->cell_jmax-1,0);//aligned in +i dir.
+      //computing ghost cell velocity
+      x_vel = fieldij(field,n,mesh->cell_jmax-1,mesh->cell_imax)[1]; y_vel = fieldij(field,n,mesh->cell_jmax-1,mesh->cell_imax)[2]; 
+      mesh->top_cells[n][1] = x_vel - 2.0* (x_vel*unit_normal[0] + y_vel*unit_normal[1] )*unit_normal[0];
+      mesh->top_cells[n][2] = y_vel - 2.0* (x_vel*unit_normal[0] + y_vel*unit_normal[1] )*unit_normal[1];
+    
+      //extrapolating pressure
+      p_nbor1 = fieldij(field,n,mesh->cell_jmax-1,mesh->cell_imax)[3]; 
+      if (flux_accuracy == 1)
+        mesh->top_cells[n][3] = p_nbor1;
+      else if (flux_accuracy == 2){
+        p_nbor2 = fieldij(field,n,mesh->cell_jmax-2,mesh->cell_imax)[3]; 
+        mesh->top_cells[n][3] = p_nbor1 - 0.5*(p_nbor2-p_nbor1);
+      }
+      else //error handling
+        return;
+
+      //computing density
+      T = p_nbor1 / (fieldij(field,n,mesh->cell_jmax-1,mesh->cell_imax)[0]*R);
+      mesh->top_cells[n][0] = mesh->top_cells[n][3] / (R*T);
+
+    }
+  }
+
+
+  //BTM SIDE
+  else if (side == 1){ 
+    for (int n=0;n<mesh->cell_imax;n++){
+      //calculating outward unit normal vec.
+      unit_normal = mesh->ComputeOutwardUnitVector(n,0,1);//aligned in +i dir.
+      //computing ghost cell velocity
+      x_vel = fieldij(field,n,0,mesh->cell_imax)[1]; y_vel = fieldij(field,n,0,mesh->cell_imax)[2]; 
+      mesh->btm_cells[n][1] = x_vel - 2.0* (x_vel*unit_normal[0] + y_vel*unit_normal[1] )*unit_normal[0];
+      mesh->btm_cells[n][2] = y_vel - 2.0* (x_vel*unit_normal[0] + y_vel*unit_normal[1] )*unit_normal[1];
+    
+      //extrapolating pressure
+      p_nbor1 = fieldij(field,n,0,mesh->cell_imax)[3]; 
+      if (flux_accuracy == 1) //1st order
+        mesh->btm_cells[n][3] = p_nbor1;
+      else if (flux_accuracy == 2){ //2nd order
+        p_nbor2 = fieldij(field,n,1,mesh->cell_imax)[3]; 
+        mesh->btm_cells[n][3] = p_nbor1 - 0.5*(p_nbor2-p_nbor1);
+      }
+      else //error handling
+        return;
+
+      //computing density
+      T = p_nbor1 / (fieldij(field,n,0,mesh->cell_imax)[0]*R);
+      mesh->btm_cells[n][0] = mesh->btm_cells[n][3] / (R*T);
+
+    }
+  }
+
+  //LEFT SIDE
+  else if (side == 2){ 
+    for (int n=0;n<mesh->cell_jmax;n++){
+      //calculating outward unit normal vec.
+      unit_normal = mesh->ComputeOutwardUnitVector(0,n,2);//aligned in +i dir.
+      //computing ghost cell velocity
+      x_vel = fieldij(field,0,n,mesh->cell_imax)[1]; y_vel = fieldij(field,0,n,mesh->cell_imax)[2]; 
+      mesh->left_cells[n][1] = x_vel - 2.0* (x_vel*unit_normal[0] + y_vel*unit_normal[1] )*unit_normal[0];
+      mesh->left_cells[n][2] = y_vel - 2.0* (x_vel*unit_normal[0] + y_vel*unit_normal[1] )*unit_normal[1];
+    
+      //extrapolating pressure
+      p_nbor1 = fieldij(field,0,n,mesh->cell_imax)[3]; 
+      if (flux_accuracy == 1) //1st order
+        mesh->left_cells[n][3] = p_nbor1;
+      else if (flux_accuracy == 2){ //2nd order
+        p_nbor2 = fieldij(field,1,n,mesh->cell_imax)[3]; 
+        mesh->left_cells[n][3] = p_nbor1 - 0.5*(p_nbor2-p_nbor1);
+      }
+      else //error handling
+        return;
+
+      //computing density
+      T = p_nbor1 / (fieldij(field,0,n,mesh->cell_imax)[0]*R);
+      mesh->left_cells[n][0] = mesh->left_cells[n][3] / (R*T);
+
+    }
+  }
+
+  //RIGHT SIDE
+  else if (side == 3){
+    for (int n=0;n<mesh->cell_jmax;n++){
+      //calculating outward unit normal vec.
+      unit_normal = mesh->ComputeOutwardUnitVector(mesh->cell_imax-1,n,3);//aligned in +i dir.
+      //computing ghost cell velocity
+      x_vel = fieldij(field,mesh->cell_imax-1,n,mesh->cell_imax)[1]; y_vel = fieldij(field,mesh->cell_imax-1,n,mesh->cell_imax)[2]; 
+      mesh->right_cells[n][1] = x_vel - 2.0* (x_vel*unit_normal[0] + y_vel*unit_normal[1] )*unit_normal[0];
+      mesh->right_cells[n][2] = y_vel - 2.0* (x_vel*unit_normal[0] + y_vel*unit_normal[1] )*unit_normal[1];
+    
+      //extrapolating pressure
+      p_nbor1 = fieldij(field,mesh->cell_imax-1,n,mesh->cell_imax)[3]; 
+      if (flux_accuracy == 1) //1st order
+        mesh->right_cells[n][3] = p_nbor1;
+      else if (flux_accuracy == 2){ //2nd order
+        p_nbor2 = fieldij(field,mesh->cell_imax-2,n,mesh->cell_imax)[3]; 
+        mesh->right_cells[n][3] = p_nbor1 - 0.5*(p_nbor2-p_nbor1);
+      }
+      else //error handling
+        return;
+
+      //computing density
+      T = p_nbor1 / (fieldij(field,mesh->cell_imax-1,n,mesh->cell_imax)[0]*R);
+      mesh->right_cells[n][0] = mesh->right_cells[n][3] / (R*T);
+
+    }
+  }
+
+  else 
+    cerr<<"Error: Unknown side specification in SlipWall Boundary Condition!"<<endl;
+
+  return;
+
+
+
 
   return;
 }
