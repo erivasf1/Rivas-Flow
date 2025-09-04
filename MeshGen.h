@@ -30,6 +30,7 @@ class MeshGenBASE {
   virtual void GenerateGhostCells(int left_id,int right_id,int top_id,int btm_id); //-- adds the extra ghost cells to the domain virtual double GetInteriorCellArea(int &i,int &j,int side);
   virtual double GetInteriorCellArea(int i,int j,int side);
   virtual double GetCellVolume(int i,int j);
+  virtual array<array<double,4>,2> GetGhostCellCoords(int i,int j, int tag);
   virtual void ComputeGhostCellCenteredCoordinate();
   virtual array<double,2> ComputeOutwardUnitVector(int i,int j,int side);
   virtual array<double,4> GetGhostCellVarVec(int i,int j,int side);
@@ -80,7 +81,7 @@ class MeshGen2D : public MeshGenBASE { //reads in a non-uniform 2D mesh
   void OutputMesh();
 
   array<array<double,4>,2> GetCellCoords(int &i,int &j); //fcn. to retrieve coords; indexing: [btm_left,btm_right,top_left,top_right]!
-  array<array<double,4>,2> GetGhostCellCoords(int i,int j,int tag); 
+  array<array<double,4>,2> GetGhostCellCoords(int i,int j,int tag) override; 
   //double GetCellVolume(int cell_id) override;
   
   void GenerateGhostCells(int left_id,int right_id,int btm_id,int top_id) override; //main fcn. that generates ghost nodes to each pertaining bounds

@@ -173,6 +173,7 @@ class Euler1D { //TODO: Make this into inherit class
 // EulerOperator Class for 2D Problems
 class Euler2D : public EulerBASE {
   
+  int scenario_2d;
 
   public:
   double Mach_bc,T_bc,P_bc,alpha; //free-stream and initial conditions, assigned in constructor

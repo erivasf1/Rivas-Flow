@@ -1451,7 +1451,7 @@ Euler1D::~Euler1D(){}
 
 // EULER2D DEFINITIONS
 //-----------------------------------------------------------
-Euler2D::Euler2D(int case_2d,int cell_inum,int cell_jnum,int scheme,int accuracy,int top,int btm,int left,int right,MeshGenBASE* &mesh_ptr,vector<array<double,4>>* &source) : EulerBASE(cell_inum,cell_jnum,scheme,accuracy,top,btm,left,right,mesh_ptr,source){
+Euler2D::Euler2D(int case_2d,int cell_inum,int cell_jnum,int scheme,int accuracy,int top,int btm,int left,int right,MeshGenBASE* &mesh_ptr,vector<array<double,4>>* &source) : scenario_2d(case_2d), EulerBASE(cell_inum,cell_jnum,scheme,accuracy,top,btm,left,right,mesh_ptr,source){
   //Case assignments
   if (case_2d == 0){ //30 deg inlet case
     Mach_bc = 4.0;
@@ -1554,6 +1554,7 @@ void Euler2D::Enforce2DBoundaryConditions(vector<array<double,4>>* &field,bool s
 //-----------------------------------------------------------
 void Euler2D::ApplyInflow(int side){
 
+  //TODO: should only apply inflow to upper "slanted" part of domain
   //NOTE: boundary conditions are specified as only in the x-direction
   double rho_bc = P_bc / (R*T_bc); //boundary condition density
 
@@ -1562,7 +1563,29 @@ void Euler2D::ApplyInflow(int side){
   double uvel_bc = Mach_bc * a_bc; //boundary condition x-velocity
   double vvel_bc = 0.0; //boundary condition y-velocity
 
-  if (side == 0){ //top ghost cells
+  if ((scenario_2d == 0) && (side == 0)){ //INLET CASE ONLY
+    //NOTE: splitting the top boundary into 2 boundary conditions
+    //ramping section = inflow & horizontal section = slipwall
+    array<double,2> pt_split{0.5,0.6};
+    array<array<double,4>,2> pt_current;
+    int index;
+    for (int j=0;j<2;j++){
+      for (int i=0;i<mesh->cell_imax;i++){
+        pt_current = mesh->GetGhostCellCoords(i,j,0);
+        index = i + (j*mesh->cell_imax);
+
+        if (pt_current[0][3]<=pt_split[0]){ //if top right corner pt. is less than equal to the split pt. than it is inflow
+          mesh->top_cells[index][0] = rho_bc;
+          mesh->top_cells[index][1] = uvel_bc;
+          mesh->top_cells[index][2] = vvel_bc;
+          mesh->top_cells[index][3] = P_bc;
+        }
+      }
+    }
+
+  }
+
+  else if ((scenario_2d != 0) && (side == 0)){ //top ghost cells
     for (int n=0;n<(int)mesh->top_cells.size();n++){
       mesh->top_cells[n][0] = rho_bc;
       mesh->top_cells[n][1] = uvel_bc;

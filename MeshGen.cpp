@@ -29,6 +29,11 @@ double MeshGenBASE::GetCellVolume(int , int ){
   return 0.0;
 }
 //-----------------------------------------------------------
+array<array<double,4>,2> MeshGenBASE::GetGhostCellCoords(int, int, int ){
+  array<double,4> zeros{0.0,0.0,0.0,0.0};
+  return {zeros,zeros};
+}
+//-----------------------------------------------------------
 void MeshGenBASE::ComputeGhostCellCenteredCoordinate(){
   return;
 }
