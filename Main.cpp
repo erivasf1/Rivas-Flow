@@ -36,7 +36,7 @@ int main() {
 
   //! INITIALIZATION
   // Scenario
-  int scenario = 2; //1 = 1D, 2 = 2D, 3 = 2D MMS
+  int scenario = 3; //1 = 1D, 2 = 2D, 3 = 2D MMS
   CASE_2D case_2d = INLET;
 
   // Constants for 1D case
@@ -53,13 +53,13 @@ int main() {
   [[maybe_unused]]bool cond_bc{true}; //true for subsonic & false for supersonic (FOR OUTFLOW BC)
 
   // Mesh Specifications
-  const char* meshfile = "Grids/InletGrids/Inlet.53x17.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
+  const char* meshfile = "Grids/CurvilinearGrids/curv2d257.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
   [[maybe_unused]]int cellnum = 100; //recommending an even number for cell face at the throat of nozzle (NOTE: will get reassigned val. if mesh is provided)
 
   // Temporal Specifications
   const int iter_max = 1;
-  int iterout = 1; //number of iterations per solution output
-  const double CFL = 0.2; //CFL number (must <= 1 for Euler Explicit integration)
+  int iterout = 100; //number of iterations per solution output
+  const double CFL = 0.01; //CFL number (must <= 1 for Euler Explicit integration)
   //const double CFL = 2.9e-4; //CFL number (must <= 1 for Euler Explicit integration)
   bool timestep{false}; //true = local time stepping; false = global time stepping
 
@@ -74,7 +74,7 @@ int main() {
   // Under-Relaxation Parameters
   double C = 1.2; //residual norm check
   array<double,4> Omega{1.0,1.0,1.0,1.0}; //FWD Advance Limiter
-  int subiter_max = 1e2; //max number of relaxation sub-iterations
+  int subiter_max = 0; //max number of relaxation sub-iterations
   array<bool,4> check{false,false,false,false}; //false by default to check if under-relaxation is needed
 
   // Governing Eq. Residuals

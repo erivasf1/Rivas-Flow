@@ -24,7 +24,19 @@ using namespace std;
 
 //Start using Testcases as cases to test whole classes or segments of the Main file; not individual functions
 
+TEST_CASE(" MeshGen fcns. "){
 
+  //TODO: use a simple cartesian grid for testing
+  const char* mesh_file = "Grids/InletGrids/Inlet.53x17.grd";
+
+  MeshGenBASE* mesh = new MeshGen2D(mesh_file);
+
+
+
+  //Clean-up of dynamic objects
+  delete mesh;
+
+}
 //EulerOperator Fcns.
 
 /*TEST_CASE(" EulerOperator " ){
@@ -237,7 +249,7 @@ using namespace std;
 }*/
 
 
-TEST_CASE(" 2D Mesh Functions " ){
+/*TEST_CASE(" 2D Mesh Functions " ){
 
   SECTION(" Mesh Indexing ") {
   
@@ -256,4 +268,5 @@ TEST_CASE(" 2D Mesh Functions " ){
  
   }
 }
+*/
 

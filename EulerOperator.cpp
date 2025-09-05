@@ -488,8 +488,9 @@ array<double,4> EulerBASE::VanLeerCompute(array<double,4> &field_state,bool sign
   double T = field_state[3] / (field_state[0]*R);
   double a = sqrt(gamma*R*T); //speed of sound
  
-  double vel_mag = sqrt( pow(field_normal[1],2.0) + pow(field_normal[2],2.0) );
-  double M = vel_mag / a; //local outward pointing mach #
+  //double vel_mag = sqrt( pow(field_normal[1],2.0) + pow(field_normal[2],2.0) );
+  double Uhat = (field_state[1]*nx) + (field_state[2]*ny);
+  double M = Uhat / a; //local outward pointing mach #
 
   //total energy term(h_t)
   double ht = (gamma/(gamma-1.0))*(field_state[2]/field_state[0]); //pressure work
@@ -1483,12 +1484,19 @@ Euler2D::Euler2D(int case_2d,int cell_inum,int cell_jnum,int scheme,int accuracy
 //-----------------------------------------------------------
 void Euler2D::InitSolutions(vector<array<double,4>>* &field,int cellnum){
   
+  double rho_bc = P_bc / (R*T_bc); //boundary condition density
+
+  double Gamma = GetGamma();
+  double a_bc = sqrt(Gamma*R*T_bc); 
+  double uvel_bc = Mach_bc * a_bc; //boundary condition x-velocity
+  double vvel_bc = 0.0; //boundary condition y-velocity
+
   //Setting w/ arb. sin function
   for (int i=0;i<cellnum;i++) {
-    (*field)[i][0] = 1.0 + sin(i);
-    (*field)[i][1] = 2.0 + sin(i);
-    (*field)[i][2] = 3.0 + sin(i);
-    (*field)[i][3] = 4.0 + sin(i);
+    (*field)[i][0] = rho_bc;
+    (*field)[i][1] = uvel_bc;
+    (*field)[i][2] = vvel_bc;
+    (*field)[i][3] = P_bc;
   }
 
   return;
@@ -1496,13 +1504,20 @@ void Euler2D::InitSolutions(vector<array<double,4>>* &field,int cellnum){
 //-----------------------------------------------------------
 void Euler2D::SetInitialConditions(vector<array<double,4>>* &field){
 
+  double rho_bc = P_bc / (R*T_bc); //boundary condition density
+
+  double Gamma = GetGamma();
+  double a_bc = sqrt(Gamma*R*T_bc); 
+  double uvel_bc = Mach_bc * a_bc; //boundary condition x-velocity
+  double vvel_bc = 0.0; //boundary condition y-velocity
   int cellnum = cell_imax * cell_jmax;
+
   //Setting w/ arb. sin function
   for (int i=0;i<cellnum;i++) {
-    (*field)[i][0] = 1.0;
-    (*field)[i][1] = 1.0;
-    (*field)[i][2] = 1.0;
-    (*field)[i][3] = 1.0;
+    (*field)[i][0] = rho_bc;
+    (*field)[i][1] = uvel_bc;
+    (*field)[i][2] = vvel_bc;
+    (*field)[i][3] = P_bc;
   }
 
   return;
@@ -1925,6 +1940,7 @@ double Euler2DMMS::ContinuitySourceTerm(double x,double y){
 //-----------------------------------------------------------
 double Euler2DMMS::XMomentumSourceTerm(double x,double y){
 
+/*
   double source_term = (2.0 * Pi * vvely * cos((2.0 * Pi * y) / (3.0 * L))) *
     (rho0 + rhoy * cos((Pi * y) / (2.0 * L)) + rhox * sin((Pi * x) / L)) *
     (uvel0 + uvely * cos((3 * Pi * y) / (5.0 * L)) + uvelx * sin((3.0 * Pi * x) / (2.0 * L))) / (3.0 * L)
@@ -1934,6 +1950,33 @@ double Euler2DMMS::XMomentumSourceTerm(double x,double y){
     
   - (3.0 * Pi * uvely * (rho0 + rhoy * cos((Pi * y) / (2.0 * L)) + rhox * sin((Pi * x) / L)) *
      sin((3.0 * Pi * y) / (5.0 * L)) * (vvel0 + vvelx * cos((Pi * x) / (2.0 * L)) + vvely * sin((2.0 * Pi * y) / (3.0 * L)))) / (5.0 * L);
+*/
+
+double two = 2.0;
+double three = 3.0;
+double four = 4.0;
+double five = 5.0;
+
+double source_term = (three*Pi*uvelx*cos((three*Pi*x)/(two*L)) *                  
+    (rho0 + rhoy*cos((Pi*y)/(two*L)) + rhox*sin((Pi*x)/L)) *         
+    (uvel0 + uvely*cos((three*Pi*y)/(five*L)) +                           
+    uvelx*sin((three*Pi*x)/(two*L))))/L +                            
+    (two*Pi*vvely*cos((two*Pi*y) /                                             
+    (three*L))*(rho0 + rhoy*cos((Pi*y)/(two*L)) +                    
+    rhox*sin((Pi*x)/L))*(uvel0 + uvely*cos((three*Pi*y) /                 
+    (five*L)) + uvelx*sin((three*Pi*x)/(two*L))))/(three*L) +   
+    (Pi*rhox*cos((Pi*x)/L)*pow((uvel0 + uvely*cos((three*Pi*y) /              
+    (five*L)) + uvelx*sin((three*Pi*x)/(two*L))),2.0))/L -        
+    (two*Pi*pressx*sin((two*Pi*x)/L))/L -                            
+    (Pi*rhoy*(uvel0 + uvely*cos((three*Pi*y)/(five*L)) +                  
+    uvelx*sin((three*Pi*x)/(two*L)))*sin((Pi*y)/(two*L))*            
+    (vvel0 + vvelx*cos((Pi*x)/(two*L)) +                                  
+    vvely*sin((two*Pi*y)/(three*L))))/(two*L) -                      
+    (three*Pi*uvely*(rho0 + rhoy*cos((Pi*y)/(two*L)) +                    
+    rhox*sin((Pi*x)/L))*sin((three*Pi*y)/(five*L))*(vvel0 + vvelx *  
+    cos((Pi*x)/(two*L)) + vvely*sin((two*Pi*y)/(three*L)))) /        
+    (five*L);
+
 
   return source_term;
 
@@ -1942,12 +1985,64 @@ double Euler2DMMS::XMomentumSourceTerm(double x,double y){
 //-----------------------------------------------------------
 double Euler2DMMS::YMomentumSourceTerm(double x,double y){
 
+/*
   double source_term = (Pi * pressy * cos((Pi * y) / L)) / L
   + (4.0 * Pi * vvely * cos((2.0 * Pi * y) / (3.0 * L))) *
     (rho0 + rhoy * cos((Pi * y) / (2.0 * L)) + rhox * sin((Pi * x) / L)) *
     (vvel0 + vvelx * cos((Pi * x) / (2.0 * L)) + vvely * sin((2.0 * Pi * y) / (3.0 * L))) / (3.0 * L)
   - (Pi * rhoy * sin((Pi * y) / (2.0 * L)) *
      pow(vvel0 + vvelx * cos((Pi * x) / (2.0 * L)) + vvely * sin((2.0 * Pi * y) / (3.0 * L)), 2.0)) / (2.0 * L);
+*/
+
+double two = 2.0;
+double three = 3.0;
+double four = 4.0;
+double five = 5.0;
+
+double source_term = (Pi*pressy*cos((Pi*y)/L))/L -                           
+    (Pi*vvelx*sin((Pi*x)/(two*L))*(rho0 + rhoy*cos((Pi*y)/(two*L)) + 
+    rhox*sin((Pi*x)/L))*(uvel0 + uvely*cos((three*Pi*y)/(five*L)) +  
+    uvelx*sin((three*Pi*x)/(two*L))))/(two*L) +                      
+    (three*Pi*uvelx*cos((three*Pi*x)/(two*L)) *                           
+    (rho0 + rhoy*cos((Pi*y)/(two*L)) + rhox*sin((Pi*x)/L)) *         
+    (vvel0 + vvelx*cos((Pi*x)/(two*L)) +                                  
+    vvely*sin((two*Pi*y)/(three*L))))/(two*L) +                      
+    (four*Pi*vvely*cos((two*Pi*y) /                                            
+    (three*L))*(rho0 + rhoy*cos((Pi*y)/(two*L)) +                    
+    rhox*sin((Pi*x)/L))*(vvel0 + vvelx*cos((Pi*x)/(two*L)) +         
+    vvely*sin((two*Pi*y)/(three*L))))/(three*L) +                    
+    (Pi*rhox*cos((Pi*x)/L) *                                              
+    (uvel0 + uvely*cos((three*Pi*y)/(five*L)) +                           
+    uvelx*sin((three*Pi*x)/(two*L))) *                                    
+    (vvel0 + vvelx*cos((Pi*x)/(two*L)) +                                  
+    vvely*sin((two*Pi*y)/(three*L))))/L -                            
+    (Pi*rhoy*sin((Pi*y)/(two*L)) *                                        
+    pow((vvel0 + vvelx*cos((Pi*x)/(two*L)) +                                  
+    vvely*sin((two*Pi*y)/(three*L))),2.0))/(two*L);
+
+/*
+(pi*pressy*cos((pi*y)/length))/length -                           &
+    (pi*vvelx*sin((pi*x)/(two*length))*(rho0 + rhoy*cos((pi*y)/(two*length)) + &
+    rhox*sin((pi*x)/length))*(uvel0 + uvely*cos((three*pi*y)/(five*length)) +  &
+    uvelx*sin((three*pi*x)/(two*length))))/(two*length) +                      &
+    (three*pi*uvelx*cos((three*pi*x)/(two*length)) *                           &
+    (rho0 + rhoy*cos((pi*y)/(two*length)) + rhox*sin((pi*x)/length)) *         &
+    (vvel0 + vvelx*cos((pi*x)/(two*length)) +                                  &
+    vvely*sin((two*pi*y)/(three*length))))/(two*length) +                      &
+    (four*pi*vvely*cos((two*pi*y) /                                            &
+    (three*length))*(rho0 + rhoy*cos((pi*y)/(two*length)) +                    &
+    rhox*sin((pi*x)/length))*(vvel0 + vvelx*cos((pi*x)/(two*length)) +         &
+    vvely*sin((two*pi*y)/(three*length))))/(three*length) +                    &
+    (pi*rhox*cos((pi*x)/length) *                                              &
+    (uvel0 + uvely*cos((three*pi*y)/(five*length)) +                           &
+    uvelx*sin((three*pi*x)/(two*length))) *                                    &
+    (vvel0 + vvelx*cos((pi*x)/(two*length)) +                                  &
+    vvely*sin((two*pi*y)/(three*length))))/length -                            &
+    (pi*rhoy*sin((pi*y)/(two*length)) *                                        &
+    (vvel0 + vvelx*cos((pi*x)/(two*length)) +                                  &
+    vvely*sin((two*pi*y)/(three*length)))**2)/(two*length)
+*/
+
 
   return source_term;
 
