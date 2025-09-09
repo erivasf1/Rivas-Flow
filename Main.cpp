@@ -45,9 +45,9 @@ int main() {
 
   // Boundary Conditions Specification
   BOUNDARY_COND top_cond = INFLOW; 
-  BOUNDARY_COND btm_cond = SLIP_WALL;
-  BOUNDARY_COND left_cond = SLIP_WALL;
-  BOUNDARY_COND right_cond = OUTFLOW;
+  BOUNDARY_COND btm_cond = OUTFLOW;
+  BOUNDARY_COND left_cond = OUTFLOW;
+  BOUNDARY_COND right_cond = INFLOW;
 
   [[maybe_unused]]bool cond_loc{false}; //true for subsonic & false for supersonic (FOR EXACT SOL.)
   [[maybe_unused]]bool cond_bc{true}; //true for subsonic & false for supersonic (FOR OUTFLOW BC)

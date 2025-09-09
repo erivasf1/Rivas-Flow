@@ -1923,6 +1923,7 @@ void Euler2DMMS::ManufacturedPrimitiveSols(vector<array<double,4>>* &field,Space
 //-----------------------------------------------------------
 double Euler2DMMS::ContinuitySourceTerm(double x,double y){
 
+  /*
   double source_term = (3.0 * Pi * uvelx * cos((3.0 * Pi * x) / (2.0 * L))) *
     (rho0 + rhoy * cos((Pi * y) / (2.0 * L)) + rhox * sin((Pi * x) / L)) / (2.0 * L)
   + (2.0 * Pi * vvely * cos((2.0 * Pi * y) / (3.0 * L))) *
@@ -1931,6 +1932,20 @@ double Euler2DMMS::ContinuitySourceTerm(double x,double y){
      (uvel0 + uvely * cos((3.0 * Pi * y) / (5.0 * L)) + uvelx * sin((3.0 * Pi * x) / (2.0 * L)))) / L
   - (Pi * rhoy * sin((Pi * y) / (2.0 * L)) *
      (vvel0 + vvelx * cos((Pi * x) / (2.0 * L)) + vvely * sin((2.0 * Pi * y) / (3.0 * L)))) / (2.0 * L);
+  */
+
+  double two = 2.0;
+  double three = 3.0;
+  double five = 5.0;
+  double source_term = (three*Pi*uvelx*cos((three*Pi*x)/(two*L)) *                 
+    (rho0 + rhoy*cos((Pi*y)/(two*L)) + rhox*sin((Pi*x)/L))) /        
+    (two*L) + (two*Pi*vvely*cos((two*Pi*y)/(three*L)) *              
+    (rho0 + rhoy*cos((Pi*y)/(two*L)) + rhox*sin((Pi*x)/L))) /        
+    (three*L) + (Pi*rhox*cos((Pi*x)/L) *                             
+    (uvel0 + uvely*cos((three*Pi*y)/(five*L)) + uvelx*sin((three*Pi*x)/   
+    (two*L))))/L - (Pi*rhoy*sin((Pi*y)/(two*L)) *               
+    (vvel0 + vvelx*cos((Pi*x)/(two*L)) + vvely*sin((two*Pi*y) /           
+    (three*L))))/(two*L);
 
 
   return source_term;
@@ -1954,7 +1969,7 @@ double Euler2DMMS::XMomentumSourceTerm(double x,double y){
 
 double two = 2.0;
 double three = 3.0;
-double four = 4.0;
+//double four = 4.0;
 double five = 5.0;
 
 double source_term = (three*Pi*uvelx*cos((three*Pi*x)/(two*L)) *                  
@@ -2052,7 +2067,7 @@ double source_term = (Pi*pressy*cos((Pi*y)/L))/L -
 double Euler2DMMS::EnergySourceTerm(double x,double y){
 
   double Gamma = GetGamma();
-  double source_term = 
+  /*double source_term = 
 (uvel0 + uvely*cos((3.0*Pi*y)/(5.0*L)) + uvelx*sin((3.0*Pi*x)/(2.0*L)))*
     ((-2.0*Pi*pressx*sin((2.0*Pi*x)/L))/L + (rho0 + rhoy*cos((Pi*y)/(2.0*L)) + rhox*sin((Pi*x)/L))*
        ((-2.0*Pi*pressx*sin((2.0*Pi*x)/L))/((-1.0 + Gamma)*L*(rho0 + rhoy*cos((Pi*y)/(2.0*L)) + rhox*sin((Pi*x)/L))) + 
@@ -2088,6 +2103,85 @@ double Euler2DMMS::EnergySourceTerm(double x,double y){
             (4*Pi*vvely*cos((2.0*Pi*y)/(3.0*L))*(vvel0 + vvelx*cos((Pi*x)/(2.0*L)) + vvely*sin((2.0*Pi*y)/(3.0*L))))/(3.0*L))/2.0 + 
          (Pi*rhoy*sin((Pi*y)/(2.0*L))*(press0 + pressx*cos((2.0*Pi*x)/L) + pressy*sin((Pi*y)/L)))/
           (2.0*(-1.0 + Gamma)*L*pow(rho0 + rhoy*cos((Pi*y)/(2.0*L)) + rhox*sin((Pi*x)/L),2.0))));
+*/
+
+  double one = 1.0;   
+  double two = 2.0;   
+  double three = 3.0;   
+  double four = 4.0;   
+  double five = 5.0;   
+  double six = 6.0;   
+
+  double source_term = 
+(uvel0 + uvely*cos((three*Pi*y)/(five*L)) +                
+    uvelx*sin((three*Pi*x)/(two*L)))*((-two*Pi*pressx*sin((two*Pi*x) /    
+    L))/L + (rho0 + rhoy*cos((Pi*y)/(two*L)) +                  
+    rhox*sin((Pi*x)/L))*((-two*Pi*pressx*sin((two*Pi*x)/L))/         
+    ((-one + Gamma)*L*(rho0 + rhoy*cos((Pi*y)/(two*L)) +             
+    rhox*sin((Pi*x)/L))) + ((three*Pi*uvelx*cos((three*Pi*x) /            
+    (two*L))*(uvel0 + uvely*cos((three*Pi*y)/(five*L)) +             
+    uvelx*sin((three*Pi*x)/(two*L))))/L - (Pi*vvelx*sin((Pi*x) /     
+    (two*L))*(vvel0 + vvelx*cos((Pi*x)/(two*L)) +                    
+    vvely*sin((two*Pi*y)/(three*L))))/L)/two - (Pi*rhox*cos((Pi*x) / 
+    L)*(press0 + pressx*cos((two*Pi*x)/L) +                           
+    pressy*sin((Pi*y)/L)))/((-one + Gamma)*L*pow(rho0 + rhoy*cos((Pi*y)/
+    (two*L)) + rhox*sin((Pi*x)/L),2.0))) +                            
+    (Pi*rhox*cos((Pi*x)/L)*((pow(wvel0,2.0) + pow(uvel0 + uvely*cos((three*Pi*y) / 
+    (five*L)) + uvelx*sin((three*Pi*x)/(two*L)),2.0) +                
+    pow(vvel0 + vvelx*cos((Pi*x)/(two*L)) + vvely*sin((two*Pi*y) /           
+    (three*L)),2.0))/two + (press0 + pressx*cos((two*Pi*x)/L) +       
+    pressy*sin((Pi*y)/L))/((-one + Gamma) *                               
+    (rho0 + rhoy*cos((Pi*y)/(two*L)) +                                    
+    rhox*sin((Pi*x)/L)))))/L) +                                      
+    (three*Pi*uvelx*cos((three*Pi*x)/(two*L)) *                           
+    (press0 + pressx*cos((two*Pi*x)/L) + pressy*sin((Pi*y)/L) +      
+    (rho0 + rhoy*cos((Pi*y)/(two*L)) + rhox*sin((Pi*x)/L))*          
+    ((pow(wvel0,2.0) + pow(uvel0 + uvely*cos((three*Pi*y)/(five*L)) +              
+    uvelx*sin((three*Pi*x)/(two*L)),2.0) +                                 
+    pow(vvel0 + vvelx*cos((Pi*x)/(two*L)) +                                  
+    vvely*sin((two*Pi*y)/(three*L)),2.0))/two +                            
+    (press0 + pressx*cos((two*Pi*x)/L) +                                  
+    pressy*sin((Pi*y)/L))/((-one + Gamma) *                               
+    (rho0 + rhoy*cos((Pi*y)/(two*L)) +                                    
+    rhox*sin((Pi*x)/L))))))/(two*L) +                                
+    (two*Pi*vvely*cos((two*Pi*y)/(three*L)) *                             
+    (press0 + pressx*cos((two*Pi*x)/L) +                                  
+    pressy*sin((Pi*y)/L) + (rho0 + rhoy*cos((Pi*y)/(two*L)) +        
+    rhox*sin((Pi*x)/L))*((pow(wvel0,2.0) +                                      
+    pow(uvel0 + uvely*cos((three*Pi*y)/(five*L)) +                           
+    uvelx*sin((three*Pi*x)/(two*L)),2.0) +                                 
+    pow(vvel0 + vvelx*cos((Pi*x)/(two*L)) +                                  
+    vvely*sin((two*Pi*y)/(three*L)),2.0))/two +                            
+    (press0 + pressx*cos((two*Pi*x)/L) + pressy*sin((Pi*y)/L)) /     
+	((-one + Gamma)*(rho0 + rhoy*cos((Pi*y)/(two*L)) +                    
+    rhox*sin((Pi*x)/L))))))/(three*L) + (vvel0 + vvelx*cos((Pi*x) /  
+    (two*L)) + vvely*sin((two*Pi*y)/(three*L))) *                    
+    ((Pi*pressy*cos((Pi*y)/L))/L - (Pi*rhoy*sin((Pi*y)/(two*L))*
+    ((pow(wvel0,2.0) + pow(uvel0 + uvely*cos((three*Pi*y)/(five*L)) +              
+    uvelx*sin((three*Pi*x)/(two*L)),2.0) + pow(vvel0 + vvelx *                
+    cos((Pi*x)/(two*L)) + vvely*sin((two*Pi*y)/(three*L)),2.0))/two + 
+    (press0 + pressx*cos((two*Pi*x)/L) +                                  
+    pressy*sin((Pi*y)/L))/((-one + Gamma) *                               
+    (rho0 + rhoy*cos((Pi*y)/(two*L)) +                                    
+    rhox*sin((Pi*x)/L)))))/(two*L) +                                 
+    (rho0 + rhoy*cos((Pi*y)/(two*L)) +                                    
+    rhox*sin((Pi*x)/L))*((Pi*pressy*cos((Pi*y)/L)) /                 
+    ((-one + Gamma)*L*(rho0 + rhoy*cos((Pi*y)/(two*L)) +             
+    rhox*sin((Pi*x)/L))) +                                                
+    ((-six*Pi*uvely*(uvel0 + uvely*cos((three*Pi*y) /                          
+    (five*L)) + uvelx*sin((three*Pi*x)/(two*L))) *                   
+    sin((three*Pi*y)/(five*L)))/(five*L) +                           
+    (four*Pi*vvely*cos((two*Pi*y) /                                            
+    (three*L))*(vvel0 + vvelx*cos((Pi*x)/(two*L)) +                  
+    vvely*sin((two*Pi*y)/(three*L))))/(three*L))/two +               
+    (Pi*rhoy*sin((Pi*y)/(two*L))*(press0 + pressx*cos((two*Pi*x)/L) +
+    pressy*sin((Pi*y)/L)))/(two*(-one + Gamma)*L*                    
+    pow(rho0 + rhoy*cos((Pi*y)/(two*L)) + rhox*sin((Pi*x)/L),2.0))));
+
+
+
+
+
 
 
   return source_term;
@@ -2126,6 +2220,7 @@ void Euler2DMMS::EvalSourceTerms(/*vector<array<double,4>>* &mms_source,*/SpaceV
 
       //Energy
       fieldij(mms_source,i,j,cell_imax)[3] = EnergySourceTerm(x,y);
+      //fieldij(mms_source,i,j,cell_imax)[3] = EnergySourceTerm(x,y) / 1.0e8;
 
     }
   }
