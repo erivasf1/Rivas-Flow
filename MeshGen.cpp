@@ -666,49 +666,28 @@ void MeshGen2D::ExtendGhostCoords(int tag){
 //-----------------------------------------------------------
 double MeshGen2D::GetInteriorCellArea(int i,int j,int side){
   //side: top = 0, btm = 1, left = 2, right = 3
-  double node1_x,node1_y,node2_x,node2_y;
-  int node1_id,node2_id;
+  //TODO: replace node id with GetInterior Cell Coords
+  array<array<double,4>,2> Coords = GetCellCoords(i,j);
+  array<double,2> P1{Coords[0][0],Coords[1][0]};
+  array<double,2> P2{Coords[0][1],Coords[1][1]};
+  array<double,2> P3{Coords[0][2],Coords[1][2]};
+  array<double,2> P4{Coords[0][3],Coords[1][3]};
   double area;
-  if (side == 0){ //top side case
-    node1_id = i + ((j+1)*Nx);  
-    node2_id = (i+1) + ((j+1)*Nx);  
-    node1_x = xcoords[node1_id]; node1_y = ycoords[node1_id];
-    node2_x = xcoords[node2_id]; node2_y = ycoords[node2_id];
-    
-    area = sqrt(pow(node2_x-node1_x,2.0) + pow(node2_y-node1_y,2.0));
-  }
 
-  else if (side == 1){ //btm side case
-    node1_id = i + (j*Nx);  
-    node2_id = (i+1) + (j*Nx);  
-    node1_x = xcoords[node1_id]; node1_y = ycoords[node1_id];
-    node2_x = xcoords[node2_id]; node2_y = ycoords[node2_id];
-    
-    area = sqrt(pow(node2_x-node1_x,2.0) + pow(node2_y-node1_y,2.0));
-  }
+  if (side == 0) //top side case
+    area = sqrt(pow(P4[0]-P3[0],2.0) + pow(P4[1]-P3[1],2.0));
+  
+  else if (side == 1) //btm side case
+    area = sqrt(pow(P2[0]-P1[0],2.0) + pow(P2[1]-P1[1],2.0));
+  
+  else if (side == 2) //left side case
+    area = sqrt(pow(P3[0]-P1[0],2.0) + pow(P3[1]-P1[1],2.0));
+  
+  else if (side == 3) //right side case
+    area = sqrt(pow(P4[0]-P2[0],2.0) + pow(P4[1]-P2[1],2.0));
 
-  else if (side == 2){ //left side case
-    node1_id = i + (j*Nx);  
-    node2_id = i + ((j+1)*Nx);  
-    node1_x = xcoords[node1_id]; node1_y = ycoords[node1_id];
-    node2_x = xcoords[node2_id]; node2_y = ycoords[node2_id];
-    
-    area = sqrt(pow(node2_x-node1_x,2.0) + pow(node2_y-node1_y,2.0));
-  }
-
-  else if (side == 3){ //right side case
-    node1_id = (i+1) + (j*Nx);  
-    node2_id = (i+1) + ((j+1)*Nx);  
-    node1_x = xcoords[node1_id]; node1_y = ycoords[node1_id];
-    node2_x = xcoords[node2_id]; node2_y = ycoords[node2_id];
-    
-    area = sqrt(pow(node2_x-node1_x,2.0) + pow(node2_y-node1_y,2.0));
-  }
-
-  else { //error handling
+  else  //error handling
     cerr<<"Error:Unkown side # when retrieving area fcn."<<endl;
-
-  }
 
   return area;
 }
