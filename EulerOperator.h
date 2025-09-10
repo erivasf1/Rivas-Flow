@@ -36,8 +36,9 @@ class EulerBASE {
   EulerBASE(int &cell_inum,int &cell_jnum,int &scheme,int &accuracy,int &top,int &btm,int &left,int &right,MeshGenBASE* &mesh_ptr,vector<array<double,4>>* &source);
 
   double ComputeMachNumber(array<double,4> &sols);
+  double ComputeSpeedofSound(array<double,4> &sols); //using perfect gas relationship
   double GetGamma();
-  array<double,2> GetLambdaMax(vector<array<double,4>>* &field,int index);
+  array<double,2> GetLambdaMax(vector<array<double,4>>* &field,int i,int j);
 
   //Compute Conserved & Primitive Variables
   array<double,4> ComputeConserved(vector<array<double,4>>* &field,int &i,int &j);

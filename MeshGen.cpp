@@ -25,6 +25,10 @@ double MeshGenBASE::GetInteriorCellArea(int , int , int) {
   return 0.0;
 }
 //-----------------------------------------------------------
+double MeshGenBASE::GetInteriorCellFaceArea(int, int, int){
+  return 0.0;
+}
+//-----------------------------------------------------------
 double MeshGenBASE::GetCellVolume(int , int ){
   return 0.0;
 }
@@ -710,6 +714,31 @@ double MeshGen2D::GetInteriorCellArea(int i,int j,int side){
 }
 
 //-----------------------------------------------------------
+double MeshGen2D::GetInteriorCellFaceArea(int i,int j,int dir){
+
+  double area;
+  if (dir==0){ //i dir.
+    double left_face_area = GetInteriorCellArea(i,j,2);
+    double right_face_area = GetInteriorCellArea(i,j,3);
+ 
+    area = 0.5*(left_face_area + right_face_area);
+
+  }
+
+  else if (dir==1){ //j dir.
+    double btm_face_area = GetInteriorCellArea(i,j,1);
+    double top_face_area = GetInteriorCellArea(i,j,0);
+ 
+    area = 0.5*(btm_face_area + top_face_area);
+
+  }
+
+  else
+    cerr<<"Error: Incorrect dir. specification!"<<endl;
+
+  return area;
+}
+//-----------------------------------------------------------
 double MeshGen2D::GetGhostCellArea(int i,int j,int side){ //retrieves the area of the specified side of the domain
 
   //side: top = 0, btm = 1, left = 2, right = 3
@@ -811,11 +840,32 @@ void MeshGen2D::ComputeGhostCellCenteredCoordinate(){
 //-----------------------------------------------------------
 double MeshGen2D::GetCellVolume(int i, int j){
 
-  //length = left side & width = top side
-  double width = GetInteriorCellArea(i,j,0);
-  double length = GetInteriorCellArea(i,j,2);
+  //NOTE: define diagonal vectors of the quadrilateral and then compute cross product
+  //Mag. of cross product vector times 0.5W will give the volume -- only for quadrilateral
+  // NOTE: decompose quadrilateral into 2 triangles, then compute each areas and then sum them up (this is a more general implementation so that it works for all types of quadrilaterals)
+  //retrieving pts. of cell
+  array<array<double,4>,2> CellCoords = GetCellCoords(i,j);
+  array<double,2> P1{CellCoords[0][0],CellCoords[1][0]};//btm left
+  array<double,2> P2{CellCoords[0][1],CellCoords[1][1]};//btm right
+  array<double,2> P3{CellCoords[0][2],CellCoords[1][2]};//top left
+  array<double,2> P4{CellCoords[0][3],CellCoords[1][3]};//top right
 
-  double vol = length * width;
+  //decomposing into triangles
+  //triangle 1 side vectors
+  array<double,2> A{P2[0]-P1[0],P2[1]-P1[1]};
+  array<double,2> B{P3[0]-P1[0],P3[1]-P1[1]};
+  //triangle 2 side vectors
+  array<double,2> C{P3[0]-P4[0],P3[1]-P4[1]};
+  array<double,2> D{P2[0]-P4[0],P2[1]-P4[1]};
+
+  //areas via L2 norm of cross product vec.
+  double area1 = A[0]*B[1] - A[1]*B[0];
+  area1 = 0.5*sqrt(pow(area1,2.0));
+  double area2 = C[0]*D[1] - C[1]*D[0];
+  area2 = 0.5*sqrt(pow(area2,2.0));
+
+  //summing triangle areas for quadrilateral area
+  double vol = area1 + area2;
 
   return vol;
   

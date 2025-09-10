@@ -29,6 +29,7 @@ class MeshGenBASE {
   virtual void OutputMesh();
   virtual void GenerateGhostCells(int left_id,int right_id,int top_id,int btm_id); //-- adds the extra ghost cells to the domain virtual double GetInteriorCellArea(int &i,int &j,int side);
   virtual double GetInteriorCellArea(int i,int j,int side);
+  virtual double GetInteriorCellFaceArea(int i,int j,int dir);
   virtual double GetCellVolume(int i,int j);
   virtual array<array<double,4>,2> GetGhostCellCoords(int i,int j, int tag);
   virtual void ComputeGhostCellCenteredCoordinate();
@@ -88,6 +89,7 @@ class MeshGen2D : public MeshGenBASE { //reads in a non-uniform 2D mesh
   void ReflectGhostCoords(int tag); //used for slip wall treatments
   void ExtendGhostCoords(int tag); //used for inflow and outflow treatments
   double GetInteriorCellArea(int i,int j,int side) override; //retrieves the area of the specified side of an interior cell (really just a length); side =0(top),1(btm),2(left),3(right)
+  double GetInteriorCellFaceArea(int i,int j,int dir) override; //retrieves the cell internal area given a specified dir. in computational coordinates (dir:0=i or 1=j)
   double GetGhostCellArea(int i,int j,int side); //side refers to the boundary of the domain (instead of the side of the cell)
   void ComputeGhostCellCenteredCoordinate() override; //computes+stores the ghost cell center coordinates 
   double GetCellVolume(int i,int j) override;

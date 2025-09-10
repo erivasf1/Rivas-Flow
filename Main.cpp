@@ -43,23 +43,24 @@ int main() {
   double xmin = -1.0;
   double xmax = 1.0;
 
+  //FOR NOW: MMS case is initialized with MS & boundaries are set to outflow for extrapolating to ghost cells
   // Boundary Conditions Specification
-  BOUNDARY_COND top_cond = INFLOW; 
+  BOUNDARY_COND top_cond = OUTFLOW; 
   BOUNDARY_COND btm_cond = OUTFLOW;
   BOUNDARY_COND left_cond = OUTFLOW;
-  BOUNDARY_COND right_cond = INFLOW;
+  BOUNDARY_COND right_cond = OUTFLOW;
 
   [[maybe_unused]]bool cond_loc{false}; //true for subsonic & false for supersonic (FOR EXACT SOL.)
   [[maybe_unused]]bool cond_bc{true}; //true for subsonic & false for supersonic (FOR OUTFLOW BC)
 
   // Mesh Specifications
-  const char* meshfile = "Grids/CurvilinearGrids/curv2d257.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
+  const char* meshfile = "Grids/CurvilinearGrids/curv2d9.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
   [[maybe_unused]]int cellnum = 100; //recommending an even number for cell face at the throat of nozzle (NOTE: will get reassigned val. if mesh is provided)
 
   // Temporal Specifications
-  const int iter_max = 1;
-  int iterout = 100; //number of iterations per solution output
-  const double CFL = 0.01; //CFL number (must <= 1 for Euler Explicit integration)
+  const int iter_max = 1e3;
+  int iterout = 1; //number of iterations per solution output
+  const double CFL = 0.1; //CFL number (must <= 1 for Euler Explicit integration)
   //const double CFL = 2.9e-4; //CFL number (must <= 1 for Euler Explicit integration)
   bool timestep{false}; //true = local time stepping; false = global time stepping
 
@@ -208,8 +209,8 @@ int main() {
 
   //! SETTING INITIAL CONDITIONS
   //Tools::print("At initial conditions\n");
-  euler->SetInitialConditions(field);
-  //Field = FieldMS; //for now, setting field to manufactured sol.
+  //euler->SetInitialConditions(field);
+  Field = FieldMS; //for now, setting field to manufactured sol.
 
   //!TODO: COMPUTING EXACT SOLUTION -- ONLY FOR 1D QUASI-STEADY NOZZLE
   /*

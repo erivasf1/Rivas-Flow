@@ -394,16 +394,40 @@ double EulerBASE::ComputeMachNumber(array<double,4> &sols){
 
 }
 //-----------------------------------------------------------
-array<double,2> EulerBASE::GetLambdaMax(vector<array<double,4>>* &field,int index){
+double EulerBASE::ComputeSpeedofSound(array<double,4> &sols){
 
+  double T = sols[3] / (sols[0]*R); //if T is negative than M will be -nan!!!
+  double a = sqrt(gamma * R * T);
+
+  return a;
+
+}
+//-----------------------------------------------------------
+array<double,2> EulerBASE::GetLambdaMax(vector<array<double,4>>* &field,int i,int j){
+
+  //TODO: compute lambda based on avg. outward unit normals
   array<double,2> lambda_max;
-  array<double,4> sols = (*field)[index]; //prim. vars. of current cell
-  double M = ComputeMachNumber(sols);
-  double a_x = abs(sols[1]) / M; //x-dir. speed of sound
-  double a_y = abs(sols[2]) / M; //y-dir. speed of sound
+  array<double,4> sols = fieldij(field,i,j,mesh->cell_imax); //prim. vars. of current cell
+  //averaged unit normal vectors (i&j dir.) 
+  array<double,2> unit_normvec_i_avg,unit_normvec_j_avg;
+  array<double,2> unit_normvec_left=mesh->ComputeOutwardUnitVector(i,j,2);
+  array<double,2> unit_normvec_right=mesh->ComputeOutwardUnitVector(i,j,2);
+  array<double,2> unit_normvec_top=mesh->ComputeOutwardUnitVector(i,j,2);
+  array<double,2> unit_normvec_btm=mesh->ComputeOutwardUnitVector(i,j,2);
+  for (int n=0;n<2;n++){
+    unit_normvec_i_avg[n] = 0.5*(abs(unit_normvec_left[n])+abs(unit_normvec_right[n]));
+    unit_normvec_j_avg[n] = 0.5*(abs(unit_normvec_top[n])+abs(unit_normvec_btm[n]));
+  }
+  //outward normal velocity vector 
+  double u = sols[1]; double v = sols[2];
+  double vel_normal_i = ( u*unit_normvec_i_avg[0] + v*unit_normvec_i_avg[1] );  
+  double vel_normal_j = ( u*unit_normvec_j_avg[0] + v*unit_normvec_j_avg[1] );  
+  
+  //computing lambda max
+  double a = ComputeSpeedofSound(sols); //speed of sound in cell
 
-  lambda_max[0] = abs(sols[1]) + a_x;
-  lambda_max[1] = abs(sols[2]) + a_y;
+  lambda_max[0] = abs(vel_normal_i) + a;
+  lambda_max[1] = abs(vel_normal_j) + a;
 
   return lambda_max;
 
@@ -2234,7 +2258,8 @@ void Euler2DMMS::Enforce2DBoundaryConditions(vector<array<double,4>>* &field,boo
   //top boundary
   if ((top_cond==0) && (setup==true))
     ApplyMSInflow(0);
-  else if (top_cond==1)
+  //else if (top_cond==1)
+  else if (top_cond==1 && setup==true)
     ApplyOutflow(field,0);
   else if (top_cond==2)
     ApplySlipWall(field,0);
@@ -2243,7 +2268,8 @@ void Euler2DMMS::Enforce2DBoundaryConditions(vector<array<double,4>>* &field,boo
   //btm boundary 
   if ((btm_cond==0) && (setup==true))
     ApplyMSInflow(1);
-  else if (btm_cond==1)
+  //else if (btm_cond==1)
+  else if (btm_cond==1 && setup==true)
     ApplyOutflow(field,1);
   else if (btm_cond==2)
     ApplySlipWall(field,1);
@@ -2252,7 +2278,8 @@ void Euler2DMMS::Enforce2DBoundaryConditions(vector<array<double,4>>* &field,boo
   //left boundary
   if ((left_cond==0) && (setup==true))
     ApplyMSInflow(2);
-  else if (left_cond==1)
+  //else if (left_cond==1)
+  else if (left_cond==1 && setup==true)
     ApplyOutflow(field,2);
   else if (left_cond==2)
     ApplySlipWall(field,2);
@@ -2261,7 +2288,8 @@ void Euler2DMMS::Enforce2DBoundaryConditions(vector<array<double,4>>* &field,boo
   //right boundary
   if (right_cond==0 && (setup==true))
     ApplyMSInflow(3);
-  else if (right_cond==1)
+  //else if (right_cond==1)
+  else if (right_cond==1 && setup==true)
     ApplyOutflow(field,3);
   else if (right_cond==2)
     ApplySlipWall(field,3);
@@ -2275,6 +2303,7 @@ void Euler2DMMS::ApplyMSInflow(int side){
 
   //TODO: This is not being evaluated correctly!!!
   //NOTE: Evaluating manufactured sol. at cell-centered coord of ghost cell
+  //NOTE: Performing linear extrapolation from manufactured sol. interior cells to ghost cells
   double x,y;
   //top ghost cells
   if (side==0){

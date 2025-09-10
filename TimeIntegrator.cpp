@@ -14,17 +14,19 @@ vector<double> EulerExplicit::ComputeLocalTimeStep(vector<array<double,4>>* &fie
   //refer to Sec7-2D-Slide:36
   array<double,2> lambda_max; //speed of sound + velocity
   vector<double> time_steps(mesh->cellnumber);
-  double dx,dy;
+  double area_internal_i,area_internal_j,vol;
   int index;
 
   for (int j=0;j<mesh->cell_jmax;j++){ //looping through all interior cells
     for (int i=0;i<mesh->cell_imax;i++){ //looping through all interior cells
 
-    index = i + (j*mesh->cell_imax);
-    lambda_max = euler->GetLambdaMax(field,index); //note: [0]:x & [1]:y
+    //retrieving cell volume and interior cell areas
+    area_internal_i = mesh->GetInteriorCellFaceArea(i,j,0); 
+    area_internal_j = mesh->GetInteriorCellFaceArea(i,j,1); 
+    vol = mesh->GetCellVolume(i,j);
 
-    dx = mesh->GetInteriorCellArea(i,j,0);
-    dy = mesh->GetInteriorCellArea(i,j,2);
+    index = i + (j*mesh->cell_imax);
+    lambda_max = euler->GetLambdaMax(field,i,j); //note: [0]:i & [1]:j
 
     //error handling
     if (std::isnan(lambda_max[0]) || isnan(lambda_max[1]) ){
@@ -33,8 +35,8 @@ vector<double> EulerExplicit::ComputeLocalTimeStep(vector<array<double,4>>* &fie
       //Tools::print("Mach # at loc(%d): %f\n",i,euler->ComputeMachNumber(field,i));
     }
 
-    time_steps[index] = CFL * (dx*dy) / 
-                 ( (lambda_max[0]*dy)+(lambda_max[1]*dx) );
+    time_steps[index] = CFL * vol / 
+                 ( (lambda_max[0]*area_internal_i)+(lambda_max[1]*area_internal_j) );
     //Tools::print("CFL:%f,dx: %f,lambda_max:%f\n",CFL,dx,lambda_max);
      
     }
@@ -80,7 +82,7 @@ void EulerExplicit::FWDEulerAdvance(vector<array<double,4>>* &field,vector<array
       for (int n=0;n<4;n++) // advancing to new timestep of conservative variable
         conserve[n] -= Omega[n]*((*time_steps)[n] / vol) * (*resid)[cell_index][n];
 
-      euler->ComputePrimitive(field,conserve,i,j); //!< extracting new primitive variables
+      euler->ComputePrimitive(field,conserve,i,j); //!< extracting new primitive variables & reassigning field w/ new values
 
     }
   }
