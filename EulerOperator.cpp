@@ -68,6 +68,10 @@ void EulerBASE::ManufacturedPrimitiveSols(vector<array<double,4>>* &,SpaceVariab
 }
 
 //-----------------------------------------------------------
+void EulerBASE::ComputeMSError(vector<array<double,4>>* &,vector<array<double,4>>* &,vector<array<double,4>>* &){
+  return;
+}
+//-----------------------------------------------------------
 void EulerBASE::Setup2DBoundaryConditions(vector<array<double,4>>* &field,Output* &error){
   //TODO: Should only include the GenerateGhostCells fcn. of MeshGen
   // & then initialize the ghost cells with a specified val.
@@ -1946,6 +1950,16 @@ void Euler2DMMS::ManufacturedPrimitiveSols(vector<array<double,4>>* &field,Space
   return;
 }
 //-----------------------------------------------------------
+void Euler2DMMS::ComputeMSError(vector<array<double,4>>* &field_ms_error,vector<array<double,4>>* &field,vector<array<double,4>>* &field_ms){
+
+  for (int n=0;n<(int)field->size();n++){
+    for (int m=0;m<4;m++)
+      (*field_ms_error)[n][m] = abs( (*field)[n][m] - (*field_ms)[n][m] );
+  }
+
+  return;
+}
+//-----------------------------------------------------------
 double Euler2DMMS::ContinuitySourceTerm(double x,double y){
 
   /*
@@ -2449,7 +2463,7 @@ void Euler2DMMS::ComputeResidual(vector<array<double,4>>* &resid,vector<array<do
 
       //residual calc.
       for (int n=0;n<4;n++){
-        res[n] = flux_right[n]*area_right + flux_left[n]*area_left + flux_top[n]*area_top + flux_btm[n]*area_btm + mms[n]*vol;
+        res[n] = flux_right[n]*area_right + flux_left[n]*area_left + flux_top[n]*area_top + flux_btm[n]*area_btm - mms[n]*vol;
         //res[n] = flux_right[n]*area_right + flux_left[n]*area_left + flux_top[n]*area_top + flux_btm[n]*area_btm;
         if (isnan(res[n]) == true)
           Tools::print("Nan detected for resid in cell[%d,%d]\n",i,j);

@@ -42,7 +42,7 @@ int main() {
   // Constants for 1D case or True Cartesian MMS case
   [[maybe_unused]]double xmin = 0.0; [[maybe_unused]]double xmax = 1.0;
   [[maybe_unused]]double ymin = 0.0; [[maybe_unused]]double ymax = 1.0;
-  [[maybe_unused]]int Nx = 10; [[maybe_unused]]int Ny = 10;
+  [[maybe_unused]]int Nx = 20; [[maybe_unused]]int Ny = 20;
 
   //FOR NOW: MMS case is initialized with MS & boundaries are set to outflow for extrapolating to ghost cells
   // Boundary Conditions Specification
@@ -111,6 +111,7 @@ int main() {
   vector<array<double,4>> FieldStall(mesh->cellnumber); //stores primitive variable sols. before stall (if detected)
   vector<array<double,4>> FieldMS(mesh->cellnumber); //stores manufactured sol.
   vector<array<double,4>> FieldMS_Source(mesh->cellnumber); //stores manufactured source term for all cells
+  vector<array<double,4>> FieldMS_Error(mesh->cellnumber); //stores manufactured sol. error
 
   vector<array<double,4>> ExactField(mesh->cellnumber); //stores exact cell-averaged primitve variable sols.
   vector<array<double,4>> ExactFaces(mesh->cellnumber+1); //stores exact primitve variable sols. at cell faces
@@ -130,6 +131,7 @@ int main() {
   vector<array<double,4>>* field_stall = &FieldStall; //pointer to intermediate Field solutions
   vector<array<double,4>>* field_ms = &FieldMS; //pointer to intermediate Field solutions
   vector<array<double,4>>* field_ms_source = &FieldMS_Source; //pointer to intermediate Field solutions
+  vector<array<double,4>>* field_ms_error = &FieldMS_Error; //pointer to intermediate Field solutions
   [[maybe_unused]] vector<array<double,4>>* exact_sols = &ExactField; //pointer to exact solution field values
   [[maybe_unused]] vector<array<double,4>>* exact_faces = &ExactFaces; //pointer to exact solution field values
   vector<array<double,4>>* resid = &Residual; //pointer to residual field values per cell
@@ -218,6 +220,13 @@ int main() {
   //Tools::print("At initial conditions\n");
   //euler->SetInitialConditions(field);
   Field = FieldMS; //for now, setting field to manufactured sol.
+  if ( (scenario == 3) || (scenario == 4) ){
+    string text = "MMSError/IterationError_0000";
+    text += ".dat";
+    const char* filename_mms_error = text.c_str();
+    euler->ComputeMSError(field_ms_error,field,field_ms);
+    error->OutputPrimitiveVariables(field_ms_error,filename_mms_error,false,0,mesh->xcoords,mesh->ycoords,mesh->cellnumber,mesh->Nx,mesh->Ny);
+  }
 
   //!TODO: COMPUTING EXACT SOLUTION -- ONLY FOR 1D QUASI-STEADY NOZZLE
   /*
@@ -387,6 +396,15 @@ int main() {
       error->OutputPrimitiveVariables(field,filename_totalsols,true,iter,mesh->xcoords,mesh->ycoords,mesh->cellnumber,mesh->Nx,mesh->Ny);
       //saving iter value to iter_visuals list
       iter_visuals.push_back(it);
+
+      //saving MMS error (MMS ONLY)
+      name = "MMSError/IterationError_";
+      name += it;
+      name += ".dat";
+      const char* filename_mms_error = name.c_str();
+      euler->ComputeMSError(field_ms_error,field,field_ms);
+      error->OutputPrimitiveVariables(field_ms_error,filename_mms_error,false,iter,mesh->xcoords,mesh->ycoords,mesh->cellnumber,mesh->Nx,mesh->Ny);
+
       
       //Printing to TECPLOT
       //error->OutputPrimitiveVariables(field,filename_totalsols,true,iter,xcoords);

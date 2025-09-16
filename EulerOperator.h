@@ -74,6 +74,7 @@ class EulerBASE {
   virtual void ComputeResidual(vector<array<double,4>>* &resid,vector<array<double,4>>* &field);
   //MMS
   virtual void ManufacturedPrimitiveSols(vector<array<double,4>>* &field,SpaceVariables2D* &sols);
+  virtual void ComputeMSError(vector<array<double,4>>* &field_ms_error,vector<array<double,4>>* &field,vector<array<double,4>>* &field_ms);
   virtual ~EulerBASE();
 };
 
@@ -218,6 +219,7 @@ class Euler2DMMS : public EulerBASE {
   void SetInitialConditions(vector<array<double,4>>* &field) override; 
 
   void ManufacturedPrimitiveSols(vector<array<double,4>>* &field,SpaceVariables2D* &Sols) override;
+  void ComputeMSError(vector<array<double,4>>* &field_ms_error,vector<array<double,4>>* &field,vector<array<double,4>>* &field_ms) override;
   void EvaluateGhostCellsMS(vector<array<double,4>>* &field,SpaceVariables2D* &Sols); //evaluates the manufactured sol. on the specified ghost cells
 
   double ContinuitySourceTerm(double x,double y);
