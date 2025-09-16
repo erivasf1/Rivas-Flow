@@ -108,7 +108,7 @@ void EulerExplicit::SolutionLimiter(vector<array<double,4>>* &field){
     (*field)[n][3] = std::min(Pressure_max,std::max(Pressure_min,(*field)[n][3]));
 
     //Printing out message if limiter kicks in
-    /*
+    
     if ((*field)[n][0] == Density_max || (*field)[n][0] == Density_min)
       Tools::print("Limiter was hit for density at cell %d | val is now:%e\n",n,(*field)[n][0]);
 
@@ -120,7 +120,7 @@ void EulerExplicit::SolutionLimiter(vector<array<double,4>>* &field){
 
     if ((*field)[n][3] == Pressure_max || (*field)[n][3] == Pressure_min)
       Tools::print("Limiter was hit for pressure at cell %d | val is now:%e\n",n,(*field)[n][3]);
-   */
+   
   }
 
   return;

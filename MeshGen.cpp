@@ -10,7 +10,7 @@ double MeshGenBASE::GetCellVolume(int cell_id){
 }
 
 //-----------------------------------------------------------
-void MeshGenBASE::GenerateMesh(){}
+void MeshGenBASE::GenerateMesh(double ,double ,double ,double ){}
 
 //-----------------------------------------------------------
 void MeshGenBASE::ReadMeshFile(){}
@@ -79,7 +79,7 @@ double MeshGenNozzle::GetCellVolume(int cell_id){
 }
 
 //-----------------------------------------------------------
-void MeshGenNozzle::GenerateMesh() {
+void MeshGenNozzle::GenMesh() {
 
   int facenum = cellnumber + 1; //number of faces
   xcoords = Tools::RetrievePoints(xmin,xmax,facenum);  
@@ -133,6 +133,15 @@ MeshGen2D::MeshGen2D(const char* name)
   ReadMeshFile(); //extract nodal coords. of mesh
 }
   
+//-----------------------------------------------------------
+MeshGen2D::MeshGen2D(double xmin,double xmax,double ymin,double ymax,int nx,int ny){
+
+  Nx = nx; Ny = ny;
+  cell_imax = Nx-1; cell_jmax = Ny-1;
+  cellnumber = cell_imax*cell_jmax;
+  GenerateMesh(xmin,xmax,ymin,ymax);
+
+}
 //-----------------------------------------------------------
 void MeshGen2D::ReadMeshFile(){
 
@@ -189,6 +198,57 @@ void MeshGen2D::ReadMeshFile(){
   cell_imax = Nx-1; cell_jmax = Ny-1;
   cellnumber = cell_imax*cell_jmax;
 
+}
+//-----------------------------------------------------------
+void MeshGen2D::GenerateMesh(double xmin,double xmax,double ymin,double ymax){
+
+  //CREATING X & Y COORDS VECTORS
+  vector<double> xlist(Nx); vector<double> ylist(Ny); 
+  //Compute all x and y list first
+  double dx = (xmax-xmin) / (Nx-1);
+  double dy = (ymax-ymin) / (Ny-1);
+  for (int x=0;x<Nx;x++)
+    xlist[x] = xmin + dx*x;
+  
+  for (int y=0;y<Ny;y++)
+    ylist[y] = ymin + dy*y;
+
+  //Writing xcoords & ycoords for every i,j pt. (Plot3D format)
+  for (int n=0;n<Ny;n++){
+    for (int x=0;x<Nx;x++)
+      xcoords.push_back(xlist[x]);
+  }
+  for (int n=0;n<Ny;n++){
+    for (int x=0;x<Nx;x++)
+      ycoords.push_back(ylist[n]);
+  }
+
+  //OUTPUTTING MESH IN TECPLOT (.DAT) FORMAT
+  ofstream myfilewrite("Mesh.dat",ios::out);
+  //Writing header to Mesh Output File
+  myfilewrite<<"TITLE = \" 2D Structured Mesh \""<<endl;
+  myfilewrite<<"VARIABLES = \"X\",\"Y\""<<endl;
+  myfilewrite<<"ZONE I="<<Nx<<", J="<<Ny<<" DATAPACKING=BLOCK"<<endl;
+
+  int count = 0;
+  // Writing Xcoords
+  for (int n=0;n<(int)xcoords.size();n++){
+    count++;
+    myfilewrite<<std::setw(15)<<xcoords[n];
+    if (count % 4 == 0)
+      myfilewrite<<endl;
+  }
+
+  // Writing Ycoords
+  for (int n=0;n<(int)ycoords.size();n++){
+    count++;
+    myfilewrite<<std::setw(15)<<ycoords[n];
+    if (count % 4 == 0)
+      myfilewrite<<endl;
+  }
+  myfilewrite.close(); 
+
+  return;
 }
 //-----------------------------------------------------------
 void MeshGen2D::OutputMesh(){

@@ -36,32 +36,34 @@ int main() {
 
   //! INITIALIZATION
   // Scenario
-  int scenario = 3; //1 = 1D, 2 = 2D, 3 = 2D MMS
+  int scenario = 4; //1 = 1D, 2 = 2D, 3 = 2D MMS, 4 = TRUE CARTESIAN of MMS
   CASE_2D case_2d = INLET;
 
-  // Constants for 1D case
-  double xmin = -1.0;
-  double xmax = 1.0;
+  // Constants for 1D case or True Cartesian MMS case
+  [[maybe_unused]]double xmin = 0.0; [[maybe_unused]]double xmax = 1.0;
+  [[maybe_unused]]double ymin = 0.0; [[maybe_unused]]double ymax = 1.0;
+  [[maybe_unused]]int Nx = 10; [[maybe_unused]]int Ny = 10;
 
   //FOR NOW: MMS case is initialized with MS & boundaries are set to outflow for extrapolating to ghost cells
   // Boundary Conditions Specification
-  BOUNDARY_COND top_cond = OUTFLOW; 
-  BOUNDARY_COND btm_cond = OUTFLOW;
-  BOUNDARY_COND left_cond = OUTFLOW;
-  BOUNDARY_COND right_cond = OUTFLOW;
+  BOUNDARY_COND top_cond = INFLOW; 
+  BOUNDARY_COND btm_cond = INFLOW;
+  BOUNDARY_COND left_cond = INFLOW;
+  BOUNDARY_COND right_cond = INFLOW;
 
   [[maybe_unused]]bool cond_loc{false}; //true for subsonic & false for supersonic (FOR EXACT SOL.)
   [[maybe_unused]]bool cond_bc{true}; //true for subsonic & false for supersonic (FOR OUTFLOW BC)
 
   // Mesh Specifications
-  const char* meshfile = "Grids/CurvilinearGrids/curv2d9.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
+  //[[maybe_unused]]const char* meshfile = "Grids/CurvilinearGrids/curv2d9.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
+  [[maybe_unused]]const char* meshfile = NULL;
   [[maybe_unused]]int cellnum = 100; //recommending an even number for cell face at the throat of nozzle (NOTE: will get reassigned val. if mesh is provided)
 
   // Temporal Specifications
-  const int iter_max = 500;
+  const int iter_max = 1;
   int iterout = 1; //number of iterations per solution output
-  const double CFL = 0.1; //CFL number (must <= 1 for Euler Explicit integration)
-  //const double CFL = 2.9e-4; //CFL number (must <= 1 for Euler Explicit integration)
+  const double CFL = 0.2; //CFL number (must <= 1 for Euler Explicit integration)
+  //const double CFL = 1e-2; //CFL number (must <= 1 for Euler Explicit integration)
   bool timestep{false}; //true = local time stepping; false = global time stepping
 
   // Flux Specifications
@@ -86,18 +88,23 @@ int main() {
 
   //! GENERATING MESH 
   MeshGenBASE* mesh; 
-  if (scenario == 1){ //1D Nozzle Mesh Case
+  if (scenario == 1){ //1D Nozzle Mesh Case -- TODO:After 2D is done
     mesh = new MeshGenNozzle(xmin,xmax,mesh->cellnumber);
-    mesh->GenerateMesh();
+    //mesh->GenerateMesh();
   }
   else if ((scenario == 2) || (scenario == 3)) {
     mesh = new MeshGen2D(meshfile);
     mesh->OutputMesh(); //!< outputs mesh file for visualization
   }
+  else if ((scenario == 4) && (!meshfile)) {
+    mesh = new MeshGen2D(xmin,xmax,ymin,ymax,Nx,Ny);
+  }
   else{
     cerr<<"Unknown scenario number!"<<endl;
     return 0;
   }
+  delete mesh;
+  return 0;
   
   //! DATA ALLOCATION
   //Field variables
@@ -132,6 +139,8 @@ int main() {
   vector<array<double,4>>* init_resid = &InitResidual; //pointer to residual field values per cell
   vector<double>* time_steps = &TimeSteps;
 
+  vector<string> iter_visuals;
+
   //!OBJECT INITIALIZATIONS
 
   //Euler Operator spec.
@@ -140,7 +149,7 @@ int main() {
   //Temp -- will add scenario == 1 once 1D section is fixed!
   if (scenario == 2) 
     euler = new Euler2D(case_2d,mesh->cell_imax,mesh->cell_jmax,flux_scheme,flux_accuracy,top_cond,btm_cond,left_cond,right_cond,mesh,field_ms_source);
-  else if (scenario == 3)
+  else if ((scenario == 3) || (scenario == 4))
     euler = new Euler2DMMS(mesh->cell_imax,mesh->cell_jmax,flux_scheme,flux_accuracy,top_cond,btm_cond,left_cond,right_cond,mesh,field_ms_source);
   else{
     cerr<<"Error: scenario # not recognized!"<<endl;
@@ -197,7 +206,7 @@ int main() {
 
 
   //! COMPUTING MANUFACTURED SOLUTION AND SOURCE TERMS (MMS ONLY)
-  if (scenario == 3){
+  if ((scenario == 3) || (scenario == 4)){
     string mms_sol_filename = "ManufacturedSols.dat";
     string mms_source_filename = "SourceTerms.dat";
     euler->ManufacturedPrimitiveSols(field_ms,sols); //!< computing manufactured sol.
@@ -366,9 +375,11 @@ int main() {
 
 
     //! OUTPUT SOL. IN .DAT FILE EVERY "ITEROUT" STEPS
+
     if (iter % iterout == 0) {
-      it = to_string(iter);
-      name = "SolResults/Iteration";
+      it = error->zeroPad(iter,4);
+      //it = to_string(iter);
+      name = "SolResults/Iteration_";
       name += it;
       name += ".dat";
       const char* filename_iter = name.c_str();
@@ -376,7 +387,9 @@ int main() {
       error->OutputPrimitiveVariables(field,filename_iter,false,iter,mesh->xcoords,mesh->ycoords,mesh->cellnumber,mesh->Nx,mesh->Ny);
       //writing in 1 file
       error->OutputPrimitiveVariables(field,filename_totalsols,true,iter,mesh->xcoords,mesh->ycoords,mesh->cellnumber,mesh->Nx,mesh->Ny);
-
+      //saving iter value to iter_visuals list
+      iter_visuals.push_back(it);
+      
       //Printing to TECPLOT
       //error->OutputPrimitiveVariables(field,filename_totalsols,true,iter,xcoords);
 
@@ -418,6 +431,9 @@ int main() {
   //Closing Residuals file
   myresids.close();
 
+  //Writing PVD file for Paraview to visualize
+  //const char* filename_pvd = "SolResults/Results.pvd";
+  //error->WritePVDFile(filename_pvd,iter_visuals);
 
   //TODO:! EVALUATE DISCRETIZATION NORMS FOR GRID CONVERGENCE AND PRINT OUT TO FILE
   /*if (cond_bc == false){
@@ -434,10 +450,8 @@ int main() {
   Tools::print("Elapsed time: %fs\n",stop_time-start_time);
 
   //! CLEANUP
-  if (meshfile){
-    delete euler;
-    delete mesh;
-  }
+  delete euler;
+  delete mesh;
 
   return 0;
 }

@@ -525,5 +525,45 @@ void Output::OutputGhostCells(vector<array<double,4>>* &ghost_cell,string filena
 
 }
 //-----------------------------------------------------------
+void Output::WritePVDFile(const char* &filename,vector<string> &iter_visuals){
+ofstream myfile(filename);
+
+  if (!myfile){ //checking if file opened successfully
+    cerr<<"Error: Could Not Open File "<<filename<<endl;
+    return;
+  }
+
+  //TITLE
+  myfile<<"<?xml version=\"1.0\"?>"<<endl;
+  myfile<<"<VTKFile type=\"Collection\" version=\"0.1\" byte_order=\"LittleEndian\">"<<endl;
+  myfile<<"  <Collection>"<<endl;
+  //Writing file names
+  for (int n=0;n<(int)iter_visuals.size();n++)
+    myfile<<"    <DataSet timestep=\""<<iter_visuals[n]<<"\""<<" part=\"0\""<<" file=\"Iteration"<<iter_visuals[n]<<".dat\"/>"<<endl;
+
+  myfile<<"  </Collection>"<<endl;
+  myfile<<"</VTKFile>"<<endl;
+/*
+<VTKFile type="Collection" version="0.1" byte_order="LittleEndian">
+  <Collection>
+    <DataSet timestep="0" part="0" file="solution_0.vtu"/>
+    <DataSet timestep="1" part="0" file="solution_1.vtu"/>
+    <DataSet timestep="2" part="0" file="solution_2.vtu"/>
+    <DataSet timestep="3" part="0" file="solution_3.vtu"/>
+    <!-- Add more timesteps here -->
+  </Collection>
+</VTKFile>
+*/
+
+  return;
+
+}
+//-----------------------------------------------------------
+string Output::zeroPad(int number, int padWidth) {
+  ostringstream ss;
+  ss << std::setw(padWidth) << std::setfill('0') << number;
+  return ss.str();
+}
+//-----------------------------------------------------------
 
 Output::~Output(){}

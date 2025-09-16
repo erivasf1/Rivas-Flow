@@ -507,7 +507,7 @@ array<double,4> EulerBASE::VanLeerCompute(array<double,4> &field_state,bool sign
 
   //NOTE: refer to Sec.7,slide# 31
   array<double,4> flux;
-  array<double,4> field_normal{field_state[0],field_state[1]*nx,field_state[2]*ny,field_state[3]}; //val. of primitive vars. with outward normal velocities
+  //array<double,4> field_normal{field_state[0],field_state[1]*nx,field_state[2]*ny,field_state[3]}; //val. of primitive vars. with outward normal velocities
   //scalars
   double T = field_state[3] / (field_state[0]*R);
   double a = sqrt(gamma*R*T); //speed of sound
@@ -2259,7 +2259,7 @@ void Euler2DMMS::Enforce2DBoundaryConditions(vector<array<double,4>>* &field,boo
   if ((top_cond==0) && (setup==true))
     ApplyMSInflow(0);
   //else if (top_cond==1)
-  else if (top_cond==1 && setup==true)
+  else if (top_cond==1 && setup==true) //temp: setup==true here for now
     ApplyOutflow(field,0);
   else if (top_cond==2)
     ApplySlipWall(field,0);
@@ -2269,7 +2269,7 @@ void Euler2DMMS::Enforce2DBoundaryConditions(vector<array<double,4>>* &field,boo
   if ((btm_cond==0) && (setup==true))
     ApplyMSInflow(1);
   //else if (btm_cond==1)
-  else if (btm_cond==1 && setup==true)
+  else if (btm_cond==1 && setup==true)//temp: setup==true here for now
     ApplyOutflow(field,1);
   else if (btm_cond==2)
     ApplySlipWall(field,1);
@@ -2279,7 +2279,7 @@ void Euler2DMMS::Enforce2DBoundaryConditions(vector<array<double,4>>* &field,boo
   if ((left_cond==0) && (setup==true))
     ApplyMSInflow(2);
   //else if (left_cond==1)
-  else if (left_cond==1 && setup==true)
+  else if (left_cond==1 && setup==true)//temp: setup==true here for now
     ApplyOutflow(field,2);
   else if (left_cond==2)
     ApplySlipWall(field,2);
@@ -2289,7 +2289,7 @@ void Euler2DMMS::Enforce2DBoundaryConditions(vector<array<double,4>>* &field,boo
   if (right_cond==0 && (setup==true))
     ApplyMSInflow(3);
   //else if (right_cond==1)
-  else if (right_cond==1 && setup==true)
+  else if (right_cond==1 && setup==true)//temp: setup==true here for now
     ApplyOutflow(field,3);
   else if (right_cond==2)
     ApplySlipWall(field,3);

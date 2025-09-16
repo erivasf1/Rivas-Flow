@@ -24,10 +24,10 @@ class MeshGenBASE {
   MeshGenBASE();
 
   virtual double GetCellVolume(int cell_id);
-  virtual void GenerateMesh();
+  virtual void GenerateMesh(double xmin,double xmax,double ymin,double ymax);
   virtual void ReadMeshFile();
   virtual void OutputMesh();
-  virtual void GenerateGhostCells(int left_id,int right_id,int top_id,int btm_id); //-- adds the extra ghost cells to the domain virtual double GetInteriorCellArea(int &i,int &j,int side);
+  virtual void GenerateGhostCells(int left_id,int right_id,int btm_id,int top_id); //-- adds the extra ghost cells to the domain virtual double GetInteriorCellArea(int &i,int &j,int side);
   virtual double GetInteriorCellArea(int i,int j,int side);
   virtual double GetInteriorCellFaceArea(int i,int j,int dir);
   virtual double GetCellVolume(int i,int j);
@@ -53,7 +53,7 @@ class MeshGenNozzle : public MeshGenBASE { //creates a uniform mesh (in x)
   double GetCellVolume(int cell_id) override;
   //static double GetCellVolume(int cell_id) override;
  
-  void GenerateMesh() override;
+  void GenMesh(); //TODO: polymorphism here after 2D implementation
 
   void OutputNozzleAreas(vector<double> &coords,const char *filename);
 
@@ -77,9 +77,13 @@ class MeshGen2D : public MeshGenBASE { //reads in a non-uniform 2D mesh
 
   MeshGen2D(const char* name);
 
+  MeshGen2D(double xmin,double xmax,double ymin,double ymax,int Nx,int Ny); //constructor for true Cartesian testing
+
   void ReadMeshFile() override; //assings values to x and y coords list
 
-  void OutputMesh();
+  void OutputMesh() override; //generates a true Cartesian mesh. Use only for TESTING!!!
+
+  void GenerateMesh(double xmin,double xmax,double ymin,double ymax) override;
 
   array<array<double,4>,2> GetCellCoords(int &i,int &j); //fcn. to retrieve coords; indexing: [btm_left,btm_right,top_left,top_right]!
   array<array<double,4>,2> GetGhostCellCoords(int i,int j,int tag) override; 
