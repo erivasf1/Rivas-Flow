@@ -103,8 +103,6 @@ int main() {
     cerr<<"Unknown scenario number!"<<endl;
     return 0;
   }
-  delete mesh;
-  return 0;
   
   //! DATA ALLOCATION
   //Field variables
