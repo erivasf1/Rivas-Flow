@@ -313,32 +313,33 @@ array<double,4> EulerBASE::ComputeSpatialFlux_UPWIND1stOrder(vector<array<double
   
   //NOTE: assumes loc is left/btm state and nbor is right/top state (for 1st order accuracy)
   array<double,4> loc_state,nbor_state;
-  //loc_state = fieldij(field,loci,locj,cell_imax);
+  loc_state = fieldij(field,loci,locj,cell_imax);
 
   //checking if nbor is accessing ghost cells
-  if ( loci<0 || nbori>=cell_imax || locj<0 || nborj>=cell_jmax ){
+  if ( nbori<0 || nbori>=cell_imax || nborj<0 || nborj>=cell_jmax ){
 
-    if (loci<0){ //using 1st layer of left ghost cells (-i case)
-      loc_state = mesh->left_cells[nborj];
-      nbor_state = fieldij(field,nbori,nborj,cell_imax);
+    //loc_state = fieldij(field,loci,locj,cell_imax);
+    if (nbori<0){ //using 1st layer of left ghost cells (-i case)
+      nbor_state = mesh->left_cells[nborj];
+      //nbor_state = fieldij(field,nbori,nborj,cell_imax);
     } 
     else if (nbori>=cell_imax){ //using 1st layer of right ghost cells (+i case)
-      loc_state = fieldij(field,loci,locj,cell_imax);
+      //loc_state = fieldij(field,loci,locj,cell_imax);
       nbor_state = mesh->right_cells[nborj];
     }
-    else if (locj<0){ //using 1st layer of btm ghost cells (-j case)
-      loc_state = mesh->btm_cells[loci]; //j set to 0 for 1st layer
-      nbor_state = fieldij(field,nbori,nborj,cell_imax);
+    else if (nborj<0){ //using 1st layer of btm ghost cells (-j case)
+      nbor_state = mesh->btm_cells[loci]; //j set to 0 for 1st layer
+      //nbor_state = fieldij(field,nbori,nborj,cell_imax);
     }
     
     else{  //using 1st layer of top ghost cells (+j case)
-      loc_state = fieldij(field,loci,locj,cell_imax);
+      //loc_state = fieldij(field,loci,locj,cell_imax);
       nbor_state = mesh->top_cells[loci];
     }
   }
 
   else{  //normal case (no use of ghost cells)
-    loc_state = fieldij(field,loci,locj,cell_imax);
+    //loc_state = fieldij(field,loci,locj,cell_imax);
     nbor_state = fieldij(field,nbori,nborj,cell_imax);
   }
 
@@ -2403,7 +2404,7 @@ void Euler2DMMS::ComputeResidual(vector<array<double,4>>* &resid,vector<array<do
 
   array<double,4> mms;
   
-  //NOTE: set as i,j as center of evaluating fluxes, only vary the nbor indices
+  //NOTE: set as i,j as center of evaluating fluxes, only vary the nbor indices!
 
   for (int j=0;j<cell_jmax;j++){
     for (int i=0;i<cell_imax;i++){
@@ -2417,7 +2418,7 @@ void Euler2DMMS::ComputeResidual(vector<array<double,4>>* &resid,vector<array<do
 
         //-i dir. flux ("left")
         unitvec = mesh->ComputeOutwardUnitVector(i,j,2);
-        flux_left = ComputeSpatialFlux_UPWIND1stOrder(field,i-1,j,i,j,unitvec);
+        flux_left = ComputeSpatialFlux_UPWIND1stOrder(field,i,j,i-1,j,unitvec);
 
         //+j dir. flux ("top")
         unitvec = mesh->ComputeOutwardUnitVector(i,j,0);
@@ -2425,7 +2426,7 @@ void Euler2DMMS::ComputeResidual(vector<array<double,4>>* &resid,vector<array<do
 
         //-j dir. flux ("btm")
         unitvec = mesh->ComputeOutwardUnitVector(i,j,1);
-        flux_btm = ComputeSpatialFlux_UPWIND1stOrder(field,i,j-1,i,j,unitvec);
+        flux_btm = ComputeSpatialFlux_UPWIND1stOrder(field,i,j,i,j-1,unitvec);
       }
 
       else if ((flux_scheme!=0) && (flux_accuracy==2)){ //2nd ordr Upwind Schemes w/ MUSCL extrapolation
@@ -2448,7 +2449,8 @@ void Euler2DMMS::ComputeResidual(vector<array<double,4>>* &resid,vector<array<do
 
       //residual calc.
       for (int n=0;n<4;n++){
-        res[n] = flux_right[n]*area_right + flux_left[n]*area_left + flux_top[n]*area_top + flux_btm[n]*area_btm - mms[n]*vol;
+        res[n] = flux_right[n]*area_right + flux_left[n]*area_left + flux_top[n]*area_top + flux_btm[n]*area_btm + mms[n]*vol;
+        //res[n] = flux_right[n]*area_right + flux_left[n]*area_left + flux_top[n]*area_top + flux_btm[n]*area_btm;
         if (isnan(res[n]) == true)
           Tools::print("Nan detected for resid in cell[%d,%d]\n",i,j);
       }

@@ -60,7 +60,7 @@ int main() {
   [[maybe_unused]]int cellnum = 100; //recommending an even number for cell face at the throat of nozzle (NOTE: will get reassigned val. if mesh is provided)
 
   // Temporal Specifications
-  const int iter_max = 1;
+  const int iter_max = 5e2;
   int iterout = 1; //number of iterations per solution output
   const double CFL = 0.2; //CFL number (must <= 1 for Euler Explicit integration)
   //const double CFL = 1e-2; //CFL number (must <= 1 for Euler Explicit integration)
@@ -81,10 +81,10 @@ int main() {
   array<bool,4> check{false,false,false,false}; //false by default to check if under-relaxation is needed
 
   // Governing Eq. Residuals
-  double cont_tol = 1.0e-8;
-  double xmom_tol = 1.0e-8;
-  double ymom_tol = 1.0e-8;
-  double energy_tol = 1.0e-8;
+  double cont_tol = 1.0e-6;
+  double xmom_tol = 1.0e-6;
+  double ymom_tol = 1.0e-6;
+  double energy_tol = 1.0e-6;
 
   //! GENERATING MESH 
   MeshGenBASE* mesh; 
@@ -320,7 +320,7 @@ int main() {
     time->SolutionLimiter(field_star); //applies solution limiter to all cells (including ghost cells)
 
     //! ENFORCE BOUNDARY CONDITIONS
-    euler->Enforce2DBoundaryConditions(field_star,false);
+    //euler->Enforce2DBoundaryConditions(field_star,false);
     //time->SolutionLimiter(field_star); //temporarily reapplying the limiter
 
 
