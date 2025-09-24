@@ -37,6 +37,7 @@ class EulerBASE {
 
   double ComputeMachNumber(array<double,4> &sols);
   double ComputeSpeedofSound(array<double,4> &sols); //using perfect gas relationship
+  double ComputeHTotal(array<double,4> &sols);
   double GetGamma();
   array<double,2> GetLambdaMax(vector<array<double,4>>* &field,int i,int j);
 

@@ -42,7 +42,7 @@ int main() {
   // Constants for 1D case or True Cartesian MMS case
   [[maybe_unused]]double xmin = 0.0; [[maybe_unused]]double xmax = 1.0;
   [[maybe_unused]]double ymin = 0.0; [[maybe_unused]]double ymax = 1.0;
-  [[maybe_unused]]int Nx = 20; [[maybe_unused]]int Ny = 20;
+  [[maybe_unused]]int Nx = 10; [[maybe_unused]]int Ny = 10;
 
   //FOR NOW: MMS case is initialized with MS & boundaries are set to outflow for extrapolating to ghost cells
   // Boundary Conditions Specification
@@ -60,7 +60,7 @@ int main() {
   [[maybe_unused]]int cellnum = 100; //recommending an even number for cell face at the throat of nozzle (NOTE: will get reassigned val. if mesh is provided)
 
   // Temporal Specifications
-  const int iter_max = 5e2;
+  const int iter_max = 5e3;
   int iterout = 1; //number of iterations per solution output
   const double CFL = 0.2; //CFL number (must <= 1 for Euler Explicit integration)
   //const double CFL = 1e-2; //CFL number (must <= 1 for Euler Explicit integration)
@@ -81,10 +81,10 @@ int main() {
   array<bool,4> check{false,false,false,false}; //false by default to check if under-relaxation is needed
 
   // Governing Eq. Residuals
-  double cont_tol = 1.0e-6;
-  double xmom_tol = 1.0e-6;
-  double ymom_tol = 1.0e-6;
-  double energy_tol = 1.0e-6;
+  double cont_tol = 1.0e-8;
+  double xmom_tol = 1.0e-8;
+  double ymom_tol = 1.0e-8;
+  double energy_tol = 1.0e-8;
 
   //! GENERATING MESH 
   MeshGenBASE* mesh; 
@@ -108,7 +108,7 @@ int main() {
   //Field variables
   vector<array<double,4>> Field(mesh->cellnumber); //stores primitive variable sols.
   vector<array<double,4>> FieldStar(mesh->cellnumber); //stores intermediate primitive variable sols.
-  vector<array<double,4>> FieldStall(mesh->cellnumber); //stores primitive variable sols. before stall (if detected)
+  //vector<array<double,4>> FieldStall(mesh->cellnumber); //stores primitive variable sols. before stall (if detected)
   vector<array<double,4>> FieldMS(mesh->cellnumber); //stores manufactured sol.
   vector<array<double,4>> FieldMS_Source(mesh->cellnumber); //stores manufactured source term for all cells
   vector<array<double,4>> FieldMS_Error(mesh->cellnumber); //stores manufactured sol. error
@@ -123,12 +123,12 @@ int main() {
   vector<double> TimeSteps(mesh->cellnumber); //for storing the time step (delta_t) for each cell
   array<double,4> ResidualNorms; //for storing the global residual norms
   array<double,4> ResidualStarNorms; //stores the intermediate global residual norms
-  array<double,4> Prev_ResidualNorms; //for storing the previous global residual norms
+  //array<double,4> Prev_ResidualNorms; //for storing the previous global residual norms
 
   //Pointers to Field variables
   vector<array<double,4>>* field = &Field; //pointer to Field solutions
   vector<array<double,4>>* field_star = &FieldStar; //pointer to intermediate Field solutions
-  vector<array<double,4>>* field_stall = &FieldStall; //pointer to intermediate Field solutions
+  //vector<array<double,4>>* field_stall = &FieldStall; //pointer to intermediate Field solutions
   vector<array<double,4>>* field_ms = &FieldMS; //pointer to intermediate Field solutions
   vector<array<double,4>>* field_ms_source = &FieldMS_Source; //pointer to intermediate Field solutions
   vector<array<double,4>>* field_ms_error = &FieldMS_Error; //pointer to intermediate Field solutions
@@ -158,6 +158,7 @@ int main() {
   
   //Time Integrator spec.
   //TODO: Specifying time integrator via Polymorphism
+  //Temp: using Euler explicit time integration for now
   EulerExplicit Time(mesh,euler,CFL); //for computing time steps
 
   SpaceVariables2D Sols; //for operating on Field variables
@@ -217,10 +218,10 @@ int main() {
   }
 
   //! SETTING INITIAL CONDITIONS
-  //Tools::print("At initial conditions\n");
   //euler->SetInitialConditions(field);
   Field = FieldMS; //for now, setting field to manufactured sol.
-  if ( (scenario == 3) || (scenario == 4) ){
+
+  if ( (scenario == 3) || (scenario == 4) ){ //outputting initial error w/ MS
     string text = "MMSError/IterationError_0000";
     text += ".dat";
     const char* filename_mms_error = text.c_str();
@@ -255,10 +256,6 @@ int main() {
   //time->SolutionLimiter(field_test);
 
 
-  //!< Outputting initial solutions with BC's
-  //const char* filename2 = "InitSolutionswBCs.txt";
-  //sols->OutputPrimitiveVariables(field,euler,filename2);
-
   // COMPUTING INITIAL RESIDUAL NORMS
   // using ResidSols spacevariable
   array<double,4> InitNorms;
@@ -273,7 +270,7 @@ int main() {
   error->OutputPrimitiveVariables(init_resid,resid_file,false,0,mesh->xcoords,mesh->ycoords,mesh->cellnumber,mesh->Nx,mesh->Ny);
 
   InitNorms = sols->ComputeSolutionNorms(init_resid); //computing L2 norm of residuals
-  //InitNorms = sols->ComputeSolutionNorms(init_resid); //computing L2 norm of residuals
+
   Tools::print("-Initial Residual Norms\n");
   Tools::print("--Continuity:%e\n",InitNorms[0]);
   Tools::print("--X-Momentum:%e\n",InitNorms[1]);
