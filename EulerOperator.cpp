@@ -404,6 +404,9 @@ array<Vector,2> EulerBASE::MUSCLApprox(vector<array<double,4>>* &field,vector<ar
       nbor_state = mesh->top_cells[loci];
   }
 
+  else //interior cell case
+    nbor_state = fieldij(field,nbori,nborj,cell_imax); 
+
     //!< neighbor to loc in (-) outward normal direction 
   if ( nborloc_i < 0 || nborloc_i >= cell_imax || nborloc_j < 0 || nborloc_j >= cell_jmax ) {
     if (nborloc_i<0) //using 1st layer of left ghost cells (-i case)
@@ -418,6 +421,9 @@ array<Vector,2> EulerBASE::MUSCLApprox(vector<array<double,4>>* &field,vector<ar
     else  //using 1st layer of top ghost cells (+j case)
       nborloc_state = mesh->top_cells[nborloc_i];
   }
+
+  else //interior cell case
+    nborloc_state = fieldij(field,nborloc_i,nborloc_j,cell_imax);
 
     //!< neighbor to neighbor in (+) outward normal direction 
   if ( nbornbor_i < 0 || nbornbor_i >= cell_imax || nbornbor_j < 0 || nbornbor_j >= cell_jmax ){
@@ -434,6 +440,9 @@ array<Vector,2> EulerBASE::MUSCLApprox(vector<array<double,4>>* &field,vector<ar
       nbornbor_state = mesh->top_cells[nbornbor_i+cell_imax];
   }
 
+  else //interior cell case
+    nbornbor_state = fieldij(field,nbornbor_i,nbornbor_j,cell_imax);
+
   //TMP
   for (int i=0;i<4;i++){
     loc_vec[i] = loc_state[i]; nbor_vec[i] = nbor_state[i];
@@ -443,7 +452,7 @@ array<Vector,2> EulerBASE::MUSCLApprox(vector<array<double,4>>* &field,vector<ar
 
   // extrapolating states
   state[0] = loc_vec + (epsilon/4.0) * ( (1.0-kappa_scheme)*(loc_vec-nborloc_vec) + (1.0+kappa_scheme)*(nbor_vec-loc_vec) ); //left state
-  state[1] = loc_vec - (epsilon/4.0) * ( (1.0+kappa_scheme)*(nbor_vec-loc_vec) + (1.0-kappa_scheme)*(nbornbor_vec-nbor_vec) ); //right state
+  state[1] = nbor_vec - (epsilon/4.0) * ( (1.0+kappa_scheme)*(nbor_vec-loc_vec) + (1.0-kappa_scheme)*(nbornbor_vec-nbor_vec) ); //right state
 
   return state;
 

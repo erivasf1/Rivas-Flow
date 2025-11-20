@@ -68,7 +68,7 @@ int main() {
 
   // Temporal Specifications
   const int iter_max = 1e4;
-  int iterout = 10; //number of iterations per solution output
+  int iterout = 1; //number of iterations per solution output
   const double CFL = 0.7; //CFL number (must <= 1 for Euler Explicit integration)
   //const double CFL = 1e-2; //CFL number (must <= 1 for Euler Explicit integration)
   bool timestep{false}; //true = local time stepping; false = global time stepping
@@ -233,7 +233,7 @@ int main() {
   Field = FieldMS; //for now, setting field to manufactured sol.
 
   string val = error->zeroPad(0,4);
-  string init_name = "SolResults/Iteration_";
+  string init_name = "Results/Iteration_";
   init_name += val;
   init_name += ".dat";
   const char* filename_init = init_name.c_str();
@@ -402,7 +402,7 @@ int main() {
     if (iter % iterout == 0) {
       it = error->zeroPad(iter,4);
       //it = to_string(iter);
-      name = "SolResults/Iteration_";
+      name = "Results/Iteration_";
       name += it;
       name += ".dat";
       const char* filename_iter = name.c_str();
@@ -466,7 +466,7 @@ int main() {
   myresids.close();
 
   //Writing PVD file for Paraview to visualize
-  //const char* filename_pvd = "SolResults/Results.pvd";
+  //const char* filename_pvd = "Results/Results.pvd";
   //error->WritePVDFile(filename_pvd,iter_visuals);
 
   //TODO:! EVALUATE DISCRETIZATION NORMS FOR GRID CONVERGENCE AND PRINT OUT TO FILE
