@@ -39,38 +39,45 @@ int main() {
   int scenario = 4; //1 = 1D, 2 = 2D, 3 = 2D MMS, 4 = TRUE CARTESIAN of MMS
   CASE_2D case_2d = INLET;
 
-  // Constants for 1D case or True Cartesian MMS case
+  // Constants for 1D case or True Cartesian 2D MMS case
   [[maybe_unused]]double xmin = 0.0; [[maybe_unused]]double xmax = 1.0;
   [[maybe_unused]]double ymin = 0.0; [[maybe_unused]]double ymax = 1.0;
-  [[maybe_unused]]int Nx = 10; [[maybe_unused]]int Ny = 10;
+  [[maybe_unused]]int Nx = 9; [[maybe_unused]]int Ny = 9;
 
   //FOR NOW: MMS case is initialized with MS & boundaries are set to outflow for extrapolating to ghost cells
   // Boundary Conditions Specification
-  BOUNDARY_COND top_cond = INFLOW; 
+  BOUNDARY_COND top_cond = OUTFLOW; 
   BOUNDARY_COND btm_cond = INFLOW;
   BOUNDARY_COND left_cond = INFLOW;
-  BOUNDARY_COND right_cond = INFLOW;
+  BOUNDARY_COND right_cond = OUTFLOW;
+  /* 
+  BOUNDARY_COND top_cond = INFLOW; 
+  BOUNDARY_COND btm_cond = SLIP_WALL;
+  BOUNDARY_COND left_cond = SLIP_WALL;
+  BOUNDARY_COND right_cond = OUTFLOW;
+  */
 
   [[maybe_unused]]bool cond_loc{false}; //true for subsonic & false for supersonic (FOR EXACT SOL.)
   [[maybe_unused]]bool cond_bc{true}; //true for subsonic & false for supersonic (FOR OUTFLOW BC)
 
   // Mesh Specifications
-  //[[maybe_unused]]const char* meshfile = "Grids/CurvilinearGrids/curv2d9.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
+  //[[maybe_unused]]const char* meshfile = "Grids/InletGrids/Inlet.53x17.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
+  //[[maybe_unused]]const char* meshfile = "Grids/CurvilinearGrids/curv2d257.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
   [[maybe_unused]]const char* meshfile = NULL;
   [[maybe_unused]]int cellnum = 100; //recommending an even number for cell face at the throat of nozzle (NOTE: will get reassigned val. if mesh is provided)
 
   // Temporal Specifications
-  const int iter_max = 5e3;
-  int iterout = 1; //number of iterations per solution output
-  const double CFL = 0.2; //CFL number (must <= 1 for Euler Explicit integration)
+  const int iter_max = 1e4;
+  int iterout = 10; //number of iterations per solution output
+  const double CFL = 0.7; //CFL number (must <= 1 for Euler Explicit integration)
   //const double CFL = 1e-2; //CFL number (must <= 1 for Euler Explicit integration)
   bool timestep{false}; //true = local time stepping; false = global time stepping
 
   // Flux Specifications
   int flux_scheme{1}; //0=JST, 1=Van Leer, 2 = Roe (this will eventually be used!)
-  int flux_accuracy{1}; //1=1st order, 2=2nd order
+  double epsilon = 1.0; //0 for 1st order and 1 for 2nd order
   [[maybe_unused]] const double ramp_stop = 1.0e-7; //stopping criteria for ramping fcn. of transitioning from 1st to 2nd
-  double epsilon = 1.0; //ramping value used to transition from 1st to 2nd order
+  //double epsilon = 1.0; //ramping value used to transition from 1st to 2nd order
   bool resid_stall{false};//for detecting if residuals have stalled
   [[maybe_unused]]int stall_count = 0;
 
@@ -108,7 +115,7 @@ int main() {
   //Field variables
   vector<array<double,4>> Field(mesh->cellnumber); //stores primitive variable sols.
   vector<array<double,4>> FieldStar(mesh->cellnumber); //stores intermediate primitive variable sols.
-  //vector<array<double,4>> FieldStall(mesh->cellnumber); //stores primitive variable sols. before stall (if detected)
+  vector<array<double,4>> FieldStall(mesh->cellnumber); //stores primitive variable sols. before stall (if detected)
   vector<array<double,4>> FieldMS(mesh->cellnumber); //stores manufactured sol.
   vector<array<double,4>> FieldMS_Source(mesh->cellnumber); //stores manufactured source term for all cells
   vector<array<double,4>> FieldMS_Error(mesh->cellnumber); //stores manufactured sol. error
@@ -128,7 +135,7 @@ int main() {
   //Pointers to Field variables
   vector<array<double,4>>* field = &Field; //pointer to Field solutions
   vector<array<double,4>>* field_star = &FieldStar; //pointer to intermediate Field solutions
-  //vector<array<double,4>>* field_stall = &FieldStall; //pointer to intermediate Field solutions
+  vector<array<double,4>>* field_stall = &FieldStall; //pointer to intermediate Field solutions
   vector<array<double,4>>* field_ms = &FieldMS; //pointer to intermediate Field solutions
   vector<array<double,4>>* field_ms_source = &FieldMS_Source; //pointer to intermediate Field solutions
   vector<array<double,4>>* field_ms_error = &FieldMS_Error; //pointer to intermediate Field solutions
@@ -148,9 +155,9 @@ int main() {
   EulerBASE* euler;
   //Temp -- will add scenario == 1 once 1D section is fixed!
   if (scenario == 2) 
-    euler = new Euler2D(case_2d,mesh->cell_imax,mesh->cell_jmax,flux_scheme,flux_accuracy,top_cond,btm_cond,left_cond,right_cond,mesh,field_ms_source);
+    euler = new Euler2D(case_2d,mesh->cell_imax,mesh->cell_jmax,flux_scheme,epsilon,top_cond,btm_cond,left_cond,right_cond,mesh,field_ms_source);
   else if ((scenario == 3) || (scenario == 4))
-    euler = new Euler2DMMS(mesh->cell_imax,mesh->cell_jmax,flux_scheme,flux_accuracy,top_cond,btm_cond,left_cond,right_cond,mesh,field_ms_source);
+    euler = new Euler2DMMS(mesh->cell_imax,mesh->cell_jmax,flux_scheme,epsilon,top_cond,btm_cond,left_cond,right_cond,mesh,field_ms_source);
   else{
     cerr<<"Error: scenario # not recognized!"<<endl;
     return 0;
@@ -182,6 +189,10 @@ int main() {
     Tools::print("-Mesh Selected: ");
     Tools::print("%s\n",meshfile);
   }
+  else if (scenario == 4){
+    Tools::print("-Case Selected: ");
+    Tools::print("True Cartesian MMS Case\n");
+  }
   else{
     Tools::print("-Case Selected: ");
     (cond_bc == true) ? Tools::print("Shock Wave Case\n") : Tools::print("Isentropic Case\n");
@@ -198,9 +209,9 @@ int main() {
   // Temporal Stats
   Tools::print("-Flux Statistics:");
   if (flux_scheme == 1) //Van Leer Flux 
-    (flux_accuracy == 1) ? Tools::print(" 1st Order Van Leer Scheme\n") : Tools::print(" 2nd Order Van Leer Scheme\n");
+    (epsilon == 0.0) ? Tools::print(" 1st Order Van Leer Scheme\n") : Tools::print(" 2nd Order Van Leer Scheme\n");
   else if (flux_scheme == 2) //Roe Flux
-    (flux_accuracy == 1) ? Tools::print(" 1st Order Roe's Scheme\n") : Tools::print(" 2nd Order Roe's Scheme\n");
+    (epsilon == 0.0) ? Tools::print(" 1st Order Roe's Scheme\n") : Tools::print(" 2nd Order Roe's Scheme\n");
   
   else
     Tools::print(" JST Damping\n");
@@ -220,6 +231,13 @@ int main() {
   //! SETTING INITIAL CONDITIONS
   //euler->SetInitialConditions(field);
   Field = FieldMS; //for now, setting field to manufactured sol.
+
+  string val = error->zeroPad(0,4);
+  string init_name = "SolResults/Iteration_";
+  init_name += val;
+  init_name += ".dat";
+  const char* filename_init = init_name.c_str();
+  error->OutputPrimitiveVariables(field,filename_init,false,0,mesh->xcoords,mesh->ycoords,mesh->cellnumber,mesh->Nx,mesh->Ny);
 
   if ( (scenario == 3) || (scenario == 4) ){ //outputting initial error w/ MS
     string text = "MMSError/IterationError_0000";
@@ -263,7 +281,7 @@ int main() {
   //if (upwind_scheme == false && flux_accuracy == false) //reverting to 1st order if 2nd order Roe is selected
     //flux_accuracy = true;
 
-  euler->ComputeResidual(init_resid,field);
+  euler->ComputeResidual(init_resid,field,field_stall,resid_stall);
 
   //debug: Residual
   const char* resid_file = "InitialResiduals.dat"; 
@@ -278,8 +296,6 @@ int main() {
   Tools::print("--Energy:%e\n\n",InitNorms[3]);
 
 
-  (*resid) = (*init_resid);//!< setting initial residual to intermediate
-  ResidualNorms = InitNorms;
 
   string it,name; //used for outputting file name
   int iter; //iteration number
@@ -300,11 +316,11 @@ int main() {
   error->OutputPrimitiveVariables(field,filename_totalsols,false,0,mesh->xcoords,mesh->ycoords,mesh->cellnumber,mesh->Nx,mesh->Ny);
 
   //Assigning Intermediate Field to Initial Field (including residuals)
-  (*field_star) = (*field);
-  (*resid_star) = (*resid);
-
-  (*resid) = (*init_resid);//!< setting initial residual to intermediate
+  (*resid) = (*init_resid); //!< setting residual to initial
   ResidualNorms = InitNorms;
+
+  (*field_star) = (*field); //!< setting intermediate to current
+  (*resid_star) = (*resid);
 
   //! BEGIN OF MAIN LOOP
   for (iter=1;iter<iter_max;iter++){
@@ -326,11 +342,11 @@ int main() {
     time->SolutionLimiter(field_star); //applies solution limiter to all cells (including ghost cells)
 
     //! ENFORCE BOUNDARY CONDITIONS
-    //euler->Enforce2DBoundaryConditions(field_star,false);
+    euler->Enforce2DBoundaryConditions(field_star,false);
     //time->SolutionLimiter(field_star); //temporarily reapplying the limiter
 
 
-    euler->ComputeResidual(resid_star,field_star);
+    euler->ComputeResidual(resid_star,field_star,field_stall,resid_stall);
     ResidualStarNorms = sols->ComputeSolutionNorms(resid_star);
     time->UnderRelaxationCheck(ResidualNorms,ResidualStarNorms,C,check);
 
@@ -342,10 +358,13 @@ int main() {
           Omega[i] = (check[i] == true) ?  Omega[i] /= 2.0 : Omega[i] = 1.0;
 
         (*field_star) = (*field); //resetting primitive variables to previous time step values
+
         time->FWDEulerAdvance(field_star,resid_star,time_steps,Omega); //advancing intermediate solution w/ under-relaxation factor 
         time->SolutionLimiter(field_star); //temporarily reapplying the limiter
-        euler->ComputeResidual(resid_star,field_star);
+
+        euler->ComputeResidual(resid_star,field_star,field_stall,resid_stall);
         ResidualStarNorms = sols->ComputeSolutionNorms(resid_star);
+
         time->UnderRelaxationCheck(ResidualNorms,ResidualStarNorms,C,check);
 
         //checking if new residuals do not need under-relaxation
@@ -395,12 +414,14 @@ int main() {
       iter_visuals.push_back(it);
 
       //saving MMS error (MMS ONLY)
-      name = "MMSError/IterationError_";
-      name += it;
-      name += ".dat";
-      const char* filename_mms_error = name.c_str();
-      euler->ComputeMSError(field_ms_error,field,field_ms);
-      error->OutputPrimitiveVariables(field_ms_error,filename_mms_error,false,iter,mesh->xcoords,mesh->ycoords,mesh->cellnumber,mesh->Nx,mesh->Ny);
+      if (scenario == 3 || scenario == 4){
+        name = "MMSError/IterationError_";
+        name += it;
+        name += ".dat";
+        const char* filename_mms_error = name.c_str();
+        euler->ComputeMSError(field_ms_error,field,field_ms);
+        error->OutputPrimitiveVariables(field_ms_error,filename_mms_error,false,iter,mesh->xcoords,mesh->ycoords,mesh->cellnumber,mesh->Nx,mesh->Ny);
+      }
 
       
       //Printing to TECPLOT

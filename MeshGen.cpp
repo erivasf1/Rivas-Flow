@@ -625,7 +625,7 @@ void MeshGen2D::ReflectGhostCoords(int tag){
 //-----------------------------------------------------------
 void MeshGen2D::ExtendGhostCoords(int tag){
 
-  //algoritm: find x&y diff. between corresponding interior point and boundary and then subtract that diff. to boundary point to find ghost coord
+  //algorithm: find x&y diff. between corresponding interior point and boundary and then subtract that diff. to boundary point to find ghost coord
   double x,x1,x2; //x&y: reflected pt. && x1&y1: 1st interior pt. && x2&y2: 2nd interior pt. && x3&y3: interior pt. used to determine reflected axis
   double y,y1,y2;
   int pt_id1,pt_id2; //pt ids in loop

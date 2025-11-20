@@ -9,6 +9,7 @@
 //Forward Declarations
 class SpaceVariables1D;
 class SpaceVariables2D;
+class Vector;
 class Output;
 
 //EulerBASE Class
@@ -17,6 +18,7 @@ class EulerBASE {
   const double Ru = 8314.0; // J/(kmol*K) -- universal gas constant   
   const double gamma = 1.4; //specific heat ratio
   const double MolMass = 28.96; // kg/kmol
+  const double kappa_scheme = 1.0; //kappa scheme
 
   public:
 
@@ -28,12 +30,12 @@ class EulerBASE {
   vector<array<double,4>>* mms_source; //pointer to source terms
 
   int flux_scheme; //flux scheme id (0=JST, 1=VanLeer, 2=Roe)
-  int flux_accuracy; //flux accuracy id (1=1st order, 2 = 2nd order)
+  double epsilon; //flux accuracy (0=1st order)
 
   int cell_imax; //NUMBER of cells in the i dir!
   int cell_jmax; //NUMBER of cells in the j dir!
 
-  EulerBASE(int &cell_inum,int &cell_jnum,int &scheme,int &accuracy,int &top,int &btm,int &left,int &right,MeshGenBASE* &mesh_ptr,vector<array<double,4>>* &source);
+  EulerBASE(int &cell_inum,int &cell_jnum,int &scheme,double &accuracy,int &top,int &btm,int &left,int &right,MeshGenBASE* &mesh_ptr,vector<array<double,4>>* &source);
 
   double ComputeMachNumber(array<double,4> &sols);
   double ComputeSpeedofSound(array<double,4> &sols); //using perfect gas relationship
@@ -56,8 +58,7 @@ class EulerBASE {
   virtual void ApplySlipWall(vector<array<double,4>>* &field,int side);
 
   //SPATIAL FLUXES
-  array<double,4> ComputeSpatialFlux_UPWIND1stOrder(vector<array<double,4>>* field,int loci,int locj,int nbori,int nborj,array<double,2> &unitvec); //1st order upwind schemes
-  array<double,4> ComputeSpatialFlux_UPWIND2ndOrder(vector<array<double,4>>* field,int loci,int locj,int nbori,int nborj); //2nd order upwind schemes
+  array<double,4> ComputeSpatialFlux_UPWIND(vector<array<double,4>>* field,vector<array<double,4>>* field_stall,int loci,int locj,int nbori,int nborj,int nborloc_i,int nborloc_j,int nbornbor_i,int nbornbor_j,array<double,2> &unitvec,bool resid_stall); //Utilizes both 1st and 2nd order
   //VanLeer
   array<double,4> VanLeerCompute(array<double,4> &field_state,bool sign,double &nx,double &ny);
   double GetC(double M,bool sign); //c value
@@ -68,11 +69,12 @@ class EulerBASE {
   double GetP2Bar(double M,bool sign); //Pressure double bar
   //Roe
   //MUSCL Extrapolation
+  array<Vector,2> MUSCLApprox(vector<array<double,4>>* &field,vector<array<double,4>>* &field_stall,int loci,int locj,int nbori,int nborj,int nborloc_i,int nborloc_j,int nbornbor_i,int nbornbor_j,bool resid_stall);
   //Artificial Dissipation (JST Damping Only)
   //Source Term
   virtual void EvalSourceTerms(SpaceVariables2D* &sols); //source terms for all governing equations
   //Residual
-  virtual void ComputeResidual(vector<array<double,4>>* &resid,vector<array<double,4>>* &field);
+  virtual void ComputeResidual(vector<array<double,4>>* &resid,vector<array<double,4>>* &field,vector<array<double,4>>* &field_stall,bool resid_stall); 
   //MMS
   virtual void ManufacturedPrimitiveSols(vector<array<double,4>>* &field,SpaceVariables2D* &sols);
   virtual void ComputeMSError(vector<array<double,4>>* &field_ms_error,vector<array<double,4>>* &field,vector<array<double,4>>* &field_ms);
@@ -181,15 +183,15 @@ class Euler2D : public EulerBASE {
   public:
   double Mach_bc,T_bc,P_bc,alpha; //free-stream and initial conditions, assigned in constructor
   
-  Euler2D(int case_2d,int scheme,int accuracy,int cell_inum,int cell_jnum,int top,int btm,int left,int right,MeshGenBASE* &mesh_ptr,vector<array<double,4>>* &source); //constructor determines val. of const. parameters (e.g. freestream Mach #, angle-of-attack)
+  Euler2D(int case_2d,int cell_inum,int cell_jnum,int scheme,double accuracy,int top,int btm,int left,int right,MeshGenBASE* &mesh_ptr,vector<array<double,4>>* &source); //constructor determines val. of const. parameters (e.g. freestream Mach #, angle-of-attack)
 
   void InitSolutions(vector<array<double,4>>* &field,int cellnum);
   void SetInitialConditions(vector<array<double,4>>* &field) override;
   void Enforce2DBoundaryConditions(vector<array<double,4>>* &field,bool setup) override;
   void ApplyInflow(int side) override;
-  void ApplySlipWall(vector<array<double,4>>* &field, int side) override;
+  void ApplySlipWall(vector<array<double,4>>* &field, int side) override; //contains unique def. for the inlet due to split top boundary
 
-  void ComputeResidual(vector<array<double,4>>* &resid,vector<array<double,4>>* &field) override;
+  void ComputeResidual(vector<array<double,4>>* &resid,vector<array<double,4>>* &field,vector<array<double,4>>* &field_stall,bool resid_stall) override;
 
   ~Euler2D();
 
@@ -215,7 +217,7 @@ class Euler2DMMS : public EulerBASE {
   double wvel0 = 0.0;
 
   public:
-  Euler2DMMS(int cell_inum,int cell_jnum,int scheme,int accuracy,int top,int btm, int left,int right,MeshGenBASE* &mesh_ptr,vector<array<double,4>>* &source);
+  Euler2DMMS(int cell_inum,int cell_jnum,int scheme,double accuracy,int top,int btm, int left,int right,MeshGenBASE* &mesh_ptr,vector<array<double,4>>* &source);
 
   void SetInitialConditions(vector<array<double,4>>* &field) override; 
 
@@ -230,7 +232,7 @@ class Euler2DMMS : public EulerBASE {
   void EvalSourceTerms(SpaceVariables2D* &sols) override; //source terms for all governing equations
   void Enforce2DBoundaryConditions(vector<array<double,4>>* &field,bool setup) override;
   void ApplyMSInflow(int side);
-  void ComputeResidual(vector<array<double,4>>* &resid,vector<array<double,4>>* &field) override;
+  void ComputeResidual(vector<array<double,4>>* &resid,vector<array<double,4>>* &field,vector<array<double,4>>* &field_stall,bool resid_stall) override;
   ~Euler2DMMS();
 
 };

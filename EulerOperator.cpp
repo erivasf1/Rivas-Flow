@@ -5,8 +5,8 @@
 // EULERBASE DEFINITIONS
 
 //-----------------------------------------------------------
-EulerBASE::EulerBASE(int &cell_inum,int &cell_jnum,int &scheme,int &accuracy,int &top,int &btm,int &left,int &right,MeshGenBASE* &mesh_ptr,vector<array<double,4>>* &source)
-  : cell_imax(cell_inum), cell_jmax(cell_jnum),flux_scheme(scheme),flux_accuracy(accuracy),top_cond(top),btm_cond(btm),left_cond(left), right_cond(right), mesh(mesh_ptr), mms_source(source) {}
+EulerBASE::EulerBASE(int &cell_inum,int &cell_jnum,int &scheme,double &accuracy,int &top,int &btm,int &left,int &right,MeshGenBASE* &mesh_ptr,vector<array<double,4>>* &source)
+  : cell_imax(cell_inum), cell_jmax(cell_jnum),flux_scheme(scheme),epsilon(accuracy),top_cond(top),btm_cond(btm),left_cond(left), right_cond(right), mesh(mesh_ptr), mms_source(source) {}
 
 //-----------------------------------------------------------
 array<double,4> EulerBASE::ComputeConserved(vector<array<double,4>>* &field,int &i,int &j){
@@ -206,9 +206,9 @@ void EulerBASE::ApplySlipWall(vector<array<double,4>>* &field,int side){
     
       //extrapolating pressure
       p_nbor1 = fieldij(field,n,mesh->cell_jmax-1,mesh->cell_imax)[3]; 
-      if (flux_accuracy == 1)
+      if (epsilon == 0)
         mesh->top_cells[n][3] = p_nbor1;
-      else if (flux_accuracy == 2){
+      else if (epsilon > 0){
         p_nbor2 = fieldij(field,n,mesh->cell_jmax-2,mesh->cell_imax)[3]; 
         mesh->top_cells[n][3] = p_nbor1 - 0.5*(p_nbor2-p_nbor1);
       }
@@ -235,9 +235,9 @@ void EulerBASE::ApplySlipWall(vector<array<double,4>>* &field,int side){
     
       //extrapolating pressure
       p_nbor1 = fieldij(field,n,0,mesh->cell_imax)[3]; 
-      if (flux_accuracy == 1) //1st order
+      if (epsilon == 0) //1st order
         mesh->btm_cells[n][3] = p_nbor1;
-      else if (flux_accuracy == 2){ //2nd order
+      else if (epsilon > 0){ //2nd order
         p_nbor2 = fieldij(field,n,1,mesh->cell_imax)[3]; 
         mesh->btm_cells[n][3] = p_nbor1 - 0.5*(p_nbor2-p_nbor1);
       }
@@ -263,9 +263,9 @@ void EulerBASE::ApplySlipWall(vector<array<double,4>>* &field,int side){
     
       //extrapolating pressure
       p_nbor1 = fieldij(field,0,n,mesh->cell_imax)[3]; 
-      if (flux_accuracy == 1) //1st order
+      if (epsilon == 0) //1st order
         mesh->left_cells[n][3] = p_nbor1;
-      else if (flux_accuracy == 2){ //2nd order
+      else if (epsilon > 0){ //2nd order
         p_nbor2 = fieldij(field,1,n,mesh->cell_imax)[3]; 
         mesh->left_cells[n][3] = p_nbor1 - 0.5*(p_nbor2-p_nbor1);
       }
@@ -291,9 +291,9 @@ void EulerBASE::ApplySlipWall(vector<array<double,4>>* &field,int side){
     
       //extrapolating pressure
       p_nbor1 = fieldij(field,mesh->cell_imax-1,n,mesh->cell_imax)[3]; 
-      if (flux_accuracy == 1) //1st order
+      if (epsilon == 0) //1st order
         mesh->right_cells[n][3] = p_nbor1;
-      else if (flux_accuracy == 2){ //2nd order
+      else if (epsilon > 0){ //2nd order
         p_nbor2 = fieldij(field,mesh->cell_imax-2,n,mesh->cell_imax)[3]; 
         mesh->right_cells[n][3] = p_nbor1 - 0.5*(p_nbor2-p_nbor1);
       }
@@ -313,15 +313,84 @@ void EulerBASE::ApplySlipWall(vector<array<double,4>>* &field,int side){
   return;
 }
 //-----------------------------------------------------------
-array<double,4> EulerBASE::ComputeSpatialFlux_UPWIND1stOrder(vector<array<double,4>>* field,int loci,int locj,int nbori,int nborj,array<double,2> &unitvec){
+array<double,4> EulerBASE::ComputeSpatialFlux_UPWIND(vector<array<double,4>>* field,vector<array<double,4>>* field_stall,int loci,int locj,int nbori,int nborj,int nborloc_i,int nborloc_j,int nbornbor_i,int nbornbor_j,array<double,2> &unitvec,bool resid_stall){
+
+  //! CHOOSING LEFT AND RIGHT STATES
+  array<double,4> left_state, right_state;
+  Vector l_state, r_state;
+
+  if (epsilon == 0.0){ //1st order
+    left_state = fieldij(field,loci,locj,cell_imax);
+
+    //checking if nbor is accessing ghost cells
+    if ( nbori<0 || nbori>=cell_imax || nborj<0 || nborj>=cell_jmax ){
+
+      if (nbori<0) //using 1st layer of left ghost cells (-i case)
+        right_state = mesh->left_cells[nborj];
+     
+      else if (nbori>=cell_imax) //using 1st layer of right ghost cells (+i case)
+        right_state = mesh->right_cells[nborj];
+    
+      else if (nborj<0) //using 1st layer of btm ghost cells (-j case)
+        right_state = mesh->btm_cells[loci]; //j set to 0 for 1st layer
+    
+      else  //using 1st layer of top ghost cells (+j case)
+        right_state = mesh->top_cells[loci];
+    }
+
+    else  //normal case (nbor does not use any ghost cells)
+      right_state = fieldij(field,nbori,nborj,cell_imax);
+  }
+
+  else { //2nd order -- MUSCL extrapolation
+    array<Vector,2> field_states = MUSCLApprox(field,field_stall,loci,locj,nbori,nborj,nborloc_i,nborloc_j,nbornbor_i,nbornbor_j,resid_stall);
+    l_state = field_states[0];
+    r_state = field_states[1];
+
+    for (int i=0;i<4;i++){ //TMP
+      left_state[i] = l_state[i];
+      right_state[i] = r_state[i];
+    }
+  }
+
+  //! EVALUATING FLUX
+  array<double,4> flux; //total flux
+  array<double,4> flux_rtstate; //right state flux (for upwinding in +c wave speed)
+  array<double,4> flux_ltstate; //left state flux (for upwinding in -c wave speed)
+
+  if (flux_scheme == 1){ //Van Leer Method
+    flux_rtstate = VanLeerCompute(right_state,false,unitvec[0],unitvec[1]); //false for negative c case
+    flux_ltstate = VanLeerCompute(left_state,true,unitvec[0],unitvec[1]); //true for positive c case
+   
+  for (int n=0;n<4;n++) //summing up left and right state fluxes
+    flux[n] = flux_rtstate[n] + flux_ltstate[n];
+
+  }
+
+  else if (flux_scheme == 2) //Roe's Method
+    flux = flux_ltstate; //TMP
+
+  else { //error handling
+    cerr<<"Error: Unknown flux specification!"<<endl;
+  }
+
+  return flux;
+}
+
+//-----------------------------------------------------------
+array<Vector,2> EulerBASE::MUSCLApprox(vector<array<double,4>>* &field,vector<array<double,4>>* &field_stall,int loci,int locj,int nbori,int nborj,int nborloc_i,int nborloc_j,int nbornbor_i,int nbornbor_j,bool resid_stall){
+
+  //NOTE: From lecture notes Section 7, pg. 8
+  // rightnbor_vec: u_i+2 & leftloc_vec: u_i-1
+  Vector loc_vec,nbor_vec,nbornbor_vec,nborloc_vec;
+  array<double,4> loc_state = fieldij(field,loci,locj,cell_imax);
+  array<double,4> nbor_state,nborloc_state,nbornbor_state;
+  array<Vector,2> state;
+
+  //checking if any indices of stencil access ghost cells
   
-  //NOTE: assumes loc is left/btm state and nbor is right/top state (for 1st order accuracy)
-  array<double,4> loc_state,nbor_state;
-  loc_state = fieldij(field,loci,locj,cell_imax);
-
-  //checking if nbor is accessing ghost cells
+  //!< neighbor to loc in (+) outward normal direction
   if ( nbori<0 || nbori>=cell_imax || nborj<0 || nborj>=cell_jmax ){
-
     if (nbori<0) //using 1st layer of left ghost cells (-i case)
       nbor_state = mesh->left_cells[nborj];
      
@@ -329,46 +398,56 @@ array<double,4> EulerBASE::ComputeSpatialFlux_UPWIND1stOrder(vector<array<double
       nbor_state = mesh->right_cells[nborj];
     
     else if (nborj<0) //using 1st layer of btm ghost cells (-j case)
-      nbor_state = mesh->btm_cells[loci]; //j set to 0 for 1st layer
+      nbor_state = mesh->btm_cells[nbori]; //j set to 0 for 1st layer
     
     else  //using 1st layer of top ghost cells (+j case)
       nbor_state = mesh->top_cells[loci];
-    
   }
 
-  else  //normal case (nbor does not use any ghost cells)
-    nbor_state = fieldij(field,nbori,nborj,cell_imax);
+    //!< neighbor to loc in (-) outward normal direction 
+  if ( nborloc_i < 0 || nborloc_i >= cell_imax || nborloc_j < 0 || nborloc_j >= cell_jmax ) {
+    if (nborloc_i<0) //using 1st layer of left ghost cells (-i case)
+      nborloc_state = mesh->left_cells[nborloc_j];
+     
+    else if (nborloc_i>=cell_imax) //using 1st layer of right ghost cells (+i case)
+      nborloc_state = mesh->right_cells[nborloc_j];
+    
+    else if (nborloc_j<0) //using 1st layer of btm ghost cells (-j case)
+      nborloc_state = mesh->btm_cells[nborloc_i]; //j set to 0 for 1st layer
+    
+    else  //using 1st layer of top ghost cells (+j case)
+      nborloc_state = mesh->top_cells[nborloc_i];
+  }
+
+    //!< neighbor to neighbor in (+) outward normal direction 
+  if ( nbornbor_i < 0 || nbornbor_i >= cell_imax || nbornbor_j < 0 || nbornbor_j >= cell_jmax ){
+    if (nbornbor_i<0) //using 2nd layer of left ghost cells (-i case)
+      nbornbor_state = mesh->left_cells[nbornbor_j+cell_jmax];
+     
+    else if (nbornbor_i>=cell_imax) //using 2nd layer of right ghost cells (+i case)
+      nbornbor_state = mesh->right_cells[nbornbor_j+cell_jmax];
+    
+    else if (nbornbor_j<0) //using 2nd layer of btm ghost cells (-j case)
+      nbornbor_state = mesh->btm_cells[nbornbor_i+cell_imax]; //j set to 0 for 1st layer
+    
+    else  //using 2nd layer of top ghost cells (+j case)
+      nbornbor_state = mesh->top_cells[nbornbor_i+cell_imax];
+  }
+
+  //TMP
+  for (int i=0;i<4;i++){
+    loc_vec[i] = loc_state[i]; nbor_vec[i] = nbor_state[i];
+    nborloc_vec[i] = nborloc_state[i]; nbornbor_vec[i] = nbornbor_state[i];
+  }
   
 
-  array<double,4> flux; //total flux
+  // extrapolating states
+  state[0] = loc_vec + (epsilon/4.0) * ( (1.0-kappa_scheme)*(loc_vec-nborloc_vec) + (1.0+kappa_scheme)*(nbor_vec-loc_vec) ); //left state
+  state[1] = loc_vec - (epsilon/4.0) * ( (1.0+kappa_scheme)*(nbor_vec-loc_vec) + (1.0-kappa_scheme)*(nbornbor_vec-nbor_vec) ); //right state
 
-
-  if (flux_scheme == 1){ //Van Leer Method
-    array<double,4> flux_rtstate = VanLeerCompute(nbor_state,false,unitvec[0],unitvec[1]); //false for negative outward c case
-    array<double,4> flux_ltstate = VanLeerCompute(loc_state,true,unitvec[0],unitvec[1]); //true for positive outward c case
-   
-    for (int n=0;n<4;n++) //summing up left and right state fluxes
-      flux[n] = flux_rtstate[n] + flux_ltstate[n];
-
-
-  }
-  else if (flux_scheme == 2){ //Roe's Method
-    //flux = ComputeRoeFlux(left_state,right_state);
-  }
-  else { //error handling
-    cerr<<"Error: Unknown flux specification!"<<endl;
-  }
-
-  return flux;
+  return state;
 
 }
-
-//-----------------------------------------------------------
-array<double,4> EulerBASE::ComputeSpatialFlux_UPWIND2ndOrder([[maybe_unused]]vector<array<double,4>>* field,[[maybe_unused]]int loci,[[maybe_unused]]int locj,[[maybe_unused]]int nbori,[[maybe_unused]]int nborj){
-  array<double,4> res; 
-  return res;
-}
-
 //-----------------------------------------------------------
 double EulerBASE::ComputeMachNumber(array<double,4> &sols){
   double M;
@@ -543,11 +622,11 @@ array<double,4> EulerBASE::VanLeerCompute(array<double,4> &field_state,bool sign
 
 
 }
+
 //-----------------------------------------------------------
-void EulerBASE::ComputeResidual(vector<array<double,4>>* &,vector<array<double,4>>* &){
+void EulerBASE::ComputeResidual(vector<array<double,4>>* &,vector<array<double,4>>* &,vector<array<double,4>>* &,bool ){
   return;
 }
-
 //-----------------------------------------------------------
 EulerBASE::~EulerBASE(){}
 //-----------------------------------------------------------
@@ -1479,7 +1558,7 @@ Euler1D::~Euler1D(){}
 
 // EULER2D DEFINITIONS
 //-----------------------------------------------------------
-Euler2D::Euler2D(int case_2d,int cell_inum,int cell_jnum,int scheme,int accuracy,int top,int btm,int left,int right,MeshGenBASE* &mesh_ptr,vector<array<double,4>>* &source) : scenario_2d(case_2d), EulerBASE(cell_inum,cell_jnum,scheme,accuracy,top,btm,left,right,mesh_ptr,source){
+Euler2D::Euler2D(int case_2d,int cell_inum,int cell_jnum,int scheme,double accuracy,int top,int btm,int left,int right,MeshGenBASE* &mesh_ptr,vector<array<double,4>>* &source) : scenario_2d(case_2d), EulerBASE(cell_inum,cell_jnum,scheme,accuracy,top,btm,left,right,mesh_ptr,source){
   //Case assignments
   if (case_2d == 0){ //30 deg inlet case
     Mach_bc = 4.0;
@@ -1713,9 +1792,9 @@ void Euler2D::ApplySlipWall(vector<array<double,4>>* &field,int side){
     
       //extrapolating pressure
       p_nbor1 = fieldij(field,n,mesh->cell_jmax-1,mesh->cell_imax)[3]; 
-      if (flux_accuracy == 1)
+      if (epsilon == 0)
         mesh->top_cells[n][3] = p_nbor1;
-      else if (flux_accuracy == 2){
+      else if (epsilon > 0){
         p_nbor2 = fieldij(field,n,mesh->cell_jmax-2,mesh->cell_imax)[3]; 
         mesh->top_cells[n][3] = p_nbor1 - 0.5*(p_nbor2-p_nbor1);
       }
@@ -1742,9 +1821,9 @@ void Euler2D::ApplySlipWall(vector<array<double,4>>* &field,int side){
     
       //extrapolating pressure
       p_nbor1 = fieldij(field,n,0,mesh->cell_imax)[3]; 
-      if (flux_accuracy == 1) //1st order
+      if (epsilon == 0) //1st order
         mesh->btm_cells[n][3] = p_nbor1;
-      else if (flux_accuracy == 2){ //2nd order
+      else if (epsilon > 0){ //2nd order
         p_nbor2 = fieldij(field,n,1,mesh->cell_imax)[3]; 
         mesh->btm_cells[n][3] = p_nbor1 - 0.5*(p_nbor2-p_nbor1);
       }
@@ -1770,9 +1849,9 @@ void Euler2D::ApplySlipWall(vector<array<double,4>>* &field,int side){
     
       //extrapolating pressure
       p_nbor1 = fieldij(field,0,n,mesh->cell_imax)[3]; 
-      if (flux_accuracy == 1) //1st order
+      if (epsilon == 0) //1st order
         mesh->left_cells[n][3] = p_nbor1;
-      else if (flux_accuracy == 2){ //2nd order
+      else if (epsilon > 0){ //2nd order
         p_nbor2 = fieldij(field,1,n,mesh->cell_imax)[3]; 
         mesh->left_cells[n][3] = p_nbor1 - 0.5*(p_nbor2-p_nbor1);
       }
@@ -1798,9 +1877,9 @@ void Euler2D::ApplySlipWall(vector<array<double,4>>* &field,int side){
     
       //extrapolating pressure
       p_nbor1 = fieldij(field,mesh->cell_imax-1,n,mesh->cell_imax)[3]; 
-      if (flux_accuracy == 1) //1st order
+      if (epsilon == 0) //1st order
         mesh->right_cells[n][3] = p_nbor1;
-      else if (flux_accuracy == 2){ //2nd order
+      else if (epsilon > 0){ //2nd order
         p_nbor2 = fieldij(field,mesh->cell_imax-2,n,mesh->cell_imax)[3]; 
         mesh->right_cells[n][3] = p_nbor1 - 0.5*(p_nbor2-p_nbor1);
       }
@@ -1825,7 +1904,7 @@ void Euler2D::ApplySlipWall(vector<array<double,4>>* &field,int side){
   return;
 }
 //-----------------------------------------------------------
-void Euler2D::ComputeResidual(vector<array<double,4>>* &resid,vector<array<double,4>>* &field){
+void Euler2D::ComputeResidual(vector<array<double,4>>* &resid,vector<array<double,4>>* &field,vector<array<double,4>>* &field_stall,bool resid_stall){
 
   array<double,4> flux_right,flux_left,flux_top,flux_btm;
   double area_right,area_left,area_btm,area_top;
@@ -1836,31 +1915,25 @@ void Euler2D::ComputeResidual(vector<array<double,4>>* &resid,vector<array<doubl
   for (int j=0;j<cell_jmax;j++){
     for (int i=0;i<cell_imax;i++){
   
-      //TODO:fluxes evaluation
+      //fluxes evaluation
       if (flux_scheme==0){ //JST Damping
       }
-      else if ((flux_scheme!=0) && (flux_accuracy==1)){ //1st order Upwind Schemes
+      else if (flux_scheme!=0){ //Upwind Schemes (Van Leer & Roe)
         //+i dir. flux ("right")
         unitvec = mesh->ComputeOutwardUnitVector(i,j,3);
-        flux_right = ComputeSpatialFlux_UPWIND1stOrder(field,i,j,i+1,j,unitvec);
+        flux_right = ComputeSpatialFlux_UPWIND(field,field_stall,i,j,i+1,j,i-1,j,i+2,j,unitvec,resid_stall);
 
         //-i dir. flux ("left")
         unitvec = mesh->ComputeOutwardUnitVector(i,j,2);
-        flux_left = ComputeSpatialFlux_UPWIND1stOrder(field,i-1,j,i,j,unitvec);
+        flux_left = ComputeSpatialFlux_UPWIND(field,field_stall,i,j,i-1,j,i+1,j,i-2,j,unitvec,resid_stall);
 
         //+j dir. flux ("top")
         unitvec = mesh->ComputeOutwardUnitVector(i,j,0);
-        flux_top = ComputeSpatialFlux_UPWIND1stOrder(field,i,j,i,j+1,unitvec);
+        flux_top = ComputeSpatialFlux_UPWIND(field,field_stall,i,j,i,j+1,i,j-1,i,j+2,unitvec,resid_stall);
 
         //-j dir. flux ("btm")
         unitvec = mesh->ComputeOutwardUnitVector(i,j,1);
-        flux_btm = ComputeSpatialFlux_UPWIND1stOrder(field,i,j-1,i,j,unitvec);
-      }
-      else if ((flux_scheme!=0) && (flux_accuracy==2)){ //2nd ordr Upwind Schemes w/ MUSCL extrapolation
-        flux_right = ComputeSpatialFlux_UPWIND2ndOrder(field,i,j,i+1,j);
-        flux_left = ComputeSpatialFlux_UPWIND2ndOrder(field,i-1,j,i,j);
-        flux_top = ComputeSpatialFlux_UPWIND2ndOrder(field,i,j,i,j+1);
-        flux_btm = ComputeSpatialFlux_UPWIND2ndOrder(field,i,j-1,i,j);
+        flux_btm = ComputeSpatialFlux_UPWIND(field,field_stall,i,j,i,j-1,i,j+1,i,j-2,unitvec,resid_stall);
       }
       else {} //TODO:error handling
 
@@ -1872,7 +1945,7 @@ void Euler2D::ComputeResidual(vector<array<double,4>>* &resid,vector<array<doubl
 
       //residual calc.
       for (int n=0;n<4;n++)
-        res[n] = (flux_right[n]*area_right+flux_left[n]*area_left) + (flux_top[n]*area_top - flux_btm[n]*area_btm);
+        res[n] = (flux_right[n]*area_right+flux_left[n]*area_left) + (flux_top[n]*area_top + flux_btm[n]*area_btm);
 
       fieldij(resid,i,j,cell_imax) = res;
     }
@@ -1885,7 +1958,7 @@ Euler2D::~Euler2D(){}
 
 // EULER2DMMS DEFINITIONS
 //-----------------------------------------------------------
-Euler2DMMS::Euler2DMMS(int cell_inum,int cell_jnum,int scheme,int accuracy,int top,int btm, int left,int right,MeshGenBASE* &mesh_ptr,vector<array<double,4>>* &source) : EulerBASE(cell_inum,cell_jnum,scheme,accuracy,top,btm,left,right,mesh_ptr,source){}
+Euler2DMMS::Euler2DMMS(int cell_inum,int cell_jnum,int scheme,double accuracy,int top,int btm, int left,int right,MeshGenBASE* &mesh_ptr,vector<array<double,4>>* &source) : EulerBASE(cell_inum,cell_jnum,scheme,accuracy,top,btm,left,right,mesh_ptr,source){}
 //-----------------------------------------------------------
 void Euler2DMMS::SetInitialConditions(vector<array<double,4>>* &field){
 
@@ -2320,7 +2393,7 @@ void Euler2DMMS::ApplyMSInflow(int side){
   double x,y;
   //top ghost cells
   if (side==0){
-    if ((int)mesh->top_cells.size()!=(int)mesh->btm_cellcenter_coords.size())
+    if ((int)mesh->top_cells.size()!=(int)mesh->top_cellcenter_coords.size())
       cerr<<"ERROR:Top ghost cells & cell centers do not equal in size!"<<endl;
     for (int m=0;m<(int)mesh->top_cells.size();m++){ 
       x = mesh->top_cellcenter_coords[m][0];
@@ -2359,8 +2432,8 @@ void Euler2DMMS::ApplyMSInflow(int side){
   }
   //left ghost cells
   else if (side==2){
-    if ((int)mesh->left_cells.size()!=(int)mesh->btm_cellcenter_coords.size())
-      cerr<<"ERROR:Left ghost cells & cell centers do not equal in size!"<<endl;
+    if ((int)mesh->left_cells.size()!=(int)mesh->left_cellcenter_coords.size())
+      cerr<<"ERROR:left ghost cells & cell centers do not equal in size!"<<endl;
     for (int m=0;m<(int)mesh->left_cells.size();m++){ 
       x = mesh->left_cellcenter_coords[m][0];
       y = mesh->left_cellcenter_coords[m][1];
@@ -2378,8 +2451,8 @@ void Euler2DMMS::ApplyMSInflow(int side){
   }
   //right ghost cells
   else if (side==3){
-    if ((int)mesh->right_cells.size()!=(int)mesh->btm_cellcenter_coords.size())
-      cerr<<"ERROR:Btm ghost cells & cell centers do not equal in size!"<<endl;
+    if ((int)mesh->right_cells.size()!=(int)mesh->right_cellcenter_coords.size())
+      cerr<<"ERROR:right ghost cells & cell centers do not equal in size!"<<endl;
     for (int m=0;m<(int)mesh->right_cells.size();m++){ 
       x = mesh->right_cellcenter_coords[m][0];
       y = mesh->right_cellcenter_coords[m][1];
@@ -2405,7 +2478,7 @@ void Euler2DMMS::ApplyMSInflow(int side){
 }
 
 //-----------------------------------------------------------
-void Euler2DMMS::ComputeResidual(vector<array<double,4>>* &resid,vector<array<double,4>>* &field){
+void Euler2DMMS::ComputeResidual(vector<array<double,4>>* &resid,vector<array<double,4>>* &field,vector<array<double,4>>* &field_stall,bool resid_stall){
 
 
   array<double,4> flux_right,flux_left,flux_top,flux_btm;
@@ -2420,33 +2493,28 @@ void Euler2DMMS::ComputeResidual(vector<array<double,4>>* &resid,vector<array<do
 
   for (int j=0;j<cell_jmax;j++){
     for (int i=0;i<cell_imax;i++){
+
       //fluxes evaluation
       if (flux_scheme==0){ //JST Damping
       }
-      else if ((flux_scheme!=0) && (flux_accuracy==1)){ //1st order Upwind Schemes
+      else if (flux_scheme!=0) { //Upwind Schemes (Van Leer & Roe)
         //+i dir. flux ("right")
         unitvec = mesh->ComputeOutwardUnitVector(i,j,3);
-        flux_right = ComputeSpatialFlux_UPWIND1stOrder(field,i,j,i+1,j,unitvec);
+        flux_right = ComputeSpatialFlux_UPWIND(field,field_stall,i,j,i+1,j,i-1,j,i+2,j,unitvec,resid_stall);
 
         //-i dir. flux ("left")
         unitvec = mesh->ComputeOutwardUnitVector(i,j,2);
-        flux_left = ComputeSpatialFlux_UPWIND1stOrder(field,i,j,i-1,j,unitvec);
+        flux_left = ComputeSpatialFlux_UPWIND(field,field_stall,i,j,i-1,j,i+1,j,i-2,j,unitvec,resid_stall);
 
         //+j dir. flux ("top")
-        unitvec = mesh->ComputeOutwardUnitVector(i,j,0);
-        flux_top = ComputeSpatialFlux_UPWIND1stOrder(field,i,j,i,j+1,unitvec);
+        unitvec = mesh->ComputeOutwardUnitVector(i,j,0); 
+        flux_top = ComputeSpatialFlux_UPWIND(field,field_stall,i,j,i,j+1,i,j-1,i,j+2,unitvec,resid_stall);
 
         //-j dir. flux ("btm")
         unitvec = mesh->ComputeOutwardUnitVector(i,j,1);
-        flux_btm = ComputeSpatialFlux_UPWIND1stOrder(field,i,j,i,j-1,unitvec);
+        flux_btm = ComputeSpatialFlux_UPWIND(field,field_stall,i,j,i,j-1,i,j+1,i,j-2,unitvec,resid_stall);
       }
 
-      else if ((flux_scheme!=0) && (flux_accuracy==2)){ //2nd ordr Upwind Schemes w/ MUSCL extrapolation
-        flux_right = ComputeSpatialFlux_UPWIND2ndOrder(field,i,j,i+1,j);
-        flux_left = ComputeSpatialFlux_UPWIND2ndOrder(field,i-1,j,i,j);
-        flux_top = ComputeSpatialFlux_UPWIND2ndOrder(field,i,j,i,j+1);
-        flux_btm = ComputeSpatialFlux_UPWIND2ndOrder(field,i,j-1,i,j);
-      }
       else {} //TODO:error handling
 
       //volume evaluation (for source term) + source term retrievel 

@@ -56,4 +56,36 @@ class SpaceVariables2D { //TODO: Will replace SpaceVariables1D
 
 };
 
+//Vector class for 2D Problems
+class Vector {
+
+  double v[4];
+
+  public:
+  Vector() {v[0] = 0.0;v[1] = 0.0;v[2] = 0.0;v[3] = 0.0;}
+  Vector(double d1,double d2,double d3,double d4) {v[0] = d1; v[1] = d2; v[2] = d3; v[3] = d4;}
+
+  Vector operator+(const Vector& vec2) {Vector res; for(int i=0;i<4;i++) res.v[i] = v[i] + vec2.v[i]; return res;}
+
+  Vector operator-(const Vector& vec2) {Vector res; for(int i=0;i<4;i++) res.v[i] = v[i] - vec2.v[i]; return res;}
+
+  Vector operator*(const Vector& vec2) {Vector res; for(int i=0;i<4;i++) res.v[i] = v[i] * vec2.v[i]; return res;}
+
+  Vector operator*(double& val)const {Vector res; for(int i=0;i<4;i++) res.v[i] = v[i] * val; return res;}
+
+  Vector operator/(const Vector& vec2) {Vector res; for(int i=0;i<4;i++) res.v[i] = v[i] / vec2.v[i]; return res;}
+
+  double operator[](int i) const {return v[i];}
+  double &operator[](int i) {return v[i];}
+
+  ~Vector(){};
+
+};
+
+// scalar * vector (non-member fcn.) -- to allow "scalar * Vector"
+inline Vector operator*(double val, const Vector& vec) {
+    return vec * val;
+}
+
+
 #endif
