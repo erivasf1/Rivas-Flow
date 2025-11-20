@@ -18,7 +18,7 @@ class EulerBASE {
   const double Ru = 8314.0; // J/(kmol*K) -- universal gas constant   
   const double gamma = 1.4; //specific heat ratio
   const double MolMass = 28.96; // kg/kmol
-  const double kappa_scheme = 1.0; //kappa scheme
+  const double kappa_scheme = 0.0; //kappa scheme
 
   public:
 
