@@ -67,15 +67,15 @@ int main() {
   [[maybe_unused]]int cellnum = 100; //recommending an even number for cell face at the throat of nozzle (NOTE: will get reassigned val. if mesh is provided)
 
   // Temporal Specifications
-  const int iter_max = 1e4;
+  const int iter_max = 5e1;
   int iterout = 1; //number of iterations per solution output
-  const double CFL = 0.7; //CFL number (must <= 1 for Euler Explicit integration)
+  const double CFL = 0.5; //CFL number (must <= 1 for Euler Explicit integration)
   //const double CFL = 1e-2; //CFL number (must <= 1 for Euler Explicit integration)
   bool timestep{false}; //true = local time stepping; false = global time stepping
 
   // Flux Specifications
-  int flux_scheme{1}; //0=JST, 1=Van Leer, 2 = Roe (this will eventually be used!)
-  double epsilon = 1.0; //0 for 1st order and 1 for 2nd order
+  int flux_scheme{2}; //0=JST, 1=Van Leer, 2 = Roe (this will eventually be used!)
+  double epsilon = 0.0; //0 for 1st order and 1 for 2nd order
   [[maybe_unused]] const double ramp_stop = 1.0e-7; //stopping criteria for ramping fcn. of transitioning from 1st to 2nd
   //double epsilon = 1.0; //ramping value used to transition from 1st to 2nd order
   bool resid_stall{false};//for detecting if residuals have stalled

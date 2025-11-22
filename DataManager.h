@@ -73,6 +73,8 @@ class Vector {
 
   Vector operator*(double& val)const {Vector res; for(int i=0;i<4;i++) res.v[i] = v[i] * val; return res;}
 
+  Vector operator*=(double val)const {Vector res;for (int i=0;i<4;i++) res.v[i] *= val; return res;}
+
   Vector operator/(const Vector& vec2) {Vector res; for(int i=0;i<4;i++) res.v[i] = v[i] / vec2.v[i]; return res;}
 
   double operator[](int i) const {return v[i];}

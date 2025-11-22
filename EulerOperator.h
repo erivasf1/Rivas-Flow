@@ -68,6 +68,12 @@ class EulerBASE {
   double GetD(double M,bool sign); //D value
   double GetP2Bar(double M,bool sign); //Pressure double bar
   //Roe
+  array<double,4> ComputeRoeFlux(array<double,4> &field_ltstate,array<double,4> &field_rtstate,double nx,double ny); //roe-avg eigenvalues (4th step)
+  array<double,4> ComputeRoeWaveAmps(array<double,5> &roe_vars,array<double,4> &field_ltstate,array<double,4> &field_rtstate,double nx,double ny); //rho-avg eigenvalues (3rd step)
+  array<double,4> ComputeRoeEigenVals(array<double,5> &roe_vars,double nx,double ny); //roe-avg eigenvalues (2nd step)
+  array<array<double,4>,4> ComputeRoeEigenVecs(array<double,5> &roe_vars,double nx,double ny); //rho-avg eigenvectors (2nd step)
+  array<double,5> ComputeRoeAvgVars(array<double,4> &field_ltstate,array<double,4> &field_rtstate); //roe-avg. vars (1st step) - output:[rhobar,ubar,vbar,htbar,abar]
+  array<double,4> ComputeFlux_CELL(array<double,4> &field_state,double nx,double ny); //computes flux vector of given primitive vars. vector in the outward normal dir.
   //MUSCL Extrapolation
   array<Vector,2> MUSCLApprox(vector<array<double,4>>* &field,vector<array<double,4>>* &field_stall,int loci,int locj,int nbori,int nborj,int nborloc_i,int nborloc_j,int nbornbor_i,int nbornbor_j,bool resid_stall);
   //Artificial Dissipation (JST Damping Only)
