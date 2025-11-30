@@ -365,12 +365,9 @@ array<double,4> EulerBASE::ComputeSpatialFlux_UPWIND(vector<array<double,4>>* fi
    
   for (int n=0;n<4;n++) //summing up left and right state fluxes
     flux[n] = flux_rtstate[n] + flux_ltstate[n];
-
-    //array<double,4> flux_loc = ComputeFlux_CELL(left_state,unitvec[0],unitvec[1]);
-    //array<double,4> flux_nbor = ComputeFlux_CELL(right_state,unitvec[0],unitvec[1]);
   }
 
-  else if (flux_scheme == 2) //Roe's Method -- TODO: almost there, but there is a small bug
+  else if (flux_scheme == 2) //Roe's Method 
     flux = ComputeRoeFlux(left_state,right_state,unitvec[0],unitvec[1]);
 
   else { //error handling
@@ -747,10 +744,10 @@ array<double,4> EulerBASE::ComputeFlux_CELL(array<double,4> &field_state,double 
   flux[0] = field_state_normal[0] * ( field_state_normal[1] + field_state_normal[2] ); //rho*u*nx + rho*v*ny
 
   //X-Momentum Flux
-  flux[1] = field_state_normal[0] * (pow(field_state_normal[1],2.0) + field_state_normal[1]*field_state_normal[2]) + field_state_normal[3]; //rho*u^2 + rho*u*v + P
+  flux[1] = field_state_normal[0] * (pow(field_state_normal[1],2.0) + field_state_normal[1]*field_state_normal[2]) - field_state_normal[3]; //rho*u^2 + rho*u*v - P
 
   //Y-Momentum Flux
-  flux[2] = field_state_normal[0] * (pow(field_state_normal[2],2.0) + field_state_normal[1]*field_state_normal[2]) + field_state_normal[3]; //rho*v^2 rho*u*v + P
+  flux[2] = field_state_normal[0] * (pow(field_state_normal[2],2.0) + field_state_normal[1]*field_state_normal[2]) - field_state_normal[3]; //rho*v^2 rho*u*v - P
 
   //Energy Flux
   /*
@@ -792,22 +789,10 @@ array<double,4> EulerBASE::ComputeRoeFlux(array<double,4> &field_ltstate,array<d
     roe_sum += abs(eigenvals[3])*wave_amps[3]*eigenvecs[3][i];
 
     ans[i] = 0.5*(flux_ltstate[i] + flux_rtstate[i]) - 0.5*roe_sum;
+    //ans[i] = 0.5*(flux_ltstate[i] + flux_rtstate[i]);
  
   }
   
-
-  /*
-  array<array<double,4>,4> j_vec;
-  array<double,4> shock_waves;
-  for (int j=0;j<4;j++) //computing j vectors
-    for (int n=0;n<4;n++)
-      j_vec[j][n] = abs(eigenvals[j])*wave_amps[j]*eigenvecs[j][n];
-  for (int n=0;n<4;n++)
-    shock_waves[n] = j_vec[0][n] + j_vec[1][n] + j_vec[2][n] + j_vec[3][n];
-  
-  for (int n=0;n<4;n++)
-    ans[n] = 0.5*(flux_ltstate[n]+flux_rtstate[n]) - 0.5*shock_waves[n];
-  */
 
   return ans;
 

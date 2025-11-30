@@ -36,7 +36,7 @@ int main() {
 
   //! INITIALIZATION
   // Scenario
-  int scenario = 4; //1 = 1D, 2 = 2D, 3 = 2D MMS, 4 = TRUE CARTESIAN of MMS
+  int scenario = 3; //1 = 1D, 2 = 2D, 3 = 2D MMS, 4 = TRUE CARTESIAN of MMS
   CASE_2D case_2d = INLET;
 
   // Constants for 1D case or True Cartesian 2D MMS case
@@ -62,20 +62,20 @@ int main() {
 
   // Mesh Specifications
   //[[maybe_unused]]const char* meshfile = "Grids/InletGrids/Inlet.53x17.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
-  //[[maybe_unused]]const char* meshfile = "Grids/CurvilinearGrids/curv2d257.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
-  [[maybe_unused]]const char* meshfile = NULL;
+  [[maybe_unused]]const char* meshfile = "Grids/CurvilinearGrids/curv2d9.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
+  //[[maybe_unused]]const char* meshfile = NULL;
   [[maybe_unused]]int cellnum = 100; //recommending an even number for cell face at the throat of nozzle (NOTE: will get reassigned val. if mesh is provided)
 
   // Temporal Specifications
-  const int iter_max = 5e1;
-  int iterout = 1; //number of iterations per solution output
+  const int iter_max = 1e3;
+  int iterout = 10; //number of iterations per solution output
   const double CFL = 0.5; //CFL number (must <= 1 for Euler Explicit integration)
   //const double CFL = 1e-2; //CFL number (must <= 1 for Euler Explicit integration)
   bool timestep{false}; //true = local time stepping; false = global time stepping
 
   // Flux Specifications
   int flux_scheme{2}; //0=JST, 1=Van Leer, 2 = Roe (this will eventually be used!)
-  double epsilon = 0.0; //0 for 1st order and 1 for 2nd order
+  double epsilon = 1.0; //0 for 1st order and 1 for 2nd order
   [[maybe_unused]] const double ramp_stop = 1.0e-7; //stopping criteria for ramping fcn. of transitioning from 1st to 2nd
   //double epsilon = 1.0; //ramping value used to transition from 1st to 2nd order
   bool resid_stall{false};//for detecting if residuals have stalled
