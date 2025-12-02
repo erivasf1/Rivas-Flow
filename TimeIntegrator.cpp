@@ -11,22 +11,41 @@ EulerExplicit::EulerExplicit(MeshGenBASE* &m,EulerBASE* &e,const double &c)
 //-----------------------------------------------------------
 vector<double> EulerExplicit::ComputeLocalTimeStep(vector<array<double,4>>* &field){
 
-  //refer to Sec7-2D-Slide:36
+  //refer to Sec7-2D-Slide:37
   array<double,2> lambda_max; //speed of sound + velocity
   vector<double> time_steps(mesh->cellnumber);
-  double area_internal_i,area_internal_j,vol;
+  double area_iavg, area_javg;
+
+  double vol;
   int index;
+
 
   for (int j=0;j<mesh->cell_jmax;j++){ //looping through all interior cells
     for (int i=0;i<mesh->cell_imax;i++){ //looping through all interior cells
 
     //retrieving cell volume and interior cell areas
-    area_internal_i = mesh->GetInteriorCellFaceArea(i,j,0); 
-    area_internal_j = mesh->GetInteriorCellFaceArea(i,j,1); 
     vol = mesh->GetCellVolume(i,j);
+    area_iavg = mesh->GetInteriorCellArea(i,j,0);
+    area_javg = mesh->GetInteriorCellArea(i,j,1); 
 
     index = i + (j*mesh->cell_imax);
-    lambda_max = euler->GetLambdaMax(field,i,j); //note: [0]:i & [1]:j
+
+    //retrieving outward normal unit vectors
+    array<double,2> n_iplushalf = mesh->ComputeOutwardUnitVector(i,j,3);
+    array<double,2> n_iminushalf = mesh->ComputeOutwardUnitVector(i,j,2);
+    array<double,2> n_jplushalf = mesh->ComputeOutwardUnitVector(i,j,0);
+    array<double,2> n_jminushalf = mesh->ComputeOutwardUnitVector(i,j,1);
+
+    //averaging outward normal unit vectors to get NORMAL UNIT VECTOR
+    //NOTE: vectors are subtracted because avg. unit vector is not outward!
+    array<double,2> n_iavg, n_javg;
+    for (int n=0;n<2;n++){
+      n_iavg[n] = (n_iplushalf[n] - n_iminushalf[n]) / 2.0;
+      n_javg[n] = (n_jplushalf[n] - n_jminushalf[n]) / 2.0;
+    }
+
+    //computing lambda max for both in i and j dir.
+    lambda_max = euler->GetLambdaMax(field,i,j);
 
     //error handling
     if (std::isnan(lambda_max[0]) || isnan(lambda_max[1]) ){
@@ -35,9 +54,9 @@ vector<double> EulerExplicit::ComputeLocalTimeStep(vector<array<double,4>>* &fie
       //Tools::print("Mach # at loc(%d): %f\n",i,euler->ComputeMachNumber(field,i));
     }
 
+    //computing time step!
     time_steps[index] = CFL * vol / 
-                 ( (lambda_max[0]*area_internal_i)+(lambda_max[1]*area_internal_j) );
-    //Tools::print("CFL:%f,dx: %f,lambda_max:%f\n",CFL,dx,lambda_max);
+                        ( (lambda_max[0]*area_iavg)+(lambda_max[1]*area_javg) );
      
     }
   }

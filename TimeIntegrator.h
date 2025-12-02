@@ -39,6 +39,25 @@ class EulerExplicit {
 
 //TODO: Add RUNGE-KUTTA Classes (2nd and 4th stage)
 
+class RungeKutta2 : public EulerExplicit {
+
+  double alpha1 = 1.0 / 2.0;
+  double alpha2 = 1.0;
+  vector<array<double,4>>* field_orig;
+  vector<array<double,4>> Field_intermediate;
+
+  public:
+  
+  RungeKutta2(vector<array<double,4>>* &field);
+  
+  void ComputeNewSolution() override;
+
+
+  ~RungeKutta2();
+
+};
+
+
 
 
 #endif

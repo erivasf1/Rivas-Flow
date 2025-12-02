@@ -47,8 +47,8 @@ int main() {
   //FOR NOW: MMS case is initialized with MS & boundaries are set to outflow for extrapolating to ghost cells
   // Boundary Conditions Specification
   BOUNDARY_COND top_cond = OUTFLOW; 
-  BOUNDARY_COND btm_cond = INFLOW;
-  BOUNDARY_COND left_cond = INFLOW;
+  BOUNDARY_COND btm_cond = OUTFLOW;
+  BOUNDARY_COND left_cond = OUTFLOW;
   BOUNDARY_COND right_cond = OUTFLOW;
   /* 
   BOUNDARY_COND top_cond = INFLOW; 
@@ -62,20 +62,20 @@ int main() {
 
   // Mesh Specifications
   //[[maybe_unused]]const char* meshfile = "Grids/InletGrids/Inlet.53x17.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
-  [[maybe_unused]]const char* meshfile = "Grids/CurvilinearGrids/curv2d9.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
+  [[maybe_unused]]const char* meshfile = "Grids/CurvilinearGrids/curv2d129.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
   //[[maybe_unused]]const char* meshfile = NULL;
   [[maybe_unused]]int cellnum = 100; //recommending an even number for cell face at the throat of nozzle (NOTE: will get reassigned val. if mesh is provided)
 
   // Temporal Specifications
-  const int iter_max = 1e3;
+  const int iter_max = 1e5;
   int iterout = 10; //number of iterations per solution output
   const double CFL = 0.5; //CFL number (must <= 1 for Euler Explicit integration)
   //const double CFL = 1e-2; //CFL number (must <= 1 for Euler Explicit integration)
   bool timestep{false}; //true = local time stepping; false = global time stepping
 
   // Flux Specifications
-  int flux_scheme{2}; //0=JST, 1=Van Leer, 2 = Roe (this will eventually be used!)
-  double epsilon = 1.0; //0 for 1st order and 1 for 2nd order
+  int flux_scheme{1}; //0=JST, 1=Van Leer, 2 = Roe 
+  double epsilon = 0.0; //0 for 1st order and 1 for 2nd order
   [[maybe_unused]] const double ramp_stop = 1.0e-7; //stopping criteria for ramping fcn. of transitioning from 1st to 2nd
   //double epsilon = 1.0; //ramping value used to transition from 1st to 2nd order
   bool resid_stall{false};//for detecting if residuals have stalled
@@ -88,10 +88,10 @@ int main() {
   array<bool,4> check{false,false,false,false}; //false by default to check if under-relaxation is needed
 
   // Governing Eq. Residuals
-  double cont_tol = 1.0e-8;
-  double xmom_tol = 1.0e-8;
-  double ymom_tol = 1.0e-8;
-  double energy_tol = 1.0e-8;
+  double cont_tol = 1.0e-10;
+  double xmom_tol = 1.0e-10;
+  double ymom_tol = 1.0e-10;
+  double energy_tol = 1.0e-10;
 
   //! GENERATING MESH 
   MeshGenBASE* mesh; 
