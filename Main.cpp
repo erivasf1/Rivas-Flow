@@ -72,11 +72,12 @@ int main() {
   const double CFL = 0.7; //CFL number (must <= 1 for Euler Explicit integration)
   //const double CFL = 1e-2; //CFL number (must <= 1 for Euler Explicit integration)
   bool timestep{false}; //true = local time stepping; false = global time stepping
-  int time_scheme = 2; //0 for Euler Explicit, 1 for RungeKutta2, 2 for RungeKutta4
+  int time_scheme = 1; //0 for Euler Explicit, 1 for RungeKutta2, 2 for RungeKutta4
 
   // Flux Specifications
   int flux_scheme{2}; //0=JST, 1=Van Leer, 2 = Roe 
   double epsilon = 1.0; //0 for 1st order and 1 for 2nd order
+  int flux_limiter = 0; //0 for Van Leer
   [[maybe_unused]] const double ramp_stop = 1.0e-7; //stopping criteria for ramping fcn. of transitioning from 1st to 2nd
   //double epsilon = 1.0; //ramping value used to transition from 1st to 2nd order
   bool resid_stall{false};//for detecting if residuals have stalled
@@ -156,9 +157,9 @@ int main() {
   EulerBASE* euler;
   //Temp -- will add scenario == 1 once 1D section is fixed!
   if (scenario == 2) 
-    euler = new Euler2D(case_2d,mesh->cell_imax,mesh->cell_jmax,flux_scheme,epsilon,top_cond,btm_cond,left_cond,right_cond,mesh,field_ms_source);
+    euler = new Euler2D(case_2d,mesh->cell_imax,mesh->cell_jmax,flux_scheme,flux_limiter,epsilon,top_cond,btm_cond,left_cond,right_cond,mesh,field_ms_source);
   else if ((scenario == 3) || (scenario == 4))
-    euler = new Euler2DMMS(mesh->cell_imax,mesh->cell_jmax,flux_scheme,epsilon,top_cond,btm_cond,left_cond,right_cond,mesh,field_ms_source);
+    euler = new Euler2DMMS(mesh->cell_imax,mesh->cell_jmax,flux_scheme,flux_limiter,epsilon,top_cond,btm_cond,left_cond,right_cond,mesh,field_ms_source);
   else{
     cerr<<"Error: scenario # not recognized!"<<endl;
     return 0;
@@ -230,6 +231,12 @@ int main() {
   else
     Tools::print(" JST Damping\n");
 
+  Tools::print("-Flux Limiter: ");
+  if ((flux_limiter == 0) && (epsilon > 0.0) ) 
+    Tools::print("Van Leer\n");
+
+  else
+    Tools::print("N/A\n");
 
   //! COMPUTING MANUFACTURED SOLUTION AND SOURCE TERMS (MMS ONLY)
   if ((scenario == 3) || (scenario == 4)){

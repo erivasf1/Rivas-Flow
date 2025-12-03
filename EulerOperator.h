@@ -5,6 +5,7 @@
 #include "MeshGen.h"
 #include "Output.h"
 #include "DataManager.h"
+#include <cfloat>
 
 //Forward Declarations
 class SpaceVariables1D;
@@ -30,12 +31,13 @@ class EulerBASE {
   vector<array<double,4>>* mms_source; //pointer to source terms
 
   int flux_scheme; //flux scheme id (0=JST, 1=VanLeer, 2=Roe)
+  int flux_limiter; //flux limiter
   double epsilon; //flux accuracy (0=1st order)
 
   int cell_imax; //NUMBER of cells in the i dir!
   int cell_jmax; //NUMBER of cells in the j dir!
 
-  EulerBASE(int &cell_inum,int &cell_jnum,int &scheme,double &accuracy,int &top,int &btm,int &left,int &right,MeshGenBASE* &mesh_ptr,vector<array<double,4>>* &source);
+  EulerBASE(int &cell_inum,int &cell_jnum,int &scheme,int &limiter,double &accuracy,int &top,int &btm,int &left,int &right,MeshGenBASE* &mesh_ptr,vector<array<double,4>>* &source);
 
   double ComputeMachNumber(array<double,4> &sols);
   double ComputeSpeedofSound(array<double,4> &sols); //using perfect gas relationship
@@ -74,8 +76,12 @@ class EulerBASE {
   array<array<double,4>,4> ComputeRoeEigenVecs(array<double,5> &roe_vars,double nx,double ny); //rho-avg eigenvectors (2nd step)
   array<double,5> ComputeRoeAvgVars(array<double,4> &field_ltstate,array<double,4> &field_rtstate); //roe-avg. vars (1st step) - output:[rhobar,ubar,vbar,htbar,abar]
   array<double,4> ComputeFlux_CELL(array<double,4> &field_state,double nx,double ny); //computes flux vector of given primitive vars. vector in the outward normal dir.
-  //MUSCL Extrapolation
+  //MUSCL Extrapolation (2nd order accuracy)
   array<Vector,2> MUSCLApprox(vector<array<double,4>>* &field,vector<array<double,4>>* &field_stall,int loci,int locj,int nbori,int nborj,int nborloc_i,int nborloc_j,int nbornbor_i,int nbornbor_j,bool resid_stall);
+  //Flux Limiters
+  array<double,4> FluxLimiter(vector<array<double,4>>* &field,int loci,int locj,int nbori,int nborj,bool sign);
+  array<double,4> VanLeerLimiter(vector<array<double,4>>* &field,int loci,int locj,int nbori,int nborj,bool sign);
+  array<double,4> ComputeRVariation(vector<array<double,4>>* &field,int loci,int locj,int nbori,int nborj,bool sign); //outputs r+ and r-
   //Artificial Dissipation (JST Damping Only)
   //Source Term
   virtual void EvalSourceTerms(SpaceVariables2D* &sols); //source terms for all governing equations
@@ -189,7 +195,7 @@ class Euler2D : public EulerBASE {
   public:
   double Mach_bc,T_bc,P_bc,alpha; //free-stream and initial conditions, assigned in constructor
   
-  Euler2D(int case_2d,int cell_inum,int cell_jnum,int scheme,double accuracy,int top,int btm,int left,int right,MeshGenBASE* &mesh_ptr,vector<array<double,4>>* &source); //constructor determines val. of const. parameters (e.g. freestream Mach #, angle-of-attack)
+  Euler2D(int case_2d,int cell_inum,int cell_jnum,int scheme,int limiter,double accuracy,int top,int btm,int left,int right,MeshGenBASE* &mesh_ptr,vector<array<double,4>>* &source); //constructor determines val. of const. parameters (e.g. freestream Mach #, angle-of-attack)
 
   void InitSolutions(vector<array<double,4>>* &field,int cellnum);
   void SetInitialConditions(vector<array<double,4>>* &field) override;
@@ -223,7 +229,7 @@ class Euler2DMMS : public EulerBASE {
   double wvel0 = 0.0;
 
   public:
-  Euler2DMMS(int cell_inum,int cell_jnum,int scheme,double accuracy,int top,int btm, int left,int right,MeshGenBASE* &mesh_ptr,vector<array<double,4>>* &source);
+  Euler2DMMS(int cell_inum,int cell_jnum,int scheme,int limiter,double accuracy,int top,int btm, int left,int right,MeshGenBASE* &mesh_ptr,vector<array<double,4>>* &source);
 
   void SetInitialConditions(vector<array<double,4>>* &field) override; 
 

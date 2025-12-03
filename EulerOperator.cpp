@@ -5,8 +5,8 @@
 // EULERBASE DEFINITIONS
 
 //-----------------------------------------------------------
-EulerBASE::EulerBASE(int &cell_inum,int &cell_jnum,int &scheme,double &accuracy,int &top,int &btm,int &left,int &right,MeshGenBASE* &mesh_ptr,vector<array<double,4>>* &source)
-  : cell_imax(cell_inum), cell_jmax(cell_jnum),flux_scheme(scheme),epsilon(accuracy),top_cond(top),btm_cond(btm),left_cond(left), right_cond(right), mesh(mesh_ptr), mms_source(source) {}
+EulerBASE::EulerBASE(int &cell_inum,int &cell_jnum,int &scheme,int &limiter,double &accuracy,int &top,int &btm,int &left,int &right,MeshGenBASE* &mesh_ptr,vector<array<double,4>>* &source)
+  : cell_imax(cell_inum), cell_jmax(cell_jnum),flux_scheme(scheme),flux_limiter(limiter),epsilon(accuracy),top_cond(top),btm_cond(btm),left_cond(left), right_cond(right), mesh(mesh_ptr), mms_source(source) {}
 
 //-----------------------------------------------------------
 array<double,4> EulerBASE::ComputeConserved(vector<array<double,4>>* &field,int &i,int &j){
@@ -455,11 +455,151 @@ array<Vector,2> EulerBASE::MUSCLApprox(vector<array<double,4>>* &field,vector<ar
   }
   
 
-  // extrapolating states
-  state[0] = loc_vec + (epsilon/4.0) * ( (1.0-kappa_scheme)*(loc_vec-nborloc_vec) + (1.0+kappa_scheme)*(nbor_vec-loc_vec) ); //left state
-  state[1] = nbor_vec - (epsilon/4.0) * ( (1.0+kappa_scheme)*(nbor_vec-loc_vec) + (1.0-kappa_scheme)*(nbornbor_vec-nbor_vec) ); //right state
+  //applying flux limiters (if specified)
+  array<double,4> psi_ijhalfplus, psi_ijhalfminus, psi_ijminushalfplus, psi_ij3halfminus;
+
+  if (epsilon == 0.0) { //1st order accurate case -- no flux limiter
+    psi_ijhalfplus[0] = 1.0; psi_ijhalfplus[1] = 1.0;
+    psi_ijhalfplus[2] = 1.0; psi_ijhalfplus[3] = 1.0; 
+
+    psi_ijhalfminus = psi_ijhalfplus; psi_ijminushalfplus = psi_ijhalfplus;
+    psi_ij3halfminus = psi_ijhalfplus;
+  }
+
+  else { //2nd order accurate
+    psi_ijhalfplus = FluxLimiter(field,loci,locj,nbori,nborj,true);
+    psi_ijhalfminus = FluxLimiter(field,loci,locj,nbori,nborj,false);
+
+    psi_ijminushalfplus = FluxLimiter(field,loci,locj,nborloc_i,nborloc_j,true);
+    psi_ij3halfminus = FluxLimiter(field,loci,locj,nbornbor_i,nbornbor_j,false);
+  }
+
+  // extrapolating states -- lecture notes Sec. 7 pg. 24
+  for (int n=0;n<4;n++){
+    state[0][n] = loc_state[n] + (epsilon/4.0) * ( (1.0-kappa_scheme)*psi_ijminushalfplus[n]*(loc_state[n]-nborloc_state[n]) + (1.0+kappa_scheme)*psi_ijhalfminus[n]*(nbor_state[n]-loc_state[n]) ); //left state
+    state[1][n] = nbor_state[n] - (epsilon/4.0) * ( (1.0+kappa_scheme)*psi_ij3halfminus[n]*(nbor_state[n]-loc_state[n]) + (1.0-kappa_scheme)*psi_ijhalfplus[n]*(nbornbor_state[n]-nbor_state[n]) ); //right state
+  } 
 
   return state;
+
+}
+//-----------------------------------------------------------
+array<double,4> EulerBASE::FluxLimiter(vector<array<double,4>>* &field,int loci,int locj,int nbori,int nborj,bool sign){
+
+  array<double,4> Psi;
+  if (flux_limiter == 0) //Van Leer Flux Limiter case 
+    Psi = VanLeerLimiter(field,loci,locj,nbori,nborj,sign); 
+
+  else
+    cerr<<"Error: Unknown Limiter Spec.!!!"<<endl;
+
+  return Psi;
+
+}
+//-----------------------------------------------------------
+array<double,4> EulerBASE::VanLeerLimiter(vector<array<double,4>>* &field,int loci,int locj,int nbori,int nborj,bool sign){
+
+  array<double,4> Psi;
+  array<double,4> R_var = ComputeRVariation(field,loci,locj,nbori,nborj,sign); //Get from fcn.
+  
+  for (int n=0;n<4;n++) 
+    Psi[n] = ( R_var[n]+abs(R_var[n]) ) / ( 1.0+R_var[n] );
+
+  return Psi;
+
+}
+//-----------------------------------------------------------
+array<double,4> EulerBASE::ComputeRVariation(vector<array<double,4>>* &field,int loci,int locj,int nbori,int nborj,bool sign){
+
+  array<double,4> u_ij, u_ijplus1, u_ijminus1, u_ijplus2;
+  array<double,4> ans;
+
+  if (sign == true){ //rplus case
+    
+    if (locj == nborj) { //i+1/2 face
+
+      if (nbori >= cell_imax) { //i+ ghost cells case
+        u_ijplus1 = mesh->right_cells[nborj];
+        u_ijplus2 = mesh->right_cells[nborj+cell_jmax];
+      }
+      else if (nbori == cell_imax-1)
+        u_ijplus2 = mesh->right_cells[nborj];
+
+      else
+        u_ijplus1 = fieldij(field,nbori,nborj,cell_imax);
+     }
+
+    else if (loci == nbori){ //j+1/2 face
+
+      if (nborj >= cell_jmax) { //j+ ghost cells case
+        u_ijplus1 = mesh->top_cells[nbori];
+        u_ijplus2 = mesh->top_cells[nbori+cell_imax];
+      }
+      else if (nbori == cell_imax-1)
+        u_ijplus2 = mesh->top_cells[nbori];
+
+      else
+        u_ijplus1 = fieldij(field,nbori,nborj,cell_imax);
+    
+    }
+    else{
+      cerr<<"Error: Neither loc i,j and nbor i,j match in R variation!"<<endl;
+      array<double,4> trash{DBL_MIN,DBL_MIN};
+      return trash;
+    }
+
+  for (int n=0;n<4;n++)
+    ans[n] = (u_ijplus2[n]-u_ijplus1[n]) / (u_ijplus1[n]-u_ij[n]);
+
+  }
+    
+  else { //rminus case
+
+    if (locj == nborj) { //i+1/2 face
+      if (loci < 0){ //i- ghost cells case
+        u_ij = mesh->left_cells[locj];
+        u_ijminus1 = mesh->left_cells[locj+cell_jmax];
+      }
+
+      else if (loci-1<=0) 
+        u_ijminus1 = mesh->left_cells[locj];
+
+      else{
+        u_ijminus1 = fieldij(field,loci-1,locj,cell_imax);
+        u_ij = fieldij(field,loci,locj,cell_imax);
+      }
+
+    }
+
+    else if (loci == nbori){ //j+1/2 face
+      if (loci < 0){ //j- ghost cells case
+        u_ij = mesh->btm_cells[loci];
+        u_ijminus1 = mesh->btm_cells[loci+cell_imax];
+      }
+
+      else if (loci-1<=0) 
+        u_ijminus1 = mesh->btm_cells[loci];
+
+      else {
+        u_ijminus1 = fieldij(field,loci,locj-1,cell_imax);
+        u_ij = fieldij(field,loci,locj,cell_imax);
+      }
+    }
+
+    else{
+      cerr<<"Error: Neither loc i,j and nbor i,j match in R variation!"<<endl;
+      array<double,4> trash{DBL_MIN,DBL_MIN};
+      return trash;
+    }
+
+  for (int n=0;n<4;n++)
+    ans[n] = (u_ij[n]-u_ijminus1[n]) / (u_ijplus1[n]-u_ij[n]);
+
+  }
+
+
+  return ans;
+
 
 }
 //-----------------------------------------------------------
@@ -1737,7 +1877,7 @@ Euler1D::~Euler1D(){}
 
 // EULER2D DEFINITIONS
 //-----------------------------------------------------------
-Euler2D::Euler2D(int case_2d,int cell_inum,int cell_jnum,int scheme,double accuracy,int top,int btm,int left,int right,MeshGenBASE* &mesh_ptr,vector<array<double,4>>* &source) : scenario_2d(case_2d), EulerBASE(cell_inum,cell_jnum,scheme,accuracy,top,btm,left,right,mesh_ptr,source){
+Euler2D::Euler2D(int case_2d,int cell_inum,int cell_jnum,int scheme,int limiter,double accuracy,int top,int btm,int left,int right,MeshGenBASE* &mesh_ptr,vector<array<double,4>>* &source) : scenario_2d(case_2d), EulerBASE(cell_inum,cell_jnum,scheme,limiter,accuracy,top,btm,left,right,mesh_ptr,source){
   //Case assignments
   if (case_2d == 0){ //30 deg inlet case
     Mach_bc = 4.0;
@@ -2137,7 +2277,7 @@ Euler2D::~Euler2D(){}
 
 // EULER2DMMS DEFINITIONS
 //-----------------------------------------------------------
-Euler2DMMS::Euler2DMMS(int cell_inum,int cell_jnum,int scheme,double accuracy,int top,int btm, int left,int right,MeshGenBASE* &mesh_ptr,vector<array<double,4>>* &source) : EulerBASE(cell_inum,cell_jnum,scheme,accuracy,top,btm,left,right,mesh_ptr,source){}
+Euler2DMMS::Euler2DMMS(int cell_inum,int cell_jnum,int scheme,int limiter,double accuracy,int top,int btm, int left,int right,MeshGenBASE* &mesh_ptr,vector<array<double,4>>* &source) : EulerBASE(cell_inum,cell_jnum,scheme,limiter,accuracy,top,btm,left,right,mesh_ptr,source){}
 //-----------------------------------------------------------
 void Euler2DMMS::SetInitialConditions(vector<array<double,4>>* &field){
 
