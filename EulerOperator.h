@@ -45,7 +45,7 @@ class EulerBASE {
 
   //Compute Conserved & Primitive Variables
   array<double,4> ComputeConserved(vector<array<double,4>>* &field,int &i,int &j);
-  void ComputePrimitive(vector<array<double,4>>* &field,array<double,4> &conserved,int i,int j);
+  array<double,4> ComputePrimitive(array<double,4> &conserved);
   //Initial Conditions
   virtual void SetInitialConditions(vector<array<double,4>>* &field); //Complete (tested)
   //TODO:Boundary Conditions -- refer to this paper:https://arc-aiaa-org.ezproxy.lib.vt.edu/doi/10.2514/3.11983  

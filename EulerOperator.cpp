@@ -34,23 +34,28 @@ array<double,4> EulerBASE::ComputeConserved(vector<array<double,4>>* &field,int 
   
 }
 //-----------------------------------------------------------
-void EulerBASE::ComputePrimitive(vector<array<double,4>>* &field,array<double,4> &conserved,int i, int j){
+array<double,4> EulerBASE::ComputePrimitive(array<double,4> &conserved){
+
+  array<double,4> primitive;
 
   //density
-  fieldij(field,i,j,mesh->cell_imax)[0] = conserved[0];
+  primitive[0] = conserved[0];
   
   //x-velocity
-  fieldij(field,i,j,mesh->cell_imax)[1] = conserved[1] / conserved[0];
+  //fieldij(field,i,j,mesh->cell_imax)[1] = conserved[1] / conserved[0];
+  primitive[1] = conserved[1] / conserved[0];
 
   //y-velocity
-  fieldij(field,i,j,mesh->cell_imax)[2] = conserved[2] / conserved[0];
+  //fieldij(field,i,j,mesh->cell_imax)[2] = conserved[2] / conserved[0];
+  primitive[2] = conserved[2] / conserved[0];
 
   //pressure -- using ideal gas law
   //P = (gamma-1)*[rho*e_t - rho*0.5*(u^2+v^2)]
   double u = conserved[1] /  conserved[0]; double v = conserved[2]/conserved[0];
-  fieldij(field,i,j,mesh->cell_imax)[3] = (gamma-1.0) * (conserved[3]-conserved[0]*0.5*((pow(u,2.0)+pow(v,2.0))));
+  //fieldij(field,i,j,mesh->cell_imax)[3] = (gamma-1.0) * (conserved[3]-conserved[0]*0.5*((pow(u,2.0)+pow(v,2.0))));
+  primitive[3] = (gamma-1.0) * (conserved[3]-conserved[0]*0.5*((pow(u,2.0)+pow(v,2.0))));
 
-  return;
+  return primitive;
 }
 //-----------------------------------------------------------
 void EulerBASE::SetInitialConditions([[maybe_unused]] vector<array<double,4>>* &field){

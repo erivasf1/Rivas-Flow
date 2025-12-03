@@ -5,8 +5,9 @@
 #include "EulerOperator.h"
 #include "DataManager.h"
 
-class EulerExplicit {
+class EulerExplicitBASE {
   //double xmin,xmax;
+  public:
   MeshGenBASE* mesh;
   EulerBASE* euler;
   const double CFL;
@@ -18,8 +19,7 @@ class EulerExplicit {
   double Velocity_max = 1.0e8;
   double Pressure_max = 1.0e10;
 
-  public:
-  EulerExplicit(MeshGenBASE* &m,EulerBASE* &e,const double &c);
+  EulerExplicitBASE(MeshGenBASE* &m,EulerBASE* &e,const double &c);
  
   vector<double> ComputeLocalTimeStep(vector<array<double,4>>* &field); // Outputting the local time step for every cell in the domain
   vector<double> ComputeGlobalTimeStep(vector<array<double,4>>* &field); // Outputting the local time step for every cell in the domain
@@ -32,8 +32,22 @@ class EulerExplicit {
 
   bool CheckStallResids(int &count,array<double,4> &ResidNorms,array<double,4> &Prev_ResidualNorms,SpaceVariables2D* &sol); //checks if residuals are stalled
 
-  ~EulerExplicit();
+  virtual void ComputeNewSolution(vector<array<double,4>>* &field,vector<array<double,4>>* &resid,vector<double>* &time_steps,array<double,4> &Omega,vector<array<double,4>>* &field_stall,bool &resid_stall); 
 
+  virtual ~EulerExplicitBASE();
+
+
+};
+
+class EulerExplicit : public EulerExplicitBASE {
+
+
+  public:
+  EulerExplicit(MeshGenBASE* &m,EulerBASE* &e,const double &c);
+
+  void ComputeNewSolution(vector<array<double,4>>* &field,vector<array<double,4>>* &resid,vector<double>* &time_steps,array<double,4> &Omega,vector<array<double,4>>* &field_stall,bool &resid_stall); //calls FWDEulerAdvance fcn.
+
+  ~EulerExplicit();
 
 };
 
@@ -43,14 +57,20 @@ class RungeKutta2 : public EulerExplicit {
 
   double alpha1 = 1.0 / 2.0;
   double alpha2 = 1.0;
-  vector<array<double,4>>* field_orig;
-  vector<array<double,4>> Field_intermediate;
+
+  vector<array<double,4>> Field_intermediate_cons; //in conserved variables form
+  vector<array<double,4>> Field_intermediate_prim; //in primitive variables form
+  vector<array<double,4>> Resid_intermediate;
+
+  vector<array<double,4>>* field_interm_cons;
+  vector<array<double,4>>* field_interm_prim;
+  vector<array<double,4>>* resid_interm;
 
   public:
   
-  RungeKutta2(vector<array<double,4>>* &field);
+  RungeKutta2(MeshGenBASE* &m,EulerBASE* &e,const double &c);
   
-  void ComputeNewSolution() override;
+  void ComputeNewSolution(vector<array<double,4>>* &field,vector<array<double,4>>* &resid,vector<double>* &time_steps,array<double,4> &Omega,vector<array<double,4>>* &field_stall,bool &resid_stall) override;
 
 
   ~RungeKutta2();

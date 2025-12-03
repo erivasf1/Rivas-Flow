@@ -1,15 +1,15 @@
 //User-defined functions
 #include "TimeIntegrator.h" 
 
-// EULEREXPLICIT DEFINITIONS
+// EULEREXPLICITBASE DEFINITIONS
 
 //-----------------------------------------------------------
-EulerExplicit::EulerExplicit(MeshGenBASE* &m,EulerBASE* &e,const double &c)
+EulerExplicitBASE::EulerExplicitBASE(MeshGenBASE* &m,EulerBASE* &e,const double &c)
 : mesh(m),euler(e) ,CFL(c)
 {}
 
 //-----------------------------------------------------------
-vector<double> EulerExplicit::ComputeLocalTimeStep(vector<array<double,4>>* &field){
+vector<double> EulerExplicitBASE::ComputeLocalTimeStep(vector<array<double,4>>* &field){
 
   //refer to Sec7-2D-Slide:37
   array<double,2> lambda_max; //speed of sound + velocity
@@ -65,7 +65,7 @@ vector<double> EulerExplicit::ComputeLocalTimeStep(vector<array<double,4>>* &fie
 }
 
 //-----------------------------------------------------------
-vector<double> EulerExplicit::ComputeGlobalTimeStep(vector<array<double,4>>* &field){
+vector<double> EulerExplicitBASE::ComputeGlobalTimeStep(vector<array<double,4>>* &field){
 
   //extracting smallest local time step of all cells
   vector<double> time_steps = ComputeLocalTimeStep(field); //local time steps list for all cells
@@ -82,10 +82,11 @@ vector<double> EulerExplicit::ComputeGlobalTimeStep(vector<array<double,4>>* &fi
 
 }
 //-----------------------------------------------------------
-void EulerExplicit::FWDEulerAdvance(vector<array<double,4>>* &field,vector<array<double,4>>* &resid,vector<double>* &time_steps,array<double,4> &Omega){
+void EulerExplicitBASE::FWDEulerAdvance(vector<array<double,4>>* &field,vector<array<double,4>>* &resid,vector<double>* &time_steps,array<double,4> &Omega){
 
   double vol;
   array<double,4> conserve;
+  array<double,4> primitive;
   int cell_index;
   //use indexing of interior cells for Resid!
   // Field still has ghost cells
@@ -101,7 +102,9 @@ void EulerExplicit::FWDEulerAdvance(vector<array<double,4>>* &field,vector<array
       for (int n=0;n<4;n++) // advancing to new timestep of conservative variable
         conserve[n] -= Omega[n]*((*time_steps)[n] / vol) * (*resid)[cell_index][n];
 
-      euler->ComputePrimitive(field,conserve,i,j); //!< extracting new primitive variables & reassigning field w/ new values
+      primitive = euler->ComputePrimitive(conserve); //!< extracting new primitive variables & reassigning field w/ new values
+
+      fieldij(field,i,j,mesh->cell_imax) = primitive;
 
     }
   }
@@ -111,7 +114,7 @@ void EulerExplicit::FWDEulerAdvance(vector<array<double,4>>* &field,vector<array
 }
 
 //-----------------------------------------------------------
-void EulerExplicit::SolutionLimiter(vector<array<double,4>>* &field){
+void EulerExplicitBASE::SolutionLimiter(vector<array<double,4>>* &field){
 
   for (int n=0;n<(int)field->size();n++){
     //Density
@@ -147,7 +150,7 @@ void EulerExplicit::SolutionLimiter(vector<array<double,4>>* &field){
 }
 
 //-----------------------------------------------------------
-void EulerExplicit::UnderRelaxationCheck(array<double,4> ResidPrevNorm,array<double,4> ResidNorm,double C,array<bool,4> &check){
+void EulerExplicitBASE::UnderRelaxationCheck(array<double,4> ResidPrevNorm,array<double,4> ResidNorm,double C,array<bool,4> &check){
 
   for (int i=0;i<4;i++){
     if (ResidNorm[i] > C*ResidPrevNorm[i])
@@ -159,7 +162,7 @@ void EulerExplicit::UnderRelaxationCheck(array<double,4> ResidPrevNorm,array<dou
 }
 
 //-----------------------------------------------------------
-bool EulerExplicit::CheckStallResids(int &count,array<double,4> &ResidNorms,array<double,4> &Prev_ResidualNorms,SpaceVariables2D* &sol){
+bool EulerExplicitBASE::CheckStallResids(int &count,array<double,4> &ResidNorms,array<double,4> &Prev_ResidualNorms,SpaceVariables2D* &sol){
 
   int count_tol = 1e5; double diff_tol = 1.0e-2; 
   double resid_avg = sol->ComputeNormAvg(ResidNorms); 
@@ -174,4 +177,108 @@ bool EulerExplicit::CheckStallResids(int &count,array<double,4> &ResidNorms,arra
 }
 
 //-----------------------------------------------------------
+void EulerExplicitBASE::ComputeNewSolution(vector<array<double,4>>* &,vector<array<double,4>>* &,vector<double>* &,array<double,4> &,vector<array<double,4>>* &,bool &) {
+  return;
+}
+//-----------------------------------------------------------
+EulerExplicitBASE::~EulerExplicitBASE(){}
+
+// EULEREXPLICIT DEFINITIONS
+//-----------------------------------------------------------
+EulerExplicit::EulerExplicit(MeshGenBASE* &m,EulerBASE* &e,const double &c) : EulerExplicitBASE(m,e,c) {}
+//-----------------------------------------------------------
+void EulerExplicit::ComputeNewSolution(vector<array<double,4>>* &field,vector<array<double,4>>* &resid,vector<double>* &time_steps,array<double,4> &Omega,vector<array<double,4>>* &,bool &){
+
+  FWDEulerAdvance(field,resid,time_steps,Omega);
+
+  return;
+
+}
+//-----------------------------------------------------------
 EulerExplicit::~EulerExplicit(){}
+//-----------------------------------------------------------
+
+// RUNGEKUTTA2 DEFINITIONS
+//-----------------------------------------------------------
+RungeKutta2::RungeKutta2(MeshGenBASE* &m,EulerBASE* &e,const double &c) : EulerExplicit(m,e,c) {
+
+  Field_intermediate_cons.resize(mesh->cellnumber); 
+  Field_intermediate_prim.resize(mesh->cellnumber); 
+  Resid_intermediate.resize(mesh->cellnumber); 
+
+  field_interm_cons = &Field_intermediate_cons; //assigning pointers
+  field_interm_prim = &Field_intermediate_prim; 
+  resid_interm = &Resid_intermediate;
+}
+
+//-----------------------------------------------------------
+void RungeKutta2::ComputeNewSolution(vector<array<double,4>>* &field,vector<array<double,4>>* &resid,vector<double>* &time_steps,array<double,4> &Omega,vector<array<double,4>>* &field_stall,bool &resid_stall) {
+
+  //Reference: Class notes section 8, page 5
+  
+  double dt_over_V;
+  array<double,2> alpha{alpha1,alpha2}; 
+
+  array<double,4> conserve;
+  array<double,4> primitive;
+  int index;
+
+  //! Converting to conserved variabls
+  for (int j=0;j<mesh->cell_jmax;j++){
+    for (int i=0;i<mesh->cell_imax;i++){
+
+      conserve = euler->ComputeConserved(field,i,j);
+      fieldij(field_interm_cons,i,j,mesh->cell_imax) = conserve;
+
+    }
+  }
+
+  //! Intermediate stage
+  (*resid_interm) = (*resid); //setting resid. interm. to original resid.
+  for (int n=0;n<2;n++){
+
+    double alpha_n = alpha[n];
+
+    // compute U(n) vals.
+    for (int j=0;j<mesh->cell_jmax;j++){
+      for (int i=0;i<mesh->cell_imax;i++){
+        index = i + (j*mesh->cell_imax);
+        dt_over_V = (*time_steps)[index] / mesh->GetCellVolume(i,j);
+        for (int q=0;q<4;q++){
+          (*field_interm_cons)[index][q] = (*field_interm_cons)[index][q] - (alpha_n * dt_over_V * (*resid_interm)[index][q]);
+        }
+      }
+    }
+
+    if (n < 1){ //only evaluating interm. resid. once!
+      // eval resid. of U(n) -- need to convert back to primitive to eval. resid.
+      for (int j=0;j<mesh->cell_jmax;j++){
+        for (int i=0;i<mesh->cell_imax;i++){
+          conserve = fieldij(field_interm_cons,i,j,mesh->cell_imax);
+          primitive = euler->ComputePrimitive(conserve);
+          fieldij(field_interm_prim,i,j,mesh->cell_imax) = primitive;
+        }
+      }
+      euler->ComputeResidual(resid_interm,field_interm_prim,field_stall,resid_stall);
+    }
+
+
+  }
+
+
+
+  //! Updating old time step vals. to new time step
+  for (int j=0;j<mesh->cell_jmax;j++){
+    for (int i=0;i<mesh->cell_imax;i++){
+      conserve = fieldij(field_interm_cons,i,j,mesh->cell_imax);
+      primitive = euler->ComputePrimitive(conserve);
+      fieldij(field,i,j,mesh->cell_imax) = primitive;
+    }
+  }
+
+  return;
+
+}
+//-----------------------------------------------------------
+RungeKutta2::~RungeKutta2(){}
+//-----------------------------------------------------------

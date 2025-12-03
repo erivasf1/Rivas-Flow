@@ -36,7 +36,7 @@ int main() {
 
   //! INITIALIZATION
   // Scenario
-  int scenario = 3; //1 = 1D, 2 = 2D, 3 = 2D MMS, 4 = TRUE CARTESIAN of MMS
+  int scenario = 4; //1 = 1D, 2 = 2D, 3 = 2D MMS, 4 = TRUE CARTESIAN of MMS
   CASE_2D case_2d = INLET;
 
   // Constants for 1D case or True Cartesian 2D MMS case
@@ -62,20 +62,21 @@ int main() {
 
   // Mesh Specifications
   //[[maybe_unused]]const char* meshfile = "Grids/InletGrids/Inlet.53x17.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
-  [[maybe_unused]]const char* meshfile = "Grids/CurvilinearGrids/curv2d129.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
-  //[[maybe_unused]]const char* meshfile = NULL;
+  //[[maybe_unused]]const char* meshfile = "Grids/CurvilinearGrids/curv2d129.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
+  [[maybe_unused]]const char* meshfile = NULL;
   [[maybe_unused]]int cellnum = 100; //recommending an even number for cell face at the throat of nozzle (NOTE: will get reassigned val. if mesh is provided)
 
   // Temporal Specifications
   const int iter_max = 1e5;
   int iterout = 10; //number of iterations per solution output
-  const double CFL = 0.5; //CFL number (must <= 1 for Euler Explicit integration)
+  const double CFL = 0.7; //CFL number (must <= 1 for Euler Explicit integration)
   //const double CFL = 1e-2; //CFL number (must <= 1 for Euler Explicit integration)
   bool timestep{false}; //true = local time stepping; false = global time stepping
+  int time_scheme = 1; //0 for Euler Explicit, 1 for RungeKutta2, 2 for RungeKutta4
 
   // Flux Specifications
-  int flux_scheme{1}; //0=JST, 1=Van Leer, 2 = Roe 
-  double epsilon = 0.0; //0 for 1st order and 1 for 2nd order
+  int flux_scheme{2}; //0=JST, 1=Van Leer, 2 = Roe 
+  double epsilon = 1.0; //0 for 1st order and 1 for 2nd order
   [[maybe_unused]] const double ramp_stop = 1.0e-7; //stopping criteria for ramping fcn. of transitioning from 1st to 2nd
   //double epsilon = 1.0; //ramping value used to transition from 1st to 2nd order
   bool resid_stall{false};//for detecting if residuals have stalled
@@ -164,9 +165,17 @@ int main() {
   }
   
   //Time Integrator spec.
-  //TODO: Specifying time integrator via Polymorphism
-  //Temp: using Euler explicit time integration for now
-  EulerExplicit Time(mesh,euler,CFL); //for computing time steps
+  EulerExplicitBASE* time; //for computing time steps
+  if (time_scheme == 0)
+    time = new EulerExplicit(mesh,euler,CFL);
+  else if (time_scheme == 1)
+    time = new RungeKutta2(mesh,euler,CFL);
+   // else if (time_scheme == 2) TODO
+      //time = new RungeKutta4(mesh,euler,CFL);
+  else 
+    cerr<<"Error: unknown time scheme spec.!"<<endl;
+
+  
 
   SpaceVariables2D Sols; //for operating on Field variables
 
@@ -175,7 +184,6 @@ int main() {
   //Pointers to Objects
   SpaceVariables2D* sols = &Sols;
 
-  EulerExplicit* time = &Time;
   Output* error = &Error;
 
   //! PRINTING OUT SIMULATION INFO
@@ -338,7 +346,7 @@ int main() {
     (*time_steps) = (timestep == true) ? time->ComputeLocalTimeStep(field) : time->ComputeGlobalTimeStep(field);
 
     //! COMPUTE NEW SOL. VALUES 
-    time->FWDEulerAdvance(field_star,resid_star,time_steps,Omega);//TESTING
+    time->ComputeNewSolution(field_star,resid_star,time_steps,Omega,field_stall,resid_stall);//TESTING
     time->SolutionLimiter(field_star); //applies solution limiter to all cells (including ghost cells)
 
     //! ENFORCE BOUNDARY CONDITIONS
@@ -359,7 +367,7 @@ int main() {
 
         (*field_star) = (*field); //resetting primitive variables to previous time step values
 
-        time->FWDEulerAdvance(field_star,resid_star,time_steps,Omega); //advancing intermediate solution w/ under-relaxation factor 
+        time->ComputeNewSolution(field_star,resid_star,time_steps,Omega,field_stall,resid_stall); //advancing intermediate solution w/ under-relaxation factor 
         time->SolutionLimiter(field_star); //temporarily reapplying the limiter
 
         euler->ComputeResidual(resid_star,field_star,field_stall,resid_stall);
@@ -485,6 +493,7 @@ int main() {
 
   //! CLEANUP
   delete euler;
+  delete time;
   delete mesh;
 
   return 0;
