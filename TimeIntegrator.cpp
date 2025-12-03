@@ -235,7 +235,7 @@ void RungeKutta2::ComputeNewSolution(vector<array<double,4>>* &field,vector<arra
 
   //! Intermediate stage
   (*resid_interm) = (*resid); //setting resid. interm. to original resid.
-  for (int n=0;n<2;n++){
+  for (int n=0;n<(int)alpha.size();n++){
 
     double alpha_n = alpha[n];
 
@@ -250,7 +250,7 @@ void RungeKutta2::ComputeNewSolution(vector<array<double,4>>* &field,vector<arra
       }
     }
 
-    if (n < 1){ //only evaluating interm. resid. once!
+    if (n < (int)alpha.size()-1){ //only evaluating interm. resid. once!
       // eval resid. of U(n) -- need to convert back to primitive to eval. resid.
       for (int j=0;j<mesh->cell_jmax;j++){
         for (int i=0;i<mesh->cell_imax;i++){
@@ -281,4 +281,89 @@ void RungeKutta2::ComputeNewSolution(vector<array<double,4>>* &field,vector<arra
 }
 //-----------------------------------------------------------
 RungeKutta2::~RungeKutta2(){}
+//-----------------------------------------------------------
+
+// RUNGEKUTTA4 DEFINITIONS
+//-----------------------------------------------------------
+RungeKutta4::RungeKutta4(MeshGenBASE* &m,EulerBASE* &e,const double &c) : EulerExplicit(m,e,c) {
+
+  Field_intermediate_cons.resize(mesh->cellnumber); 
+  Field_intermediate_prim.resize(mesh->cellnumber); 
+  Resid_intermediate.resize(mesh->cellnumber); 
+
+  field_interm_cons = &Field_intermediate_cons; //assigning pointers
+  field_interm_prim = &Field_intermediate_prim; 
+  resid_interm = &Resid_intermediate;
+}
+
+//-----------------------------------------------------------
+void RungeKutta4::ComputeNewSolution(vector<array<double,4>>* &field,vector<array<double,4>>* &resid,vector<double>* &time_steps,array<double,4> &Omega,vector<array<double,4>>* &field_stall,bool &resid_stall) {
+
+  //Reference: Class notes section 8, page 5
+  
+  double dt_over_V;
+  array<double,4> alpha{alpha1,alpha2,alpha3,alpha4}; 
+
+  array<double,4> conserve;
+  array<double,4> primitive;
+  int index;
+
+  //! Converting to conserved variables
+  for (int j=0;j<mesh->cell_jmax;j++){
+    for (int i=0;i<mesh->cell_imax;i++){
+
+      conserve = euler->ComputeConserved(field,i,j);
+      fieldij(field_interm_cons,i,j,mesh->cell_imax) = conserve;
+
+    }
+  }
+
+  //! Intermediate stage
+  (*resid_interm) = (*resid); //setting resid. interm. to original resid.
+  for (int n=0;n<(int)alpha.size();n++){
+
+    double alpha_n = alpha[n];
+
+    // compute U(n) vals.
+    for (int j=0;j<mesh->cell_jmax;j++){
+      for (int i=0;i<mesh->cell_imax;i++){
+        index = i + (j*mesh->cell_imax);
+        dt_over_V = (*time_steps)[index] / mesh->GetCellVolume(i,j);
+        for (int q=0;q<4;q++){
+          (*field_interm_cons)[index][q] = (*field_interm_cons)[index][q] - (alpha_n * dt_over_V * (*resid_interm)[index][q]);
+        }
+      }
+    }
+
+    if (n < (int)alpha.size()-1){ //only evaluating interm. resid. once!
+      // eval resid. of U(n) -- need to convert back to primitive to eval. resid.
+      for (int j=0;j<mesh->cell_jmax;j++){
+        for (int i=0;i<mesh->cell_imax;i++){
+          conserve = fieldij(field_interm_cons,i,j,mesh->cell_imax);
+          primitive = euler->ComputePrimitive(conserve);
+          fieldij(field_interm_prim,i,j,mesh->cell_imax) = primitive;
+        }
+      }
+      euler->ComputeResidual(resid_interm,field_interm_prim,field_stall,resid_stall);
+    }
+
+
+  }
+
+
+
+  //! Updating old time step vals. to new time step
+  for (int j=0;j<mesh->cell_jmax;j++){
+    for (int i=0;i<mesh->cell_imax;i++){
+      conserve = fieldij(field_interm_cons,i,j,mesh->cell_imax);
+      primitive = euler->ComputePrimitive(conserve);
+      fieldij(field,i,j,mesh->cell_imax) = primitive;
+    }
+  }
+
+  return;
+
+}
+//-----------------------------------------------------------
+RungeKutta4::~RungeKutta4(){}
 //-----------------------------------------------------------

@@ -77,6 +77,31 @@ class RungeKutta2 : public EulerExplicit {
 
 };
 
+class RungeKutta4 : public EulerExplicit {
+
+  double alpha1 = 1.0 / 4.0;
+  double alpha2 = 1.0 / 3.0;
+  double alpha3 = 1.0 / 2.0;
+  double alpha4 = 1.0;
+
+  vector<array<double,4>> Field_intermediate_cons; //in conserved variables form
+  vector<array<double,4>> Field_intermediate_prim; //in primitive variables form
+  vector<array<double,4>> Resid_intermediate;
+
+  vector<array<double,4>>* field_interm_cons;
+  vector<array<double,4>>* field_interm_prim;
+  vector<array<double,4>>* resid_interm;
+
+  public:
+  
+  RungeKutta4(MeshGenBASE* &m,EulerBASE* &e,const double &c);
+  
+  void ComputeNewSolution(vector<array<double,4>>* &field,vector<array<double,4>>* &resid,vector<double>* &time_steps,array<double,4> &Omega,vector<array<double,4>>* &field_stall,bool &resid_stall) override;
+
+
+  ~RungeKutta4();
+
+};
 
 
 

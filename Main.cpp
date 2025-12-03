@@ -72,7 +72,7 @@ int main() {
   const double CFL = 0.7; //CFL number (must <= 1 for Euler Explicit integration)
   //const double CFL = 1e-2; //CFL number (must <= 1 for Euler Explicit integration)
   bool timestep{false}; //true = local time stepping; false = global time stepping
-  int time_scheme = 1; //0 for Euler Explicit, 1 for RungeKutta2, 2 for RungeKutta4
+  int time_scheme = 2; //0 for Euler Explicit, 1 for RungeKutta2, 2 for RungeKutta4
 
   // Flux Specifications
   int flux_scheme{2}; //0=JST, 1=Van Leer, 2 = Roe 
@@ -170,8 +170,8 @@ int main() {
     time = new EulerExplicit(mesh,euler,CFL);
   else if (time_scheme == 1)
     time = new RungeKutta2(mesh,euler,CFL);
-   // else if (time_scheme == 2) TODO
-      //time = new RungeKutta4(mesh,euler,CFL);
+  else if (time_scheme == 2)
+    time = new RungeKutta4(mesh,euler,CFL);
   else 
     cerr<<"Error: unknown time scheme spec.!"<<endl;
 
@@ -212,9 +212,15 @@ int main() {
   // Temporal Stats
   Tools::print("-Temporal Statistics:\n");
   Tools::print("--CFL: %f\n",CFL);
-  Tools::print("--Time-stepping method: ");
-  (timestep == true) ? Tools::print("Local time-stepping\n") : Tools::print("Global time-stepping\n");  
-  // Temporal Stats
+  Tools::print("--Time Scheme: ");
+  if (time_scheme == 0) //Euler Explicit Time Scheme
+    Tools::print("Euler Explicit\n");
+  else if (time_scheme == 1) //Runge-Kutta2 Time Scheme
+    Tools::print("Runge-Kutta2\n");
+  else  //Runge-Kutta4 Time Scheme
+    Tools::print("Runge-Kutta4\n");
+
+  // Flux Stats
   Tools::print("-Flux Statistics:");
   if (flux_scheme == 1) //Van Leer Flux 
     (epsilon == 0.0) ? Tools::print(" 1st Order Van Leer Scheme\n") : Tools::print(" 2nd Order Van Leer Scheme\n");
