@@ -79,9 +79,9 @@ class EulerBASE {
   //MUSCL Extrapolation (2nd order accuracy)
   array<Vector,2> MUSCLApprox(vector<array<double,4>>* &field,vector<array<double,4>>* &field_stall,int loci,int locj,int nbori,int nborj,int nborloc_i,int nborloc_j,int nbornbor_i,int nbornbor_j,bool resid_stall);
   //Flux Limiters
-  array<double,4> FluxLimiter(vector<array<double,4>>* &field,int loci,int locj,int nbori,int nborj,bool sign);
-  array<double,4> VanLeerLimiter(vector<array<double,4>>* &field,int loci,int locj,int nbori,int nborj,bool sign);
-  array<double,4> ComputeRVariation(vector<array<double,4>>* &field,int loci,int locj,int nbori,int nborj,bool sign); //outputs r+ and r-
+  array<array<double,4>,4> FluxLimiter(array<double,4> loc_state,array<double,4> nbor_state,array<double,4> nborloc_state,array<double,4> nbornbor_state);
+  array<array<double,4>,4> VanLeerLimiter(array<double,4> loc_state,array<double,4> nbor_state,array<double,4> nborloc_state,array<double,4> nbornbor_state);
+  array<array<double,4>,4> ComputeRVariation(array<double,4> loc_state,array<double,4> nbor_state,array<double,4> nborloc_state,array<double,4> nbornbor_state); //outputs r+ and r-
   //Artificial Dissipation (JST Damping Only)
   //Source Term
   virtual void EvalSourceTerms(SpaceVariables2D* &sols); //source terms for all governing equations

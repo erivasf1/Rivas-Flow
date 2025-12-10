@@ -456,39 +456,35 @@ array<Vector,2> EulerBASE::MUSCLApprox(vector<array<double,4>>* &field,vector<ar
   
 
   //applying flux limiters (if specified)
-  array<double,4> psi_ijhalfplus, psi_ijhalfminus, psi_ijminushalfplus, psi_ij3halfminus;
+  array<array<double,4>,4> Psi;
 
-  if (epsilon == 0.0) { //1st order accurate case -- no flux limiter
-    psi_ijhalfplus[0] = 1.0; psi_ijhalfplus[1] = 1.0;
-    psi_ijhalfplus[2] = 1.0; psi_ijhalfplus[3] = 1.0; 
-
-    psi_ijhalfminus = psi_ijhalfplus; psi_ijminushalfplus = psi_ijhalfplus;
-    psi_ij3halfminus = psi_ijhalfplus;
+  if (epsilon == 0.0){  //1st order accurate case -- no flux limiter
+    array<double,4> ones = {1.0,1.0,1.0,1.0}; 
+    Psi.fill(ones);
   }
 
-  else { //2nd order accurate
-    psi_ijhalfplus = FluxLimiter(field,loci,locj,nbori,nborj,true);
-    psi_ijhalfminus = FluxLimiter(field,loci,locj,nbori,nborj,false);
-
-    psi_ijminushalfplus = FluxLimiter(field,loci,locj,nborloc_i,nborloc_j,true);
-    psi_ij3halfminus = FluxLimiter(field,loci,locj,nbornbor_i,nbornbor_j,false);
+  else { //2nd order accurate w/ flux limiters
+  
+    //Note: Psi[0] = i-1/2(+); Psi[1] = i+1/2(-); Psi[2] = i+3/2(-); Psi[3] = i+1/2(+)
+    Psi = FluxLimiter(loc_state,nbor_state,nborloc_state,nbornbor_state); 
   }
+ 
 
   // extrapolating states -- lecture notes Sec. 7 pg. 24
   for (int n=0;n<4;n++){
-    state[0][n] = loc_state[n] + (epsilon/4.0) * ( (1.0-kappa_scheme)*psi_ijminushalfplus[n]*(loc_state[n]-nborloc_state[n]) + (1.0+kappa_scheme)*psi_ijhalfminus[n]*(nbor_state[n]-loc_state[n]) ); //left state
-    state[1][n] = nbor_state[n] - (epsilon/4.0) * ( (1.0+kappa_scheme)*psi_ij3halfminus[n]*(nbor_state[n]-loc_state[n]) + (1.0-kappa_scheme)*psi_ijhalfplus[n]*(nbornbor_state[n]-nbor_state[n]) ); //right state
+    state[0][n] = loc_state[n] + (epsilon/4.0) * ( (1.0-kappa_scheme)*Psi[0][n]*(loc_state[n]-nborloc_state[n]) + (1.0+kappa_scheme)*Psi[1][n]*(nbor_state[n]-loc_state[n]) ); //left state
+    state[1][n] = nbor_state[n] - (epsilon/4.0) * ( (1.0-kappa_scheme)*Psi[2][n]*(nbornbor_state[n]-nbor_state[n]) + (1.0+kappa_scheme)*Psi[3][n]*(nbor_state[n]-loc_state[n]) ); //right state
   } 
 
   return state;
 
 }
 //-----------------------------------------------------------
-array<double,4> EulerBASE::FluxLimiter(vector<array<double,4>>* &field,int loci,int locj,int nbori,int nborj,bool sign){
+array<array<double,4>,4> EulerBASE::FluxLimiter(array<double,4> loc_state,array<double,4> nbor_state,array<double,4> nborloc_state,array<double,4> nbornbor_state){
 
-  array<double,4> Psi;
+  array<array<double,4>,4> Psi;
   if (flux_limiter == 0) //Van Leer Flux Limiter case 
-    Psi = VanLeerLimiter(field,loci,locj,nbori,nborj,sign); 
+    Psi = VanLeerLimiter(loc_state,nbor_state,nborloc_state,nbornbor_state); 
 
   else
     cerr<<"Error: Unknown Limiter Spec.!!!"<<endl;
@@ -497,24 +493,72 @@ array<double,4> EulerBASE::FluxLimiter(vector<array<double,4>>* &field,int loci,
 
 }
 //-----------------------------------------------------------
-array<double,4> EulerBASE::VanLeerLimiter(vector<array<double,4>>* &field,int loci,int locj,int nbori,int nborj,bool sign){
+array<array<double,4>,4> EulerBASE::VanLeerLimiter(array<double,4> loc_state,array<double,4> nbor_state,array<double,4> nborloc_state,array<double,4> nbornbor_state){
 
-  array<double,4> Psi;
-  array<double,4> R_var = ComputeRVariation(field,loci,locj,nbori,nborj,sign); //Get from fcn.
+  array<array<double,4>,4> Psi; 
   
-  for (int n=0;n<4;n++) 
-    Psi[n] = ( R_var[n]+abs(R_var[n]) ) / ( 1.0+R_var[n] );
+  array<array<double,4>,4> R_var = ComputeRVariation(loc_state,nbor_state,nborloc_state,nbornbor_state); //Get from fcn.
+  
+  for (int n=0;n<4;n++) {
+    for (int m=0;m<4;m++) {
+
+    Psi[n][m] = std::max(0.0,( R_var[n][m]+abs(R_var[n][m]) ) / ( 1.0+R_var[n][m] ) );
+
+    }
+
+  }
 
   return Psi;
 
 }
 //-----------------------------------------------------------
-array<double,4> EulerBASE::ComputeRVariation(vector<array<double,4>>* &field,int loci,int locj,int nbori,int nborj,bool sign){
+array<array<double,4>,4> EulerBASE::ComputeRVariation(array<double,4> loc_state,array<double,4> nbor_state,array<double,4> nborloc_state,array<double,4> nbornbor_state){
 
-  array<double,4> u_ij, u_ijplus1, u_ijminus1, u_ijplus2;
-  array<double,4> ans;
+  // u_ij pertain to [loci,locj]
+  //array<double,4> u_ij, u_ijplus1, u_ijminus1, u_ijplus2;
+  array<array<double,4>,4> ans;
 
+  double denom,denom_sign;
+  double min = 1.0e-6; //to avoid division by 0
+
+  for (int n=0;n<4;n++){
+
+    //ij-1/2(+)
+    denom = loc_state[n] - nborloc_state[n];
+    denom_sign = copysign(1.0,denom);
+    denom =  denom_sign * max(abs(denom),min);
+
+    ans[0][n] = (nbor_state[n] - loc_state[n]) / (denom);
+
+    //ij+1/2(-)
+    denom = nbor_state[n] - loc_state[n];
+    denom_sign = copysign(1.0,denom);
+    denom =  denom_sign * max(abs(denom),min);
+    
+    ans[1][n] = (loc_state[n] - nborloc_state[n]) / (denom);
+  
+    //ij+3/2(-)
+    denom = nbornbor_state[n] - nbor_state[n];
+    denom_sign = copysign(1.0,denom);
+    denom =  denom_sign * max(abs(denom),min);
+
+    ans[2][n] = (nbor_state[n] - loc_state[n]) / (denom);
+
+    //ij+1/2(+)
+    denom = nbor_state[n] - loc_state[n];
+    denom_sign = copysign(1.0,denom);
+    denom =  denom_sign * max(abs(denom),min);
+
+    ans[3][n] = (nbornbor_state[n] - nbor_state[n]) / (denom);
+
+  }
+
+  return ans;
+
+
+ /*
   if (sign == true){ //rplus case
+    array<double,4> u_ijplus2;
     
     if (locj == nborj) { //i+1/2 face
 
@@ -600,6 +644,7 @@ array<double,4> EulerBASE::ComputeRVariation(vector<array<double,4>>* &field,int
 
   return ans;
 
+  */
 
 }
 //-----------------------------------------------------------
