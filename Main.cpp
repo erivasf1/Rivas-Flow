@@ -77,7 +77,7 @@ int main() {
   // Flux Specifications
   int flux_scheme{2}; //0=JST, 1=Van Leer, 2 = Roe 
   double epsilon = 1.0; //0 for 1st order and 1 for 2nd order
-  int flux_limiter = 0; //0 for Van Leer
+  int flux_limiter = 0; //1 for Van Leer
   [[maybe_unused]] const double ramp_stop = 1.0e-7; //stopping criteria for ramping fcn. of transitioning from 1st to 2nd
   //double epsilon = 1.0; //ramping value used to transition from 1st to 2nd order
   bool resid_stall{false};//for detecting if residuals have stalled
@@ -232,9 +232,8 @@ int main() {
     Tools::print(" JST Damping\n");
 
   Tools::print("-Flux Limiter: ");
-  if ((flux_limiter == 0) && (epsilon > 0.0) ) 
+  if ((flux_limiter == 1) && (epsilon > 0.0) ) 
     Tools::print("Van Leer\n");
-
   else
     Tools::print("N/A\n");
 

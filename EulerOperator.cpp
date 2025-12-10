@@ -458,7 +458,7 @@ array<Vector,2> EulerBASE::MUSCLApprox(vector<array<double,4>>* &field,vector<ar
   //applying flux limiters (if specified)
   array<array<double,4>,4> Psi;
 
-  if (epsilon == 0.0){  //1st order accurate case -- no flux limiter
+  if (epsilon == 0.0 || flux_limiter == 0){  //1st order accurate case or no flux limiter specified
     array<double,4> ones = {1.0,1.0,1.0,1.0}; 
     Psi.fill(ones);
   }
@@ -483,7 +483,7 @@ array<Vector,2> EulerBASE::MUSCLApprox(vector<array<double,4>>* &field,vector<ar
 array<array<double,4>,4> EulerBASE::FluxLimiter(array<double,4> loc_state,array<double,4> nbor_state,array<double,4> nborloc_state,array<double,4> nbornbor_state){
 
   array<array<double,4>,4> Psi;
-  if (flux_limiter == 0) //Van Leer Flux Limiter case 
+  if (flux_limiter == 1) //Van Leer Flux Limiter case 
     Psi = VanLeerLimiter(loc_state,nbor_state,nborloc_state,nbornbor_state); 
 
   else
