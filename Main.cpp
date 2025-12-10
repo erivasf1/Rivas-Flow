@@ -36,7 +36,7 @@ int main() {
 
   //! INITIALIZATION
   // Scenario
-  int scenario = 4; //1 = 1D, 2 = 2D, 3 = 2D MMS, 4 = TRUE CARTESIAN of MMS
+  int scenario = 2; //1 = 1D, 2 = 2D, 3 = 2D MMS, 4 = TRUE CARTESIAN of MMS
   CASE_2D case_2d = INLET;
 
   // Constants for 1D case or True Cartesian 2D MMS case
@@ -46,24 +46,33 @@ int main() {
 
   //FOR NOW: MMS case is initialized with MS & boundaries are set to outflow for extrapolating to ghost cells
   // Boundary Conditions Specification
-  BOUNDARY_COND top_cond = OUTFLOW; 
-  BOUNDARY_COND btm_cond = OUTFLOW;
-  BOUNDARY_COND left_cond = OUTFLOW;
-  BOUNDARY_COND right_cond = OUTFLOW;
-  /* 
-  BOUNDARY_COND top_cond = INFLOW; 
-  BOUNDARY_COND btm_cond = SLIP_WALL;
-  BOUNDARY_COND left_cond = SLIP_WALL;
-  BOUNDARY_COND right_cond = OUTFLOW;
-  */
+  BOUNDARY_COND top_cond,btm_cond,left_cond,right_cond;
+  if (scenario == 3 || scenario == 4){
+    top_cond = OUTFLOW; 
+    btm_cond = OUTFLOW;
+    left_cond = OUTFLOW;
+    right_cond = OUTFLOW;
+  }
+  else if (scenario == 2) {
+    top_cond = INFLOW; 
+    btm_cond = SLIP_WALL;
+    left_cond = SLIP_WALL;
+    right_cond = OUTFLOW;
+  
+  }
+
+  else{
+    cerr<<"Scenario not supported yet!"<<endl;
+    return 0;
+  }
 
   [[maybe_unused]]bool cond_loc{false}; //true for subsonic & false for supersonic (FOR EXACT SOL.)
   [[maybe_unused]]bool cond_bc{true}; //true for subsonic & false for supersonic (FOR OUTFLOW BC)
 
   // Mesh Specifications
-  //[[maybe_unused]]const char* meshfile = "Grids/InletGrids/Inlet.53x17.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
+  [[maybe_unused]]const char* meshfile = "Grids/InletGrids/Inlet.53x17.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
   //[[maybe_unused]]const char* meshfile = "Grids/CurvilinearGrids/curv2d129.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
-  [[maybe_unused]]const char* meshfile = NULL;
+  //[[maybe_unused]]const char* meshfile = NULL;
   [[maybe_unused]]int cellnum = 100; //recommending an even number for cell face at the throat of nozzle (NOTE: will get reassigned val. if mesh is provided)
 
   // Temporal Specifications
@@ -76,7 +85,7 @@ int main() {
 
   // Flux Specifications
   int flux_scheme{2}; //0=JST, 1=Van Leer, 2 = Roe 
-  double epsilon = 1.0; //0 for 1st order and 1 for 2nd order
+  double epsilon = 0.0; //0 for 1st order and 1 for 2nd order
   int flux_limiter = 0; //1 for Van Leer
   [[maybe_unused]] const double ramp_stop = 1.0e-7; //stopping criteria for ramping fcn. of transitioning from 1st to 2nd
   //double epsilon = 1.0; //ramping value used to transition from 1st to 2nd order
