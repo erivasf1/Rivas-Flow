@@ -36,19 +36,20 @@ int main() {
 
   //! INITIALIZATION
   // Scenario
-  int scenario = 2; //1 = 1D, 2 = 2D, 3 = 2D MMS, 4 = TRUE CARTESIAN of MMS
+  int scenario = 4; //1 = 1D, 2 = 2D, 3 = 2D MMS, 4 = TRUE CARTESIAN of MMS
   CASE_2D case_2d = INLET;
 
   // Constants for 1D case or True Cartesian 2D MMS case
   [[maybe_unused]]double xmin = 0.0; [[maybe_unused]]double xmax = 1.0;
   [[maybe_unused]]double ymin = 0.0; [[maybe_unused]]double ymax = 1.0;
-  [[maybe_unused]]int Nx = 12; [[maybe_unused]]int Ny = 12;
+  [[maybe_unused]]int Nx = 10; [[maybe_unused]]int Ny = 10;
 
-  //FOR NOW: MMS case is initialized with MS & boundaries are set to outflow for extrapolating to ghost cells
   // Boundary Conditions Specification
+  //FOR NOW: MMS case is initialized with MS & boundaries are set to outflow for extrapolating to ghost cells
   BOUNDARY_COND top_cond,btm_cond,left_cond,right_cond;
   if (scenario == 3 || scenario == 4){
-    top_cond = OUTFLOW; 
+    top_cond = SLIP_WALL; 
+    //top_cond = OUTFLOW; 
     btm_cond = OUTFLOW;
     left_cond = OUTFLOW;
     right_cond = OUTFLOW;
@@ -70,14 +71,14 @@ int main() {
   [[maybe_unused]]bool cond_bc{true}; //true for subsonic & false for supersonic (FOR OUTFLOW BC)
 
   // Mesh Specifications
-  [[maybe_unused]]const char* meshfile = "Grids/InletGrids/Inlet.53x17.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
+  //[[maybe_unused]]const char* meshfile = "Grids/InletGrids/Inlet.53x17.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
   //[[maybe_unused]]const char* meshfile = "Grids/CurvilinearGrids/curv2d129.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
-  //[[maybe_unused]]const char* meshfile = NULL;
+  [[maybe_unused]]const char* meshfile = NULL;
   [[maybe_unused]]int cellnum = 100; //recommending an even number for cell face at the throat of nozzle (NOTE: will get reassigned val. if mesh is provided)
 
   // Temporal Specifications
-  const int iter_max = 1e3;
-  int iterout = 10; //number of iterations per solution output
+  const int iter_max = 1e1;
+  int iterout = 1; //number of iterations per solution output
   const double CFL = 0.7; //CFL number (must <= 1 for Euler Explicit integration)
   //const double CFL = 1e-2; //CFL number (must <= 1 for Euler Explicit integration)
   bool timestep{false}; //true = local time stepping; false = global time stepping

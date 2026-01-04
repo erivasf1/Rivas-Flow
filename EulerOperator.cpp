@@ -192,22 +192,41 @@ void EulerBASE::ApplySlipWall(vector<array<double,4>>* &field,int side){
 
   //NOTE: using notes from Lecture 7,Slide 41
   //Velocity eq. comes from ChatGPT and wikipedia page under "vector rejection"
+  //Velocity eq. comes from self derivation
   //TODO: extrapolate to ghost cells
 
-  array<double,2> unit_normal;
+  array<double,2> unit_normal,unit_tang;
   double x_vel,y_vel; //neighboring interior cell velocities
   double T; //Temp. of ghost cell
   [[maybe_unused]] double p_nbor1,p_nbor2; //neighboring interior cell pressures
+  double denom; // holds sxny - synx
+  double tang_dot, normal_dot; //dot products of interior cell vels. w/ tang. & normal dir.
 
   //TOP SIDE
   if (side == 0){ //top side
-    for (int n=0;n<mesh->cell_imax;n++){
+    //! TODO:Applying slip wall conditions to both layers of ghost cells
+    for (int m=0;n<mesh->(int)top_cells.size();n++){
+      //extracting vel. of interior cell 
+      x_vel = fieldij(field,n,mesh->cell_jmax-1,mesh->cell_imax)[1]; 
+      y_vel = fieldij(field,n,mesh->cell_jmax-1,mesh->cell_imax)[2]; 
+
       //calculating outward unit normal vec.
       unit_normal = mesh->ComputeOutwardUnitVector(n,mesh->cell_jmax-1,0);//aligned in +i dir.
+      //TODO:calculating tangential unit vec.
+      unit_tang = mesh->ComputeTangentialUnitVector(n,mesh->cell_jmax-1,0);
+
+      //computing denom & dot products
+      denom = unit_tang[0]*unit_normal[1] - unit_tang[1]*unit_normal[0];
+      tang_dot = x_vel*unit_tang[0] + y_vel*unit_tang[1];
+      normal_dot = x_vel*unit_normal[0] + y_vel*unit_normal[1];
+
       //computing ghost cell velocity
-      x_vel = fieldij(field,n,mesh->cell_jmax-1,mesh->cell_imax)[1]; y_vel = fieldij(field,n,mesh->cell_jmax-1,mesh->cell_imax)[2]; 
+      /*
       mesh->top_cells[n][1] = x_vel - 2.0* (x_vel*unit_normal[0] + y_vel*unit_normal[1] )*unit_normal[0];
       mesh->top_cells[n][2] = y_vel - 2.0* (x_vel*unit_normal[0] + y_vel*unit_normal[1] )*unit_normal[1];
+      */
+      mesh->top_cells[n][1] = (unit_normal[1]*tang_dot + unit_tang[1]*normal_dot) / denom;
+      mesh->top_cells[n][2] = (-unit_normal[0]*tang_dot - unit_tang[0]*normal_dot) / denom;
     
       //extrapolating pressure
       p_nbor1 = fieldij(field,n,mesh->cell_jmax-1,mesh->cell_imax)[3]; 
@@ -223,6 +242,17 @@ void EulerBASE::ApplySlipWall(vector<array<double,4>>* &field,int side){
       //computing density
       T = p_nbor1 / (fieldij(field,n,mesh->cell_jmax-1,mesh->cell_imax)[0]*R);
       mesh->top_cells[n][0] = mesh->top_cells[n][3] / (R*T);
+
+    }
+
+    //! Extrapolating to 2nd layer of ghost cells
+    array<double,4> nbor_ghost, nbor_interior;
+    for (int n=0;n<mesh->cell_imax;n++){
+      nbor_ghost = mesh->top_cells[n];
+      nbor_interior = fieldij(field,n,mesh->cell_jmax-1,mesh->cell_imax);
+
+      for (int m=0;m<4;m++)
+        mesh->top_cells[n+mesh->cell_imax][m] = 2.0*nbor_ghost[m] - nbor_interior[m];
 
     }
   }

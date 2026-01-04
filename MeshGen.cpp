@@ -52,6 +52,11 @@ array<double,2> MeshGenBASE::ComputeOutwardUnitVector(int,int,int){
   return zero; //return a zero array by default
 }
 //-----------------------------------------------------------
+array<double,2> MeshGenBASE::ComputeTangentialUnitVector(int,int,int){
+  array<double,2> zero{0.0,0.0};
+  return zero; //return a zero array by default
+}
+//-----------------------------------------------------------
 MeshGenBASE::~MeshGenBASE(){}
 //-----------------------------------------------------------
 
@@ -928,8 +933,7 @@ array<double,2> MeshGen2D::ComputeOutwardUnitVector(int i,int j,int side){
     nx = -(y2-y1) / area; ny = (x2-x1) / area;
     
   }
-
-  else if (side == 1){ //btm side case (outward unit vector aligned w/ -j)
+else if (side == 1){ //btm side case (outward unit vector aligned w/ -j)
     x1 = cell_coords[0][0]; x2 = cell_coords[0][1];
     y1 = cell_coords[1][0]; y2 = cell_coords[1][1];
     area = GetInteriorCellArea(i,j,1);
@@ -965,6 +969,19 @@ array<double,2> MeshGen2D::ComputeOutwardUnitVector(int i,int j,int side){
 
 }
 
+//-----------------------------------------------------------
+array<double,2> MeshGen2D::ComputeTangentialUnitVector(int i,int j,int side){
+
+  //Calls outward unit normal and simply rotates vector by 90 degrees
+  array<double,2> unit_normal,unit_tang;
+
+  unit_normal = ComputeOutwardUnitVector(i,j,side);
+  unit_tang[0] = -unit_normal[1]; 
+  unit_tang[1] = unit_normal[0]; 
+ 
+  return unit_tang;
+
+}
 //-----------------------------------------------------------
 array<double,4> MeshGen2D::GetGhostCellVarVec(int i,int j,int side){
   //NOTE: i=0 refers to 1st LAYER of ghost cells on both left and right sides && j=0 refers to 1st LAYER Of ghost cells on both top and btm sides

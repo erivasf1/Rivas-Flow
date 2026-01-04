@@ -34,6 +34,7 @@ class MeshGenBASE {
   virtual array<array<double,4>,2> GetGhostCellCoords(int i,int j, int tag);
   virtual void ComputeGhostCellCenteredCoordinate();
   virtual array<double,2> ComputeOutwardUnitVector(int i,int j,int side);
+  virtual array<double,2> ComputeTangentialUnitVector(int i,int j,int side);
   virtual array<double,4> GetGhostCellVarVec(int i,int j,int side);
   
   virtual ~MeshGenBASE();
@@ -98,6 +99,7 @@ class MeshGen2D : public MeshGenBASE { //reads in a non-uniform 2D mesh
   void ComputeGhostCellCenteredCoordinate() override; //computes+stores the ghost cell center coordinates 
   double GetCellVolume(int i,int j) override;
   array<double,2> ComputeOutwardUnitVector(int i,int j,int side) override;
+  array<double,2> ComputeTangentialUnitVector(int i,int j,int side) override;
   array<double,4> GetGhostCellVarVec(int i,int j,int side) override; //extracts vector of primitive vars. from the specified ghost cell
   void AssignGhostCellVarVec(int i,int j,int side,array<double,4> &res);
 
