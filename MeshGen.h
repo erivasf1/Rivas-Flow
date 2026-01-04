@@ -12,7 +12,7 @@ class MeshGenBASE {
   vector<double> xcoords,ycoords; //domain nodes
   int cellnumber;
   int Nx,Ny,Nz;
-  int cell_imax,cell_jmax;
+  int cell_imax,cell_jmax; //number of cells in each dir. not index!
 
   vector<double> right_xcoords,left_xcoords,top_xcoords,btm_xcoords;
   vector<double> right_ycoords,left_ycoords,top_ycoords,btm_ycoords;

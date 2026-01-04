@@ -42,7 +42,7 @@ int main() {
   // Constants for 1D case or True Cartesian 2D MMS case
   [[maybe_unused]]double xmin = 0.0; [[maybe_unused]]double xmax = 1.0;
   [[maybe_unused]]double ymin = 0.0; [[maybe_unused]]double ymax = 1.0;
-  [[maybe_unused]]int Nx = 10; [[maybe_unused]]int Ny = 10;
+  [[maybe_unused]]int Nx = 5; [[maybe_unused]]int Ny = 5;
 
   // Boundary Conditions Specification
   //FOR NOW: MMS case is initialized with MS & boundaries are set to outflow for extrapolating to ghost cells
@@ -50,9 +50,10 @@ int main() {
   if (scenario == 3 || scenario == 4){
     top_cond = SLIP_WALL; 
     //top_cond = OUTFLOW; 
-    btm_cond = OUTFLOW;
-    left_cond = OUTFLOW;
-    right_cond = OUTFLOW;
+    btm_cond = SLIP_WALL;
+    //btm_cond = OUTFLOW;
+    left_cond = SLIP_WALL;
+    right_cond = SLIP_WALL;
   }
   else if (scenario == 2) {
     top_cond = INFLOW; 
