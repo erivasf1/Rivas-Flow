@@ -36,7 +36,7 @@ int main() {
 
   //! INITIALIZATION
   // Scenario
-  int scenario = 4; //1 = 1D, 2 = 2D, 3 = 2D MMS, 4 = TRUE CARTESIAN of MMS
+  int scenario = 2; //1 = 1D, 2 = 2D, 3 = 2D MMS, 4 = TRUE CARTESIAN of MMS
   CASE_2D case_2d = INLET;
 
   // Constants for 1D case or True Cartesian 2D MMS case
@@ -48,12 +48,10 @@ int main() {
   //FOR NOW: MMS case is initialized with MS & boundaries are set to outflow for extrapolating to ghost cells
   BOUNDARY_COND top_cond,btm_cond,left_cond,right_cond;
   if (scenario == 3 || scenario == 4){
-    top_cond = SLIP_WALL; 
-    //top_cond = OUTFLOW; 
-    btm_cond = SLIP_WALL;
-    //btm_cond = OUTFLOW;
-    left_cond = SLIP_WALL;
-    right_cond = SLIP_WALL;
+    top_cond = OUTFLOW; 
+    btm_cond = OUTFLOW;
+    left_cond = OUTFLOW;
+    right_cond = OUTFLOW;
   }
   else if (scenario == 2) {
     top_cond = INFLOW; 
@@ -72,15 +70,15 @@ int main() {
   [[maybe_unused]]bool cond_bc{true}; //true for subsonic & false for supersonic (FOR OUTFLOW BC)
 
   // Mesh Specifications
-  //[[maybe_unused]]const char* meshfile = "Grids/InletGrids/Inlet.53x17.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
+  [[maybe_unused]]const char* meshfile = "Grids/InletGrids/Inlet.53x17.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
   //[[maybe_unused]]const char* meshfile = "Grids/CurvilinearGrids/curv2d129.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
-  [[maybe_unused]]const char* meshfile = NULL;
+  //[[maybe_unused]]const char* meshfile = NULL;
   [[maybe_unused]]int cellnum = 100; //recommending an even number for cell face at the throat of nozzle (NOTE: will get reassigned val. if mesh is provided)
 
   // Temporal Specifications
-  const int iter_max = 1e1;
+  const int iter_max = 1e5;
   int iterout = 1; //number of iterations per solution output
-  const double CFL = 0.7; //CFL number (must <= 1 for Euler Explicit integration)
+  const double CFL = 0.8; //CFL number (must <= 1 for Euler Explicit integration)
   //const double CFL = 1e-2; //CFL number (must <= 1 for Euler Explicit integration)
   bool timestep{false}; //true = local time stepping; false = global time stepping
   int time_scheme = 1; //0 for Euler Explicit, 1 for RungeKutta2, 2 for RungeKutta4
@@ -260,8 +258,8 @@ int main() {
   }
 
   //! SETTING INITIAL CONDITIONS
-  //euler->SetInitialConditions(field);
-  Field = FieldMS; //for now, setting field to manufactured sol.
+  euler->SetInitialConditions(field);
+  //Field = FieldMS; //for now, setting field to manufactured sol.
 
   string val = error->zeroPad(0,4);
   string init_name = "Results/Iteration_";
@@ -370,7 +368,7 @@ int main() {
 
     //! COMPUTE NEW SOL. VALUES 
     time->ComputeNewSolution(field_star,resid_star,time_steps,Omega,field_stall,resid_stall);//TESTING
-    time->SolutionLimiter(field_star); //applies solution limiter to all cells (including ghost cells)
+    //time->SolutionLimiter(field_star); //applies solution limiter to all cells (including ghost cells)
 
     //! ENFORCE BOUNDARY CONDITIONS
     euler->Enforce2DBoundaryConditions(field_star,false);
@@ -391,7 +389,7 @@ int main() {
         (*field_star) = (*field); //resetting primitive variables to previous time step values
 
         time->ComputeNewSolution(field_star,resid_star,time_steps,Omega,field_stall,resid_stall); //advancing intermediate solution w/ under-relaxation factor 
-        time->SolutionLimiter(field_star); //temporarily reapplying the limiter
+        //time->SolutionLimiter(field_star); //temporarily reapplying the limiter
 
         euler->ComputeResidual(resid_star,field_star,field_stall,resid_stall);
         ResidualStarNorms = sols->ComputeSolutionNorms(resid_star);
@@ -488,7 +486,7 @@ int main() {
     Tools::print("\n");
     Tools::print("------------------------------------------------------------\n");
     Tools::print("CONGRATS you converged!\n");
-    Tools::print("Continuity: %e\nX-Momentum: %e\nEnergy: %e\n",ResidualNorms[0],ResidualNorms[1],ResidualNorms[2]);
+    Tools::print("Continuity: %e\nX-Momentum: %e\nY-Momentum: %e\nEnergy: %e\n",ResidualNorms[0],ResidualNorms[1],ResidualNorms[2],ResidualNorms[3]);
     const char* filename_final = "ConvergedSolution.dat" ;
     error->OutputPrimitiveVariables(field,filename_final,false,0,mesh->xcoords,mesh->ycoords,mesh->cellnumber,mesh->Nx,mesh->Ny);
   }

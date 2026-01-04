@@ -191,9 +191,7 @@ void EulerBASE::ApplyOutflow(vector<array<double,4>>* &field,int side){
 void EulerBASE::ApplySlipWall(vector<array<double,4>>* &field,int side){
 
   //NOTE: using notes from Lecture 7,Slide 41
-  //Velocity eq. comes from ChatGPT and wikipedia page under "vector rejection"
-  //Velocity eq. comes from self derivation
-  //TODO: extrapolate to ghost cells
+  //Velocity eq. comes from self derivation -- formulated in matrix-form to solve for unknowns
 
   array<double,2> unit_normal,unit_tang;
   double x_vel,y_vel; //neighboring interior cell velocities
@@ -206,7 +204,8 @@ void EulerBASE::ApplySlipWall(vector<array<double,4>>* &field,int side){
 
   //TOP SIDE
   if (side == 0){ //top side
-    //! TODO:Applying slip wall conditions to both layers of ghost cells
+
+    //! Applying slip wall conditions to both layers of ghost cells
     for (int n=0;n<(int)mesh->top_cells.size();n++){
       //interior cell indexing
       i = (n < mesh->cell_imax) ? n : n - mesh->cell_imax;
@@ -1014,16 +1013,7 @@ array<double,4> EulerBASE::ComputeFlux_CELL(array<double,4> &field_state,double 
   flux[2] = field_state_normal[0] * (pow(field_state_normal[2],2.0) + field_state_normal[1]*field_state_normal[2]) - field_state_normal[3]; //rho*v^2 rho*u*v - P
 
   //Energy Flux
-  /*
-  double rho = field_state_normal[0];
-  double u = field_state_normal[1]; double v = field_state_normal[2];
-  double P = field_state_normal[3];
-  flux[3] = (gamma/(gamma-1.0)) * (P*u + P*v);
-  flux[3] += (pow(u,2.0) + pow(v,2.0)) * (0.5*rho*(u+v));
-  */
   double ht = ComputeHTotal(field_state_normal);
-  //double ht = pow(ComputeSpeedofSound(field_state_normal),2.0) / (gamma-1.0);
-  //ht += (pow(field_state_normal[1],2.0) + pow(field_state_normal[2],2.0) ) / 2.0;
   flux[3] = field_state_normal[0]*ht*(field_state_normal[1]+field_state_normal[2]); //rho*ht*(u+v)
 
   return flux; 
@@ -2048,15 +2038,17 @@ void Euler2D::InitSolutions(vector<array<double,4>>* &field,int cellnum){
 //-----------------------------------------------------------
 void Euler2D::SetInitialConditions(vector<array<double,4>>* &field){
 
+  //using perfect gas EOS
   double rho_bc = P_bc / (R*T_bc); //boundary condition density
 
   double Gamma = GetGamma();
   double a_bc = sqrt(Gamma*R*T_bc); 
   double uvel_bc = Mach_bc * a_bc; //boundary condition x-velocity
-  double vvel_bc = 0.0; //boundary condition y-velocity
+  double vvel_bc = DBL_MIN; //boundary condition y-velocity
+  //double vvel_bc = 0.0; //boundary condition y-velocity
   int cellnum = cell_imax * cell_jmax;
 
-  //Setting w/ arb. sin function
+  //Setting to inflow condition
   for (int i=0;i<cellnum;i++) {
     (*field)[i][0] = rho_bc;
     (*field)[i][1] = uvel_bc;
@@ -2131,7 +2123,7 @@ void Euler2D::ApplyInflow(int side){
   double Gamma = GetGamma();
   double a_bc = sqrt(Gamma*R*T_bc); 
   double uvel_bc = Mach_bc * a_bc; //boundary condition x-velocity
-  double vvel_bc = 0.0; //boundary condition y-velocity
+  double vvel_bc = DBL_MIN; //boundary condition y-velocity
 
   if ((scenario_2d == 0) && (side == 0)){ //INLET CASE ONLY
     //NOTE: splitting the top boundary into 2 boundary conditions
@@ -2196,139 +2188,213 @@ void Euler2D::ApplyInflow(int side){
   return;
 }
 //-----------------------------------------------------------
+
 void Euler2D::ApplySlipWall(vector<array<double,4>>* &field,int side){
 
   //NOTE: using notes from Lecture 7,Slide 41
-  //Velocity eq. comes from ChatGPT and wikipedia page under "vector rejection"
-  //TODO: extrapolate to ghost cells
+  //Velocity eq. comes from self derivation -- formulated in matrix-form to solve for unknowns
 
-  array<double,2> unit_normal;
+  array<double,2> unit_normal,unit_tang;
   double x_vel,y_vel; //neighboring interior cell velocities
   double T; //Temp. of ghost cell
   [[maybe_unused]] double p_nbor1,p_nbor2; //neighboring interior cell pressures
+  double rho_nbor1;
+  double denom; // holds sxny - synx
+  double tang_dot, normal_dot; //dot products of interior cell vels. w/ tang. & normal dir.
+  int i,j; //for indexing corresponding interior cell
 
   [[maybe_unused]] array<double,2> pt_split{0.5,0.6}; // for inlet case
   [[maybe_unused]] array<array<double,4>,2> pt_current;
 
   //TOP SIDE
   if (side == 0){ //top side
-    for (int n=0;n<mesh->cell_imax;n++){
-         
-      if (scenario_2d == 0){ //INLET CASE
+
+    //! Applying slip wall conditions to both layers of ghost cells
+    for (int n=0;n<(int)mesh->top_cells.size();n++){
+
+      if (scenario_2d == 0){ //INLET CASE only
         pt_current = mesh->GetGhostCellCoords(n,0,0);
 
         if (pt_current[0][3] <= pt_split[0]) //skipping ghost cells to the left of the split point
           continue;
       } 
 
-      //calculating outward unit normal vec.
-      unit_normal = mesh->ComputeOutwardUnitVector(n,mesh->cell_jmax-1,0);//aligned in +i dir.
+      //interior cell indexing
+      i = (n < mesh->cell_imax) ? n : n - mesh->cell_imax;
+      j  = (n < mesh->cell_imax) ? mesh->cell_jmax-1 : mesh->cell_jmax-2;
+      //extracting vel. of corresponding interior cell 
+      x_vel = fieldij(field,i,j,mesh->cell_imax)[1]; 
+      y_vel = fieldij(field,i,j,mesh->cell_imax)[2]; 
+
+      //calculating outward unit normal vec. of corresponding interior cell
+      unit_normal = mesh->ComputeOutwardUnitVector(i,j,0);//aligned in +j dir.
+      //TODO:calculating tangential unit vec. of corresponding interior cell
+      unit_tang = mesh->ComputeTangentialUnitVector(i,j,0);
+
+      //computing denom & dot products
+      denom = unit_tang[0]*unit_normal[1] - unit_tang[1]*unit_normal[0];
+      tang_dot = x_vel*unit_tang[0] + y_vel*unit_tang[1];
+      normal_dot = x_vel*unit_normal[0] + y_vel*unit_normal[1];
+
       //computing ghost cell velocity
-      x_vel = fieldij(field,n,mesh->cell_jmax-1,mesh->cell_imax)[1]; y_vel = fieldij(field,n,mesh->cell_jmax-1,mesh->cell_imax)[2]; 
+      /*
       mesh->top_cells[n][1] = x_vel - 2.0* (x_vel*unit_normal[0] + y_vel*unit_normal[1] )*unit_normal[0];
       mesh->top_cells[n][2] = y_vel - 2.0* (x_vel*unit_normal[0] + y_vel*unit_normal[1] )*unit_normal[1];
+      */
+      mesh->top_cells[n][1] = (unit_normal[1]*tang_dot + unit_tang[1]*normal_dot) / denom;
+      mesh->top_cells[n][2] = (-unit_normal[0]*tang_dot - unit_tang[0]*normal_dot) / denom;
     
-      //extrapolating pressure
-      p_nbor1 = fieldij(field,n,mesh->cell_jmax-1,mesh->cell_imax)[3]; 
+      //extrapolating pressure!
+      p_nbor1 = (n < mesh->cell_imax) ? fieldij(field,i,j,mesh->cell_imax)[3] : mesh->top_cells[n-mesh->cell_imax][3];
       if (epsilon == 0)
         mesh->top_cells[n][3] = p_nbor1;
       else if (epsilon > 0){
-        p_nbor2 = fieldij(field,n,mesh->cell_jmax-2,mesh->cell_imax)[3]; 
+        p_nbor2 = (n < mesh->cell_imax) ? fieldij(field,i,j-1,mesh->cell_imax)[3] : fieldij(field,i,j+1,mesh->cell_imax)[3]; 
         mesh->top_cells[n][3] = p_nbor1 - 0.5*(p_nbor2-p_nbor1);
       }
       else //error handling
         return;
 
-      //computing density
-      T = p_nbor1 / (fieldij(field,n,mesh->cell_jmax-1,mesh->cell_imax)[0]*R);
+      //computing density -- assuming adiabatic BC (setting temp to val. of nbor)
+      rho_nbor1 = (n < mesh->cell_imax) ? fieldij(field,i,j,mesh->cell_imax)[0] : mesh->top_cells[n-mesh->cell_imax][0];
+      T = p_nbor1 / (rho_nbor1 * R);
       mesh->top_cells[n][0] = mesh->top_cells[n][3] / (R*T);
 
     }
+
   }
 
 
   //BTM SIDE
   else if (side == 1){ 
-    for (int n=0;n<mesh->cell_imax;n++){
-      //calculating outward unit normal vec.
-      unit_normal = mesh->ComputeOutwardUnitVector(n,0,1);//aligned in +i dir.
-      //computing ghost cell velocity
-      x_vel = fieldij(field,n,0,mesh->cell_imax)[1]; y_vel = fieldij(field,n,0,mesh->cell_imax)[2]; 
-      mesh->btm_cells[n][1] = x_vel - 2.0* (x_vel*unit_normal[0] + y_vel*unit_normal[1] )*unit_normal[0];
-      mesh->btm_cells[n][2] = y_vel - 2.0* (x_vel*unit_normal[0] + y_vel*unit_normal[1] )*unit_normal[1];
+
+    for (int n=0;n<(int)mesh->btm_cells.size();n++){
+      //interior cell indexing
+      i = (n < mesh->cell_imax) ? n : n - mesh->cell_imax;
+      j  = (n < mesh->cell_imax) ? 0 : 1;
+      //extracting vel. of corresponding interior cell 
+      x_vel = fieldij(field,i,j,mesh->cell_imax)[1]; 
+      y_vel = fieldij(field,i,j,mesh->cell_imax)[2]; 
+
+      //calculating outward unit normal vec. of corresponding interior cell
+      unit_normal = mesh->ComputeOutwardUnitVector(i,j,1);//aligned in -j dir.
+      //TODO:calculating tangential unit vec. of corresponding interior cell
+      unit_tang = mesh->ComputeTangentialUnitVector(i,j,0);
+
+      //computing denom & dot products
+      denom = unit_tang[0]*unit_normal[1] - unit_tang[1]*unit_normal[0];
+      tang_dot = x_vel*unit_tang[0] + y_vel*unit_tang[1];
+      normal_dot = x_vel*unit_normal[0] + y_vel*unit_normal[1];
+
+      mesh->btm_cells[n][1] = (unit_normal[1]*tang_dot + unit_tang[1]*normal_dot) / denom;
+      mesh->btm_cells[n][2] = (-unit_normal[0]*tang_dot - unit_tang[0]*normal_dot) / denom;
     
-      //extrapolating pressure
-      p_nbor1 = fieldij(field,n,0,mesh->cell_imax)[3]; 
-      if (epsilon == 0) //1st order
+      //extrapolating pressure!
+      p_nbor1 = (n < mesh->cell_imax) ? fieldij(field,i,j,mesh->cell_imax)[3] : mesh->btm_cells[n-mesh->cell_imax][3];
+      if (epsilon == 0)
         mesh->btm_cells[n][3] = p_nbor1;
-      else if (epsilon > 0){ //2nd order
-        p_nbor2 = fieldij(field,n,1,mesh->cell_imax)[3]; 
+      else if (epsilon > 0){
+        p_nbor2 = (n < mesh->cell_imax) ? fieldij(field,i,j+1,mesh->cell_imax)[3] : fieldij(field,i,j-1,mesh->cell_imax)[3]; 
         mesh->btm_cells[n][3] = p_nbor1 - 0.5*(p_nbor2-p_nbor1);
       }
       else //error handling
         return;
 
-      //computing density
-      T = p_nbor1 / (fieldij(field,n,0,mesh->cell_imax)[0]*R);
+      //computing density -- assuming adiabatic BC (setting temp to val. of nbor)
+      rho_nbor1 = (n < mesh->cell_imax) ? fieldij(field,i,j,mesh->cell_imax)[0] : mesh->btm_cells[n-mesh->cell_imax][0];
+      T = p_nbor1 / (rho_nbor1 * R);
       mesh->btm_cells[n][0] = mesh->btm_cells[n][3] / (R*T);
 
     }
+
   }
 
   //LEFT SIDE
   else if (side == 2){ 
-    for (int n=0;n<mesh->cell_jmax;n++){
-      //calculating outward unit normal vec.
-      unit_normal = mesh->ComputeOutwardUnitVector(0,n,2);//aligned in +i dir.
-      //computing ghost cell velocity
-      x_vel = fieldij(field,0,n,mesh->cell_imax)[1]; y_vel = fieldij(field,0,n,mesh->cell_imax)[2]; 
-      mesh->left_cells[n][1] = x_vel - 2.0* (x_vel*unit_normal[0] + y_vel*unit_normal[1] )*unit_normal[0];
-      mesh->left_cells[n][2] = y_vel - 2.0* (x_vel*unit_normal[0] + y_vel*unit_normal[1] )*unit_normal[1];
+
+    for (int n=0;n<(int)mesh->left_cells.size();n++){
+      //interior cell indexing
+      i = (n < mesh->cell_jmax) ? 0 : 1;
+      j  = (n < mesh->cell_jmax) ? n : n - mesh->cell_jmax;
+      //extracting vel. of corresponding interior cell 
+      x_vel = fieldij(field,i,j,mesh->cell_imax)[1]; 
+      y_vel = fieldij(field,i,j,mesh->cell_imax)[2]; 
+
+      //calculating outward unit normal vec. of corresponding interior cell
+      unit_normal = mesh->ComputeOutwardUnitVector(i,j,2);//aligned in -i dir.
+      //TODO:calculating tangential unit vec. of corresponding interior cell
+      unit_tang = mesh->ComputeTangentialUnitVector(i,j,2);
+
+      //computing denom & dot products
+      denom = unit_tang[0]*unit_normal[1] - unit_tang[1]*unit_normal[0];
+      tang_dot = x_vel*unit_tang[0] + y_vel*unit_tang[1];
+      normal_dot = x_vel*unit_normal[0] + y_vel*unit_normal[1];
+
+      mesh->left_cells[n][1] = (unit_normal[1]*tang_dot + unit_tang[1]*normal_dot) / denom;
+      mesh->left_cells[n][2] = (-unit_normal[0]*tang_dot - unit_tang[0]*normal_dot) / denom;
     
-      //extrapolating pressure
-      p_nbor1 = fieldij(field,0,n,mesh->cell_imax)[3]; 
-      if (epsilon == 0) //1st order
+      //extrapolating pressure!
+      p_nbor1 = (n < mesh->cell_jmax) ? fieldij(field,i,j,mesh->cell_imax)[3] : mesh->left_cells[n-mesh->cell_jmax][3];
+      if (epsilon == 0)
         mesh->left_cells[n][3] = p_nbor1;
-      else if (epsilon > 0){ //2nd order
-        p_nbor2 = fieldij(field,1,n,mesh->cell_imax)[3]; 
+      else if (epsilon > 0){
+        p_nbor2 = (n < mesh->cell_jmax) ? fieldij(field,i+1,j,mesh->cell_imax)[3] : fieldij(field,i-1,j,mesh->cell_imax)[3]; 
         mesh->left_cells[n][3] = p_nbor1 - 0.5*(p_nbor2-p_nbor1);
       }
       else //error handling
         return;
 
-      //computing density
-      T = p_nbor1 / (fieldij(field,0,n,mesh->cell_imax)[0]*R);
+      //computing density -- assuming adiabatic BC (setting temp to val. of nbor)
+      rho_nbor1 = (n < mesh->cell_jmax) ? fieldij(field,i,j,mesh->cell_imax)[0] : mesh->left_cells[n-mesh->cell_jmax][0];
+      T = p_nbor1 / (rho_nbor1 * R);
       mesh->left_cells[n][0] = mesh->left_cells[n][3] / (R*T);
 
     }
+
   }
 
   //RIGHT SIDE
-  else if (side == 3){
-    for (int n=0;n<mesh->cell_jmax;n++){
-      //calculating outward unit normal vec.
-      unit_normal = mesh->ComputeOutwardUnitVector(mesh->cell_imax-1,n,3);//aligned in +i dir.
-      //computing ghost cell velocity
-      x_vel = fieldij(field,mesh->cell_imax-1,n,mesh->cell_imax)[1]; y_vel = fieldij(field,mesh->cell_imax-1,n,mesh->cell_imax)[2]; 
-      mesh->right_cells[n][1] = x_vel - 2.0* (x_vel*unit_normal[0] + y_vel*unit_normal[1] )*unit_normal[0];
-      mesh->right_cells[n][2] = y_vel - 2.0* (x_vel*unit_normal[0] + y_vel*unit_normal[1] )*unit_normal[1];
+  else if (side == 3){ 
+
+    for (int n=0;n<(int)mesh->right_cells.size();n++){
+      //interior cell indexing
+      i = (n < mesh->cell_jmax) ? mesh->cell_imax-1 : mesh->cell_imax-2;
+      j  = (n < mesh->cell_jmax) ? n : n - mesh->cell_jmax;
+      //extracting vel. of corresponding interior cell 
+      x_vel = fieldij(field,i,j,mesh->cell_imax)[1]; 
+      y_vel = fieldij(field,i,j,mesh->cell_imax)[2]; 
+
+      //calculating outward unit normal vec. of corresponding interior cell
+      unit_normal = mesh->ComputeOutwardUnitVector(i,j,3);//aligned in +i dir.
+      //TODO:calculating tangential unit vec. of corresponding interior cell
+      unit_tang = mesh->ComputeTangentialUnitVector(i,j,3);
+
+      //computing denom & dot products
+      denom = unit_tang[0]*unit_normal[1] - unit_tang[1]*unit_normal[0];
+      tang_dot = x_vel*unit_tang[0] + y_vel*unit_tang[1];
+      normal_dot = x_vel*unit_normal[0] + y_vel*unit_normal[1];
+
+      mesh->right_cells[n][1] = (unit_normal[1]*tang_dot + unit_tang[1]*normal_dot) / denom;
+      mesh->right_cells[n][2] = (-unit_normal[0]*tang_dot - unit_tang[0]*normal_dot) / denom;
     
-      //extrapolating pressure
-      p_nbor1 = fieldij(field,mesh->cell_imax-1,n,mesh->cell_imax)[3]; 
-      if (epsilon == 0) //1st order
+      //extrapolating pressure!
+      p_nbor1 = (n < mesh->cell_jmax) ? fieldij(field,i,j,mesh->cell_imax)[3] : mesh->right_cells[n-mesh->cell_jmax][3];
+      if (epsilon == 0)
         mesh->right_cells[n][3] = p_nbor1;
-      else if (epsilon > 0){ //2nd order
-        p_nbor2 = fieldij(field,mesh->cell_imax-2,n,mesh->cell_imax)[3]; 
+      else if (epsilon > 0){
+        p_nbor2 = (n < mesh->cell_jmax) ? fieldij(field,i+1,j,mesh->cell_imax)[3] : fieldij(field,i-1,j,mesh->cell_imax)[3]; 
         mesh->right_cells[n][3] = p_nbor1 - 0.5*(p_nbor2-p_nbor1);
       }
       else //error handling
         return;
 
-      //computing density
-      T = p_nbor1 / (fieldij(field,mesh->cell_imax-1,n,mesh->cell_imax)[0]*R);
+      //computing density -- assuming adiabatic BC (setting temp to val. of nbor)
+      rho_nbor1 = (n < mesh->cell_jmax) ? fieldij(field,i,j,mesh->cell_imax)[0] : mesh->right_cells[n-mesh->cell_jmax][0];
+      T = p_nbor1 / (rho_nbor1 * R);
       mesh->right_cells[n][0] = mesh->right_cells[n][3] / (R*T);
 
     }
+
   }
 
   else 
@@ -2336,11 +2402,8 @@ void Euler2D::ApplySlipWall(vector<array<double,4>>* &field,int side){
 
   return;
 
-
-
-
-  return;
 }
+
 //-----------------------------------------------------------
 void Euler2D::ComputeResidual(vector<array<double,4>>* &resid,vector<array<double,4>>* &field,vector<array<double,4>>* &field_stall,bool resid_stall){
 
@@ -2383,7 +2446,7 @@ void Euler2D::ComputeResidual(vector<array<double,4>>* &resid,vector<array<doubl
 
       //residual calc.
       for (int n=0;n<4;n++)
-        res[n] = (flux_right[n]*area_right+flux_left[n]*area_left) + (flux_top[n]*area_top + flux_btm[n]*area_btm);
+        res[n] = (flux_right[n]*area_right) + (flux_left[n]*area_left) + (flux_top[n]*area_top) + (flux_btm[n]*area_btm);
 
       fieldij(resid,i,j,cell_imax) = res;
     }
