@@ -368,7 +368,7 @@ int main() {
 
     //! COMPUTE NEW SOL. VALUES 
     time->ComputeNewSolution(field_star,resid_star,time_steps,Omega,field_stall,resid_stall);//TESTING
-    //time->SolutionLimiter(field_star); //applies solution limiter to all cells (including ghost cells)
+    time->SolutionLimiter(field_star); //applies solution limiter to all cells (including ghost cells)
 
     //! ENFORCE BOUNDARY CONDITIONS
     euler->Enforce2DBoundaryConditions(field_star,false);
@@ -389,7 +389,7 @@ int main() {
         (*field_star) = (*field); //resetting primitive variables to previous time step values
 
         time->ComputeNewSolution(field_star,resid_star,time_steps,Omega,field_stall,resid_stall); //advancing intermediate solution w/ under-relaxation factor 
-        //time->SolutionLimiter(field_star); //temporarily reapplying the limiter
+        time->SolutionLimiter(field_star); //temporarily reapplying the limiter
 
         euler->ComputeResidual(resid_star,field_star,field_stall,resid_stall);
         ResidualStarNorms = sols->ComputeSolutionNorms(resid_star);

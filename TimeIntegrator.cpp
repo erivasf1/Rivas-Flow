@@ -50,7 +50,8 @@ vector<double> EulerExplicitBASE::ComputeLocalTimeStep(vector<array<double,4>>* 
     //error handling
     if (std::isnan(lambda_max[0]) || isnan(lambda_max[1]) ){
       Tools::print("Infinitiy detected!\n");
-      Tools::print("Velocity at loc(%d): %f\n",i,(*field)[i][0]);
+      Tools::print("Velocity at loc(%d,%d): u=%f, v=%f \n",i,j,(*field)[index][1],(*field)[index][2]);
+      Tools::print("Density at loc(%d,%d): rho=%f \n",i,j,(*field)[index][0]);
       //Tools::print("Mach # at loc(%d): %f\n",i,euler->ComputeMachNumber(field,i));
     }
 
@@ -121,10 +122,10 @@ void EulerExplicitBASE::SolutionLimiter(vector<array<double,4>>* &field){
     (*field)[n][0] = std::min(Density_max,std::max(Density_min,(*field)[n][0]));
 
     //X-Velocity
-    (*field)[n][1] = std::min(Velocity_max,std::max(Velocity_min,(*field)[n][1]));
+    //(*field)[n][1] = std::min(Velocity_max,std::max(Velocity_min,(*field)[n][1]));
 
     //Y-Velocity
-    (*field)[n][2] = std::min(Velocity_max,std::max(Velocity_min,(*field)[n][2]));
+    //(*field)[n][2] = std::min(Velocity_max,std::max(Velocity_min,(*field)[n][2]));
 
     //Pressure
     (*field)[n][3] = std::min(Pressure_max,std::max(Pressure_min,(*field)[n][3]));
@@ -134,12 +135,12 @@ void EulerExplicitBASE::SolutionLimiter(vector<array<double,4>>* &field){
     if ((*field)[n][0] == Density_max || (*field)[n][0] == Density_min)
       Tools::print("Limiter was hit for density at cell %d | val is now:%e\n",n,(*field)[n][0]);
 
-    if ((*field)[n][1] == Velocity_max || (*field)[n][1] == Velocity_min)
+    /*if ((*field)[n][1] == Velocity_max || (*field)[n][1] == Velocity_min)
       Tools::print("Limiter was hit for x-velocity at cell %d | val is now:%e\n",n,(*field)[n][1]);
 
     if ((*field)[n][2] == Velocity_max || (*field)[n][2] == Velocity_min)
       Tools::print("Limiter was hit for y-velocity at cell %d | val is now:%e\n",n,(*field)[n][2]);
-
+    */
     if ((*field)[n][3] == Pressure_max || (*field)[n][3] == Pressure_min)
       Tools::print("Limiter was hit for pressure at cell %d | val is now:%e\n",n,(*field)[n][3]);
    

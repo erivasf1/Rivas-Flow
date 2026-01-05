@@ -452,6 +452,22 @@ array<double,4> EulerBASE::ComputeSpatialFlux_UPWIND(vector<array<double,4>>* fi
     cerr<<"Error: Unknown flux specification!"<<endl;
   }
 
+  //Flux testing! 
+  //Van Leer is right, however Roe is wrong!
+  //array<double,4> flux_test = ComputeRoeFlux(left_state,right_state,unitvec[0],unitvec[1]);
+
+  /*for (int n=0;n<4;n++){
+    if (flux[n] != flux_test[n]){
+      cerr<<"Roe and Van Leer do not equal each other!"<<endl;
+      Tools::print("loc: [%d,%d] nbor [%d,%d]\n",loci,locj,nbori,nborj);
+      Tools::print("Van Leer = [%f,%f,%f,%f]\n",flux[0],flux[1],flux[2],flux[3]);
+      Tools::print("Roe = [%f,%f,%f,%f]\n",flux_test[0],flux_test[1],flux_test[2],flux_test[3]);
+      cerr<<"Dick head! >:("<<endl;
+     }
+
+  }
+  */
+
   return flux;
 }
 
@@ -746,7 +762,7 @@ double EulerBASE::ComputeMachNumber(array<double,4> &sols){
 double EulerBASE::ComputeSpeedofSound(array<double,4> &sols){
 
   //using perfect gas EOS
-  double T = sols[3] / (sols[0]*R); //if T is negative than M will be -nan!!!
+  double T = sols[3] / (sols[0]*R); //if T is negative then M will be -nan!!!
   double a = sqrt(gamma * R * T);
 
   return a;
@@ -1000,23 +1016,35 @@ array<double,4> EulerBASE::ComputeRoeWaveAmps(array<double,5> &roe_vars,array<do
 //-----------------------------------------------------------
 array<double,4> EulerBASE::ComputeFlux_CELL(array<double,4> &field_state,double nx,double ny){
 
-  array<double,4> flux;
-  array<double,4> field_state_normal{field_state[0],field_state[1]*nx,field_state[2]*ny,field_state[3]};
+  array<double,4> flux_normal; //flux = F*nx + G*ny
+  array<double,4> F,G; //F: fluxes in xdir. & G: fluxes in ydir.
+
+  //array<double,4> field_state_normal{field_state[0],field_state[1]*nx,field_state[2]*ny,field_state[3]};
 
   //Continuity Flux
-  flux[0] = field_state_normal[0] * ( field_state_normal[1] + field_state_normal[2] ); //rho*u*nx + rho*v*ny
+  F[0] = field_state[0] * field_state[1]; //rho*u
+  G[0] = field_state[0] * field_state[2]; //rho*v
+  flux_normal[0] = F[0]*nx + G[0]*ny;
+  //flux_normal[0] = field_state_normal[0] * ( field_state_normal[1] + field_state_normal[2] ); //rho*u*nx + rho*v*ny
 
   //X-Momentum Flux
-  flux[1] = field_state_normal[0] * (pow(field_state_normal[1],2.0) + field_state_normal[1]*field_state_normal[2]) - field_state_normal[3]; //rho*u^2 + rho*u*v - P
+  F[1] = field_state[0] * pow(field_state[1],2.0) + field_state[3];//rho*u^2 + P
+  G[1] = field_state[0] * field_state[1] * field_state[2]; //rho*u*v
+  flux_normal[1] = F[1]*nx + G[1]*ny;
 
   //Y-Momentum Flux
-  flux[2] = field_state_normal[0] * (pow(field_state_normal[2],2.0) + field_state_normal[1]*field_state_normal[2]) - field_state_normal[3]; //rho*v^2 rho*u*v - P
+  F[2] = field_state[0] * field_state[1] * field_state[2]; //rho*u*v
+  G[2] = field_state[0] * pow(field_state[2],2.0) + field_state[3];//rho*v^2 + P
+  flux_normal[2] = F[2]*nx + G[2]*ny;
+  //flux_normal[2] = field_state_normal[0] * (pow(field_state_normal[2],2.0) + field_state_normal[1]*field_state_normal[2]) + field_state_normal[3]; //rho*v^2 rho*u*v - P
 
   //Energy Flux
-  double ht = ComputeHTotal(field_state_normal);
-  flux[3] = field_state_normal[0]*ht*(field_state_normal[1]+field_state_normal[2]); //rho*ht*(u+v)
+  double ht = ComputeHTotal(field_state);
+  F[3] = field_state[0] * field_state[1] * ht; //rho*u*ht
+  G[3] = field_state[0] * field_state[2] * ht; //rho*v*ht
+  flux_normal[3] = F[3]*nx + G[3]*ny;
 
-  return flux; 
+  return flux_normal; 
 
 }
 //-----------------------------------------------------------
@@ -2466,10 +2494,10 @@ void Euler2DMMS::SetInitialConditions(vector<array<double,4>>* &field){
   int cellnum = cell_imax * cell_jmax;
 
   for (int i=0;i<cellnum;i++) {
-    (*field)[i][0] = 0.5;
-    (*field)[i][1] = 0.5;
-    (*field)[i][2] = 0.5;
-    (*field)[i][3] = 0.5;
+    (*field)[i][0] = 2.0;
+    (*field)[i][1] = 2.0;
+    (*field)[i][2] = 2.0;
+    (*field)[i][3] = 2.0;
   }
 
   return;
