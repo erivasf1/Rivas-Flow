@@ -982,7 +982,7 @@ array<double,4> EulerBASE::ComputeRoeEigenVals(array<double,5> &roe_vars,double 
   array<double,4> ans{lambda1,lambda2,lambda3,lambda4};
 
   //Harten mod. to prevent expansion shocks
-  double harten_eps = 0.1;
+  double harten_eps = 1.0;
   for (int n=0;n<4;n++){
     if (abs(ans[n]) < 2.0*harten_eps*abar)
       ans[n] =  (pow(ans[n],2.0) / (4.0*harten_eps*abar) ) + harten_eps*abar;
