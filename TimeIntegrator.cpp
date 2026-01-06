@@ -182,6 +182,19 @@ void EulerExplicitBASE::ComputeNewSolution(vector<array<double,4>>* &,vector<arr
   return;
 }
 //-----------------------------------------------------------
+void EulerExplicitBASE::RampEpsilon(int &ramp_start,int &ramp_stop,int iter){
+
+  if (iter < ramp_start)
+    euler->epsilon = 0.0;
+  else if (iter >= ramp_start && iter < ramp_stop)
+    euler->epsilon = 0.5 * ( 1.0-cos(PI * (iter-ramp_start)/(ramp_stop-ramp_start)) );
+
+  else
+    euler->epsilon = 1.0;
+
+  return;
+}
+//-----------------------------------------------------------
 EulerExplicitBASE::~EulerExplicitBASE(){}
 
 // EULEREXPLICIT DEFINITIONS

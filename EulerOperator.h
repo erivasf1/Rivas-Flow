@@ -19,7 +19,11 @@ class EulerBASE {
   const double Ru = 8314.0; // J/(kmol*K) -- universal gas constant   
   const double gamma = 1.4; //specific heat ratio
   const double MolMass = 28.96; // kg/kmol
-  const double kappa_scheme = 0.0; //kappa scheme
+  const double kappa_scheme = 0.0; //-1: fully upwinded, 
+                                   //0: upwind biased,
+                                   // 1/3: 3rd order upwind scheme (uniform messhes ONLY!)
+                                   // 1/2: Leonard's QUICK Scheme
+                                   // 1: central scheme
 
   public:
 

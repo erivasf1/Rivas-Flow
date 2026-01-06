@@ -70,13 +70,13 @@ int main() {
   [[maybe_unused]]bool cond_bc{true}; //true for subsonic & false for supersonic (FOR OUTFLOW BC)
 
   // Mesh Specifications
-  [[maybe_unused]]const char* meshfile = "Grids/InletGrids/Inlet.105x33.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
+  [[maybe_unused]]const char* meshfile = "Grids/InletGrids/Inlet.53x17.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
   //[[maybe_unused]]const char* meshfile = "Grids/CurvilinearGrids/curv2d129.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
   //[[maybe_unused]]const char* meshfile = NULL;
   [[maybe_unused]]int cellnum = 100; //recommending an even number for cell face at the throat of nozzle (NOTE: will get reassigned val. if mesh is provided)
 
   // Temporal Specifications
-  const int iter_max = 1e5;
+  const int iter_max = 1e6;
   int iterout = 20; //number of iterations per solution output
   const double CFL = 0.8; //CFL number (must <= 1 for Euler Explicit integration)
   //const double CFL = 1e-2; //CFL number (must <= 1 for Euler Explicit integration)
@@ -85,10 +85,12 @@ int main() {
 
   // Flux Specifications
   int flux_scheme{1}; //0=JST, 1=Van Leer, 2 = Roe 
-  double epsilon = 0.0; //0 for 1st order and 1 for 2nd order
-  int flux_limiter = 0; //1 for Van Leer
-  [[maybe_unused]] const double ramp_stop = 1.0e-7; //stopping criteria for ramping fcn. of transitioning from 1st to 2nd
-  //double epsilon = 1.0; //ramping value used to transition from 1st to 2nd order
+  double epsilon = 1.0; //0 for 1st order and 1 for 2nd order
+  bool epsilon_ramp = true; //true to enable ramp from 2nd order to 1st
+  [[maybe_unused]] int ramp_start = 1.1e4; 
+  [[maybe_unused]] int ramp_stop = 5.0e5;
+
+  int flux_limiter = 1; //1 for Van Leer
   bool resid_stall{false};//for detecting if residuals have stalled
   [[maybe_unused]]int stall_count = 0;
 
@@ -295,6 +297,9 @@ int main() {
   }
   */
 
+  // SETTING EPSILON RAMP (IF SPECIFIED)
+  if (epsilon_ramp == true && epsilon == 1.0)
+    time->RampEpsilon(ramp_start,ramp_stop,0);
 
   // SETTING BOUNDARY CONDITIONS
   //generates ghost cells here too
@@ -307,8 +312,6 @@ int main() {
   // using ResidSols spacevariable
   array<double,4> InitNorms;
 
-  //if (upwind_scheme == false && flux_accuracy == false) //reverting to 1st order if 2nd order Roe is selected
-    //flux_accuracy = true;
 
   euler->ComputeResidual(init_resid,field,field_stall,resid_stall);
 
@@ -354,13 +357,9 @@ int main() {
   //! BEGIN OF MAIN LOOP
   for (iter=1;iter<iter_max;iter++){
 
-    // For Switching from 1st to 2nd order accurate
-/*    if ((upwind_scheme == false) && (flux_accuracy == true) && (iter == 2e5)){ //resetting back to 2nd Order Roe - if Roe 2nd order selected
-      flux_accuracy = false;
-      iterout = 10;
-      subiter_max = 5;
-    }
- */   
+    // SETTING EPSILON RAMP (IF SPECIFIED)
+    if (epsilon_ramp == true && epsilon == 1.0)
+      time->RampEpsilon(ramp_start,ramp_stop,iter);
   
     //! COMPUTE TIME STEP
     // if global time step, chosen then create a vector<double> of the smallest time step
@@ -459,8 +458,9 @@ int main() {
       //Printing Residual Norms to Screen
       Tools::print("------Iteration #: %d----------\n",iter);
       Tools::print("Continuity:%e\nX-Momentum:%e\nY-Momentum:%e\nEnergy:%e\n",ResidualNorms[0],ResidualNorms[1],ResidualNorms[2],ResidualNorms[3]);
-      //debug:
-      Tools::print("Epsilon: %e\n",epsilon);
+
+      Tools::print("Epsilon: %e\n",euler->epsilon);
+
       if (resid_stall == true)
         Tools::print("Residuals are detected to be stalled!\n"); //printing message is temp. for now
 

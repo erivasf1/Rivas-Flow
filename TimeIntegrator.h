@@ -19,6 +19,8 @@ class EulerExplicitBASE {
   double Velocity_max = 1.0e8;
   double Pressure_max = 1.0e10;
 
+  double PI = M_PI;
+
   EulerExplicitBASE(MeshGenBASE* &m,EulerBASE* &e,const double &c);
  
   vector<double> ComputeLocalTimeStep(vector<array<double,4>>* &field); // Outputting the local time step for every cell in the domain
@@ -33,6 +35,8 @@ class EulerExplicitBASE {
   bool CheckStallResids(int &count,array<double,4> &ResidNorms,array<double,4> &Prev_ResidualNorms,SpaceVariables2D* &sol); //checks if residuals are stalled
 
   virtual void ComputeNewSolution(vector<array<double,4>>* &field,vector<array<double,4>>* &resid,vector<double>* &time_steps,array<double,4> &Omega,vector<array<double,4>>* &field_stall,bool &resid_stall); 
+
+  void RampEpsilon(int &ramp_start,int &ramp_stop,int iter);
 
   virtual ~EulerExplicitBASE();
 

@@ -644,97 +644,6 @@ array<array<double,4>,4> EulerBASE::ComputeRVariation(array<double,4> loc_state,
 
   return ans;
 
-
- /*
-  if (sign == true){ //rplus case
-    array<double,4> u_ijplus2;
-    
-    if (locj == nborj) { //i+1/2 face
-
-      if (nbori >= cell_imax) { //i+ ghost cells case
-        u_ijplus1 = mesh->right_cells[nborj];
-        u_ijplus2 = mesh->right_cells[nborj+cell_jmax];
-      }
-      else if (nbori == cell_imax-1)
-        u_ijplus2 = mesh->right_cells[nborj];
-
-      else
-        u_ijplus1 = fieldij(field,nbori,nborj,cell_imax);
-     }
-
-    else if (loci == nbori){ //j+1/2 face
-
-      if (nborj >= cell_jmax) { //j+ ghost cells case
-        u_ijplus1 = mesh->top_cells[nbori];
-        u_ijplus2 = mesh->top_cells[nbori+cell_imax];
-      }
-      else if (nbori == cell_imax-1)
-        u_ijplus2 = mesh->top_cells[nbori];
-
-      else
-        u_ijplus1 = fieldij(field,nbori,nborj,cell_imax);
-    
-    }
-    else{
-      cerr<<"Error: Neither loc i,j and nbor i,j match in R variation!"<<endl;
-      array<double,4> trash{DBL_MIN,DBL_MIN};
-      return trash;
-    }
-
-  for (int n=0;n<4;n++)
-    ans[n] = (u_ijplus2[n]-u_ijplus1[n]) / (u_ijplus1[n]-u_ij[n]);
-
-  }
-    
-  else { //rminus case
-
-    if (locj == nborj) { //i+1/2 face
-      if (loci < 0){ //i- ghost cells case
-        u_ij = mesh->left_cells[locj];
-        u_ijminus1 = mesh->left_cells[locj+cell_jmax];
-      }
-
-      else if (loci-1<=0) 
-        u_ijminus1 = mesh->left_cells[locj];
-
-      else{
-        u_ijminus1 = fieldij(field,loci-1,locj,cell_imax);
-        u_ij = fieldij(field,loci,locj,cell_imax);
-      }
-
-    }
-
-    else if (loci == nbori){ //j+1/2 face
-      if (loci < 0){ //j- ghost cells case
-        u_ij = mesh->btm_cells[loci];
-        u_ijminus1 = mesh->btm_cells[loci+cell_imax];
-      }
-
-      else if (loci-1<=0) 
-        u_ijminus1 = mesh->btm_cells[loci];
-
-      else {
-        u_ijminus1 = fieldij(field,loci,locj-1,cell_imax);
-        u_ij = fieldij(field,loci,locj,cell_imax);
-      }
-    }
-
-    else{
-      cerr<<"Error: Neither loc i,j and nbor i,j match in R variation!"<<endl;
-      array<double,4> trash{DBL_MIN,DBL_MIN};
-      return trash;
-    }
-
-  for (int n=0;n<4;n++)
-    ans[n] = (u_ij[n]-u_ijminus1[n]) / (u_ijplus1[n]-u_ij[n]);
-
-  }
-
-
-  return ans;
-
-  */
-
 }
 //-----------------------------------------------------------
 double EulerBASE::ComputeMachNumber(array<double,4> &sols){
@@ -2222,6 +2131,8 @@ void Euler2D::ApplySlipWall(vector<array<double,4>>* &field,int side){
   //NOTE: using notes from Lecture 7,Slide 41
   //Velocity eq. comes from self derivation -- formulated in matrix-form to solve for unknowns
 
+  //Symmetry boundary conditions reference: https://doi-org.ezproxy.lib.vt.edu/10.2514/3.11|983 
+
   array<double,2> unit_normal,unit_tang;
   double x_vel,y_vel; //neighboring interior cell velocities
   double T; //Temp. of ghost cell
@@ -2278,7 +2189,7 @@ void Euler2D::ApplySlipWall(vector<array<double,4>>* &field,int side){
         mesh->top_cells[n][3] = p_nbor1;
       else if (epsilon > 0){
         p_nbor2 = (n < mesh->cell_imax) ? fieldij(field,i,j-1,mesh->cell_imax)[3] : fieldij(field,i,j+1,mesh->cell_imax)[3]; 
-        mesh->top_cells[n][3] = p_nbor1 - 0.5*(p_nbor2-p_nbor1);
+        mesh->top_cells[n][3] = p_nbor1 - 0.5*(p_nbor2-p_nbor1)*epsilon;
       }
       else //error handling
         return;
@@ -2323,7 +2234,7 @@ void Euler2D::ApplySlipWall(vector<array<double,4>>* &field,int side){
         mesh->btm_cells[n][3] = p_nbor1;
       else if (epsilon > 0){
         p_nbor2 = (n < mesh->cell_imax) ? fieldij(field,i,j+1,mesh->cell_imax)[3] : fieldij(field,i,j-1,mesh->cell_imax)[3]; 
-        mesh->btm_cells[n][3] = p_nbor1 - 0.5*(p_nbor2-p_nbor1);
+        mesh->btm_cells[n][3] = p_nbor1 - 0.5*(p_nbor2-p_nbor1)*epsilon;
       }
       else //error handling
         return;
@@ -2367,7 +2278,7 @@ void Euler2D::ApplySlipWall(vector<array<double,4>>* &field,int side){
         mesh->left_cells[n][3] = p_nbor1;
       else if (epsilon > 0){
         p_nbor2 = (n < mesh->cell_jmax) ? fieldij(field,i+1,j,mesh->cell_imax)[3] : fieldij(field,i-1,j,mesh->cell_imax)[3]; 
-        mesh->left_cells[n][3] = p_nbor1 - 0.5*(p_nbor2-p_nbor1);
+        mesh->left_cells[n][3] = p_nbor1 - 0.5*(p_nbor2-p_nbor1)*epsilon;
       }
       else //error handling
         return;
