@@ -32,7 +32,7 @@ class EulerExplicitBASE {
 
   void UnderRelaxationCheck(array<double,4> ResidPrevNorm,array<double,4> ResidNorm,double C,array<bool,4> &check); //looks for residual norm increase to mark needed under-relaxation for each equation 
 
-  bool CheckStallResids(int &count,array<double,4> &ResidNorms,array<double,4> &Prev_ResidualNorms,SpaceVariables2D* &sol); //checks if residuals are stalled
+  bool CheckStallResids(vector<array<double,4>>* &field,vector<array<double,4>>* &field_stall,array<double,4> &ResidNorms,array<double,4> &Prev_ResidualNorms,SpaceVariables2D* &sol); //checks if residuals are stalled
 
   virtual void ComputeNewSolution(vector<array<double,4>>* &field,vector<array<double,4>>* &resid,vector<double>* &time_steps,array<double,4> &Omega,vector<array<double,4>>* &field_stall,bool &resid_stall); 
 

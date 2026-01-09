@@ -70,14 +70,14 @@ int main() {
   [[maybe_unused]]bool cond_bc{true}; //true for subsonic & false for supersonic (FOR OUTFLOW BC)
 
   // Mesh Specifications
-  [[maybe_unused]]const char* meshfile = "Grids/InletGrids/Inlet.53x17.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
+  [[maybe_unused]]const char* meshfile = "Grids/InletGrids/Inlet.209x65.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
   //[[maybe_unused]]const char* meshfile = "Grids/CurvilinearGrids/curv2d129.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
   //[[maybe_unused]]const char* meshfile = NULL;
   [[maybe_unused]]int cellnum = 100; //recommending an even number for cell face at the throat of nozzle (NOTE: will get reassigned val. if mesh is provided)
 
   // Temporal Specifications
-  const int iter_max = 1e6;
-  int iterout = 20; //number of iterations per solution output
+  const int iter_max = 5e5;
+  int iterout = 50; //number of iterations per solution output
   const double CFL = 0.8; //CFL number (must <= 1 for Euler Explicit integration)
   //const double CFL = 1e-2; //CFL number (must <= 1 for Euler Explicit integration)
   bool timestep{false}; //true = local time stepping; false = global time stepping
@@ -86,12 +86,13 @@ int main() {
   // Flux Specifications
   int flux_scheme{1}; //0=JST, 1=Van Leer, 2 = Roe 
   double epsilon = 1.0; //0 for 1st order and 1 for 2nd order
-  bool epsilon_ramp = true; //true to enable ramp from 2nd order to 1st
-  [[maybe_unused]] int ramp_start = 1.1e4; 
-  [[maybe_unused]] int ramp_stop = 5.0e5;
+  bool epsilon_ramp = false; //true to enable ramp from 2nd order to 1st
+  [[maybe_unused]] int ramp_start = 1.2e4; 
+  [[maybe_unused]] int ramp_stop = 1.2e4;
 
   int flux_limiter = 1; //1 for Van Leer
-  bool resid_stall{false};//for detecting if residuals have stalled
+  bool freeze_limiter = false; //true/false for enabling/disabling limiter freeze
+  [[maybe_unused]]bool resid_stall{false};//for detecting if residuals have stalled, NOTE: leave as false!
   [[maybe_unused]]int stall_count = 0;
 
   // Under-Relaxation Parameters
@@ -143,7 +144,7 @@ int main() {
   vector<double> TimeSteps(mesh->cellnumber); //for storing the time step (delta_t) for each cell
   array<double,4> ResidualNorms; //for storing the global residual norms
   array<double,4> ResidualStarNorms; //stores the intermediate global residual norms
-  //array<double,4> Prev_ResidualNorms; //for storing the previous global residual norms
+  [[maybe_unused]] array<double,4> Prev_ResidualNorms; //for storing the previous global residual norms
 
   //Pointers to Field variables
   vector<array<double,4>>* field = &Field; //pointer to Field solutions
@@ -357,9 +358,14 @@ int main() {
   //! BEGIN OF MAIN LOOP
   for (iter=1;iter<iter_max;iter++){
 
-    // SETTING EPSILON RAMP (IF SPECIFIED)
+    // SET EPSILON RAMP (IF SPECIFIED)
     if (epsilon_ramp == true && epsilon == 1.0)
       time->RampEpsilon(ramp_start,ramp_stop,iter);
+
+    // CHECK FOR STALL RESIDUALS (IF LIMITER FREEZE IS SPECIFIED)
+    if (euler->epsilon == 1.0 && freeze_limiter == true && resid_stall == false){
+      resid_stall = time->CheckStallResids(field,field_stall,ResidualNorms,Prev_ResidualNorms,sols);
+    }
   
     //! COMPUTE TIME STEP
     // if global time step, chosen then create a vector<double> of the smallest time step
@@ -407,26 +413,20 @@ int main() {
       }
     }
 
-    // Checking if Residuals are stalled
-    /*if (resid_stall == false){ //only checking if haven't already been marked as stalled
+    //! SAVING PREV. RESIDUALS (ONLY IF LIMITER FREEZE SPECIFIED)
+    if (freeze_limiter == true && resid_stall == false)
       Prev_ResidualNorms = ResidualNorms;
-      resid_stall = time->CheckStallResids(stall_count,ResidualNorms,Prev_ResidualNorms,sols);
-      if (resid_stall == true)
-        FieldStall = Field; //setting previous field sols. before stall
-    }
-    */
+    
+    if (resid_stall == true)
+      Tools::print("Limiters are now frozen!\n");
 
 
-    //Assinging New Time Step Values to Intermediate Values
+    //! ASSINGING NEW TIME STEP VALUES TO INTERMEDIATE VALUES
     (*field) = (*field_star);
     (*resid) = (*resid_star); ResidualNorms = ResidualStarNorms;
 
-    //Computing Ramping Value
-    //epsilon = sols->ComputeRampValue(ResidualNorms,InitNorms,ramp_stop);
-
 
     //! OUTPUT SOL. IN .DAT FILE EVERY "ITEROUT" STEPS
-
     if (iter % iterout == 0) {
       it = error->zeroPad(iter,4);
       //it = to_string(iter);
@@ -455,7 +455,7 @@ int main() {
       //Printing to TECPLOT
       //error->OutputPrimitiveVariables(field,filename_totalsols,true,iter,xcoords);
 
-      //Printing Residual Norms to Screen
+      //! PRINTING RESIDUAL NORMS TO SCREEN
       Tools::print("------Iteration #: %d----------\n",iter);
       Tools::print("Continuity:%e\nX-Momentum:%e\nY-Momentum:%e\nEnergy:%e\n",ResidualNorms[0],ResidualNorms[1],ResidualNorms[2],ResidualNorms[3]);
 
@@ -470,7 +470,8 @@ int main() {
     }
 
 
-    //! CHECK FOR CONVERGENCE (w/ respect to the intial residual norms)
+    //! CHECK FOR CONVERGENCE 
+    //based on intial residual norms
     if (ResidualNorms[0]/InitNorms[0] <= cont_tol && ResidualNorms[1]/InitNorms[1] <= xmom_tol && 
         ResidualNorms[2]/InitNorms[2] <= ymom_tol && ResidualNorms[3]/InitNorms[3] <= energy_tol)
       break;
@@ -478,7 +479,6 @@ int main() {
   }
 
   //! FINAL OUTPUT OF SOLUTION
-
   if (iter==iter_max)
     Tools::print("Failed to converge!\n");
 

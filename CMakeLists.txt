@@ -25,6 +25,7 @@ SET(CMAKE_CXX_COMPILER mpicxx)
 set(CMAKE_CXX_FLAGS "-Wall -Wextra -Wno-reorder")
 set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -Wall -Wextra -Wpedantic -Wshadow -Wconversion -fsanitize=address -lmpi")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+add_compile_definitions(OMPI_SKIP_MPICXX=1)
 
 
 

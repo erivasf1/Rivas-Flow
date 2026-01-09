@@ -476,72 +476,126 @@ array<Vector,2> EulerBASE::MUSCLApprox(vector<array<double,4>>* &field,vector<ar
 
   //NOTE: From lecture notes Section 7, pg. 8
   // rightnbor_vec: u_i+2 & leftloc_vec: u_i-1
-  Vector loc_vec,nbor_vec,nbornbor_vec,nborloc_vec;
-  array<double,4> loc_state = fieldij(field,loci,locj,cell_imax);
+  //Vector loc_vec,nbor_vec,nbornbor_vec,nborloc_vec;
+  array<double,4> loc_state;
+  [[maybe_unused]] array<double,4> loc_state_freeze;
   array<double,4> nbor_state,nborloc_state,nbornbor_state;
+  [[maybe_unused]] array<double,4> nbor_state_freeze,nborloc_state_freeze,nbornbor_state_freeze;
   array<Vector,2> state;
 
-  //checking if any indices of stencil access ghost cells
+  //! ASSIGINING LOC STATE
+  loc_state = fieldij(field,loci,locj,cell_imax);
+  if (resid_stall == true)
+    loc_state_freeze = fieldij(field_stall,loci,locj,cell_imax);
+
+  //! CHECKING IF ANY INDICES OF STENCIL ACCESS GHOST CELLS
   
   //!< neighbor to loc in (+) outward normal direction
   if ( nbori<0 || nbori>=cell_imax || nborj<0 || nborj>=cell_jmax ){
-    if (nbori<0) //using 1st layer of left ghost cells (-i case)
+    if (nbori<0){ //using 1st layer of left ghost cells (-i case)
       nbor_state = mesh->left_cells[nborj];
+      if (resid_stall == true) //case for limiter freeze
+        nbor_state_freeze = mesh->left_cells_freeze[nborj];
+    }
      
-    else if (nbori>=cell_imax) //using 1st layer of right ghost cells (+i case)
+    else if (nbori>=cell_imax){ //using 1st layer of right ghost cells (+i case)
       nbor_state = mesh->right_cells[nborj];
+      if (resid_stall == true)
+        nbor_state_freeze = mesh->right_cells_freeze[nborj];
+    }
     
-    else if (nborj<0) //using 1st layer of btm ghost cells (-j case)
+    else if (nborj<0){ //using 1st layer of btm ghost cells (-j case)
       nbor_state = mesh->btm_cells[nbori]; //j set to 0 for 1st layer
+      if (resid_stall == true)
+        nbor_state_freeze = mesh->btm_cells_freeze[nbori];
+    }
     
-    else  //using 1st layer of top ghost cells (+j case)
+    else{  //using 1st layer of top ghost cells (+j case)
       nbor_state = mesh->top_cells[loci];
+      if (resid_stall == true)
+        nbor_state_freeze = mesh->top_cells_freeze[loci];
+    }
   }
 
-  else //interior cell case
+  else{ //interior cell case
     nbor_state = fieldij(field,nbori,nborj,cell_imax); 
+    if (resid_stall == true)
+      nbor_state_freeze = fieldij(field_stall,nbori,nborj,cell_imax); 
+  }
 
     //!< neighbor to loc in (-) outward normal direction 
   if ( nborloc_i < 0 || nborloc_i >= cell_imax || nborloc_j < 0 || nborloc_j >= cell_jmax ) {
-    if (nborloc_i<0) //using 1st layer of left ghost cells (-i case)
+    if (nborloc_i<0){ //using 1st layer of left ghost cells (-i case)
       nborloc_state = mesh->left_cells[nborloc_j];
+      if (resid_stall == true)
+        nborloc_state_freeze = mesh->left_cells_freeze[nborloc_j];
+    }
      
-    else if (nborloc_i>=cell_imax) //using 1st layer of right ghost cells (+i case)
+    else if (nborloc_i>=cell_imax){ //using 1st layer of right ghost cells (+i case)
       nborloc_state = mesh->right_cells[nborloc_j];
+      if (resid_stall == true)
+        nborloc_state_freeze = mesh->right_cells_freeze[nborloc_j];
+    }
     
-    else if (nborloc_j<0) //using 1st layer of btm ghost cells (-j case)
+    else if (nborloc_j<0){ //using 1st layer of btm ghost cells (-j case)
       nborloc_state = mesh->btm_cells[nborloc_i]; //j set to 0 for 1st layer
+      if (resid_stall == true)
+        nborloc_state_freeze = mesh->btm_cells_freeze[nborloc_i];
+    }
     
-    else  //using 1st layer of top ghost cells (+j case)
+    else{  //using 1st layer of top ghost cells (+j case)
       nborloc_state = mesh->top_cells[nborloc_i];
+      if (resid_stall == true)
+        nborloc_state_freeze = mesh->top_cells_freeze[nborloc_i];
+    }
   }
 
-  else //interior cell case
+  else{ //interior cell case
     nborloc_state = fieldij(field,nborloc_i,nborloc_j,cell_imax);
+    if (resid_stall == true)
+      nborloc_state_freeze = fieldij(field_stall,nborloc_i,nborloc_j,cell_imax);
+  }
 
     //!< neighbor to neighbor in (+) outward normal direction 
   if ( nbornbor_i < 0 || nbornbor_i >= cell_imax || nbornbor_j < 0 || nbornbor_j >= cell_jmax ){
-    if (nbornbor_i<0) //using 2nd layer of left ghost cells (-i case)
+    if (nbornbor_i<0){ //using 2nd layer of left ghost cells (-i case)
       nbornbor_state = mesh->left_cells[nbornbor_j+cell_jmax];
+      if (resid_stall == true)
+        nbornbor_state_freeze = mesh->left_cells_freeze[nbornbor_j+cell_jmax];
+    }
      
-    else if (nbornbor_i>=cell_imax) //using 2nd layer of right ghost cells (+i case)
+    else if (nbornbor_i>=cell_imax){ //using 2nd layer of right ghost cells (+i case)
       nbornbor_state = mesh->right_cells[nbornbor_j+cell_jmax];
+      if (resid_stall == true)
+        nbornbor_state_freeze = mesh->right_cells_freeze[nbornbor_j+cell_jmax];
+    }
     
-    else if (nbornbor_j<0) //using 2nd layer of btm ghost cells (-j case)
+    else if (nbornbor_j<0){ //using 2nd layer of btm ghost cells (-j case)
       nbornbor_state = mesh->btm_cells[nbornbor_i+cell_imax]; //j set to 0 for 1st layer
+      if (resid_stall == true)
+        nbornbor_state_freeze = mesh->btm_cells_freeze[nbornbor_i+cell_imax];
+    }
     
-    else  //using 2nd layer of top ghost cells (+j case)
+    else{  //using 2nd layer of top ghost cells (+j case)
       nbornbor_state = mesh->top_cells[nbornbor_i+cell_imax];
+      if (resid_stall == true)
+        nbornbor_state_freeze = mesh->top_cells_freeze[nbornbor_i+cell_imax];
+    }
   }
 
-  else //interior cell case
+  else{ //interior cell case
     nbornbor_state = fieldij(field,nbornbor_i,nbornbor_j,cell_imax);
+      if (resid_stall == true)
+        nbornbor_state_freeze = fieldij(field_stall,nbornbor_i,nbornbor_j,cell_imax);
+  }
 
   //TMP
+  /*
   for (int i=0;i<4;i++){
     loc_vec[i] = loc_state[i]; nbor_vec[i] = nbor_state[i];
     nborloc_vec[i] = nborloc_state[i]; nbornbor_vec[i] = nbornbor_state[i];
   }
+  */
   
 
   //applying flux limiters (if specified)
@@ -553,9 +607,12 @@ array<Vector,2> EulerBASE::MUSCLApprox(vector<array<double,4>>* &field,vector<ar
   }
 
   else { //2nd order accurate w/ flux limiters
-  
-    //Note: Psi[0] = i-1/2(+); Psi[1] = i+1/2(-); Psi[2] = i+3/2(-); Psi[3] = i+1/2(+)
-    Psi = FluxLimiter(loc_state,nbor_state,nborloc_state,nbornbor_state); 
+    //NOTE 1: Psi[0] = i-1/2(+); Psi[1] = i+1/2(-); Psi[2] = i+3/2(-); Psi[3] = i+1/2(+)
+    //NOTE 2: if resids are stalled, then freeze limiters by evaluating frozen state
+
+    Psi = (resid_stall == true) ? 
+      FluxLimiter(loc_state_freeze,nbor_state_freeze,nborloc_state_freeze,nbornbor_state_freeze) : 
+      FluxLimiter(loc_state,nbor_state,nborloc_state,nbornbor_state); 
   }
  
 
@@ -2190,6 +2247,8 @@ void Euler2D::ApplySlipWall(vector<array<double,4>>* &field,int side){
       else if (epsilon > 0){
         p_nbor2 = (n < mesh->cell_imax) ? fieldij(field,i,j-1,mesh->cell_imax)[3] : fieldij(field,i,j+1,mesh->cell_imax)[3]; 
         mesh->top_cells[n][3] = p_nbor1 - 0.5*(p_nbor2-p_nbor1)*epsilon;
+        if (mesh->top_cells[n][3] < 0)
+          mesh->top_cells[n][3] = DBL_MIN;
       }
       else //error handling
         return;
@@ -2235,6 +2294,8 @@ void Euler2D::ApplySlipWall(vector<array<double,4>>* &field,int side){
       else if (epsilon > 0){
         p_nbor2 = (n < mesh->cell_imax) ? fieldij(field,i,j+1,mesh->cell_imax)[3] : fieldij(field,i,j-1,mesh->cell_imax)[3]; 
         mesh->btm_cells[n][3] = p_nbor1 - 0.5*(p_nbor2-p_nbor1)*epsilon;
+        if (mesh->btm_cells[n][3] < 0)
+          mesh->btm_cells[n][3] = DBL_MIN;
       }
       else //error handling
         return;
@@ -2279,6 +2340,8 @@ void Euler2D::ApplySlipWall(vector<array<double,4>>* &field,int side){
       else if (epsilon > 0){
         p_nbor2 = (n < mesh->cell_jmax) ? fieldij(field,i+1,j,mesh->cell_imax)[3] : fieldij(field,i-1,j,mesh->cell_imax)[3]; 
         mesh->left_cells[n][3] = p_nbor1 - 0.5*(p_nbor2-p_nbor1)*epsilon;
+        if (mesh->left_cells[n][3] < 0) // to prevent negative pressure
+          mesh->left_cells[n][3] = DBL_MIN;
       }
       else //error handling
         return;
@@ -2323,6 +2386,8 @@ void Euler2D::ApplySlipWall(vector<array<double,4>>* &field,int side){
       else if (epsilon > 0){
         p_nbor2 = (n < mesh->cell_jmax) ? fieldij(field,i+1,j,mesh->cell_imax)[3] : fieldij(field,i-1,j,mesh->cell_imax)[3]; 
         mesh->right_cells[n][3] = p_nbor1 - 0.5*(p_nbor2-p_nbor1);
+        if (mesh->right_cells[n][3] < 0)
+          mesh->right_cells[n][3] = DBL_MIN;
       }
       else //error handling
         return;

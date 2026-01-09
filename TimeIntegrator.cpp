@@ -163,15 +163,21 @@ void EulerExplicitBASE::UnderRelaxationCheck(array<double,4> ResidPrevNorm,array
 }
 
 //-----------------------------------------------------------
-bool EulerExplicitBASE::CheckStallResids(int &count,array<double,4> &ResidNorms,array<double,4> &Prev_ResidualNorms,SpaceVariables2D* &sol){
+bool EulerExplicitBASE::CheckStallResids(vector<array<double,4>>* &field,vector<array<double,4>>* &field_stall,array<double,4> &ResidNorms,array<double,4> &Prev_ResidualNorms,SpaceVariables2D* &sol){
 
-  int count_tol = 1e5; double diff_tol = 1.0e-2; 
+  double diff_tol = 5.0e-7; 
+  bool stall{false};
+
   double resid_avg = sol->ComputeNormAvg(ResidNorms); 
   double prev_resid_avg = sol->ComputeNormAvg(Prev_ResidualNorms); 
 
-  count = (abs(resid_avg-prev_resid_avg) <= diff_tol) ? count + 1 : count;
+  double diff = abs(resid_avg - prev_resid_avg) / prev_resid_avg;
 
-  bool stall = (count > count_tol) ? true : false;
+  if (diff < diff_tol){
+    stall = true;
+    (*field_stall) = (*field); //setting field stall to field and fixating it
+    mesh->SetFrozenGhostCells(); //turning on frozen ghostcells and fixating it
+  }
 
   return stall;
 
@@ -226,7 +232,7 @@ RungeKutta2::RungeKutta2(MeshGenBASE* &m,EulerBASE* &e,const double &c) : EulerE
 }
 
 //-----------------------------------------------------------
-void RungeKutta2::ComputeNewSolution(vector<array<double,4>>* &field,vector<array<double,4>>* &resid,vector<double>* &time_steps,array<double,4> &Omega,vector<array<double,4>>* &field_stall,bool &resid_stall) {
+void RungeKutta2::ComputeNewSolution(vector<array<double,4>>* &field,vector<array<double,4>>* &resid,vector<double>* &time_steps,[[maybe_unused]] array<double,4> &Omega,vector<array<double,4>>* &field_stall,bool &resid_stall) {
 
   //Reference: Class notes section 8, page 5
   
@@ -311,7 +317,7 @@ RungeKutta4::RungeKutta4(MeshGenBASE* &m,EulerBASE* &e,const double &c) : EulerE
 }
 
 //-----------------------------------------------------------
-void RungeKutta4::ComputeNewSolution(vector<array<double,4>>* &field,vector<array<double,4>>* &resid,vector<double>* &time_steps,array<double,4> &Omega,vector<array<double,4>>* &field_stall,bool &resid_stall) {
+void RungeKutta4::ComputeNewSolution(vector<array<double,4>>* &field,vector<array<double,4>>* &resid,vector<double>* &time_steps,[[maybe_unused]] array<double,4> &Omega,vector<array<double,4>>* &field_stall,bool &resid_stall) {
 
   //Reference: Class notes section 8, page 5
   

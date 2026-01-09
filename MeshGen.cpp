@@ -57,6 +57,10 @@ array<double,2> MeshGenBASE::ComputeTangentialUnitVector(int,int,int){
   return zero; //return a zero array by default
 }
 //-----------------------------------------------------------
+void MeshGenBASE::SetFrozenGhostCells(){
+  return;
+}
+//-----------------------------------------------------------
 MeshGenBASE::~MeshGenBASE(){}
 //-----------------------------------------------------------
 
@@ -1028,6 +1032,17 @@ void MeshGen2D::AssignGhostCellVarVec(int i,int j,int side,array<double,4> &res)
   return;
 }
 
+//-----------------------------------------------------------
+void MeshGen2D::SetFrozenGhostCells(){
+
+  top_cells_freeze = top_cells;
+  btm_cells_freeze = btm_cells;
+  left_cells_freeze = left_cells;
+  right_cells_freeze = right_cells;
+
+  return;
+
+}
 //-----------------------------------------------------------
 MeshGen2D::~MeshGen2D(){}
 //-----------------------------------------------------------

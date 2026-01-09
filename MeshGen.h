@@ -19,6 +19,8 @@ class MeshGenBASE {
 
   vector<array<double,4>> top_cells,btm_cells,right_cells,left_cells; //ghost cells sub-domains
 
+  vector<array<double,4>> top_cells_freeze,btm_cells_freeze,right_cells_freeze,left_cells_freeze; //ghost cells sub-domains
+
   vector<array<double,2>> right_cellcenter_coords,left_cellcenter_coords,top_cellcenter_coords,btm_cellcenter_coords;
 
   MeshGenBASE();
@@ -36,6 +38,7 @@ class MeshGenBASE {
   virtual array<double,2> ComputeOutwardUnitVector(int i,int j,int side);
   virtual array<double,2> ComputeTangentialUnitVector(int i,int j,int side);
   virtual array<double,4> GetGhostCellVarVec(int i,int j,int side);
+  virtual void SetFrozenGhostCells(); //freezes ghost cells for limiter freezing (i.e. assigns *cells_freeze)
   
   virtual ~MeshGenBASE();
 
@@ -102,6 +105,7 @@ class MeshGen2D : public MeshGenBASE { //reads in a non-uniform 2D mesh
   array<double,2> ComputeTangentialUnitVector(int i,int j,int side) override;
   array<double,4> GetGhostCellVarVec(int i,int j,int side) override; //extracts vector of primitive vars. from the specified ghost cell
   void AssignGhostCellVarVec(int i,int j,int side,array<double,4> &res);
+  void SetFrozenGhostCells() override;
 
   ~MeshGen2D();
 
