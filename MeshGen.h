@@ -5,6 +5,7 @@
 #include "MeshAccess.hpp"
 #include <fstream>
 #include <iostream>
+#include <cfloat>
 
 class MeshGenBASE {
 
@@ -34,6 +35,8 @@ class MeshGenBASE {
   virtual double GetInteriorCellFaceArea(int i,int j,int dir);
   virtual double GetCellVolume(int i,int j);
   virtual array<array<double,4>,2> GetGhostCellCoords(int i,int j, int tag);
+  virtual array<double,2> ComputeMaxCoords(array<array<double,4>,2> &coords);
+  virtual array<double,2> ComputeMinCoords(array<array<double,4>,2> &coords);
   virtual void ComputeGhostCellCenteredCoordinate();
   virtual array<double,2> ComputeOutwardUnitVector(int i,int j,int side);
   virtual array<double,2> ComputeTangentialUnitVector(int i,int j,int side);
@@ -91,6 +94,8 @@ class MeshGen2D : public MeshGenBASE { //reads in a non-uniform 2D mesh
 
   array<array<double,4>,2> GetCellCoords(int &i,int &j); //fcn. to retrieve coords; indexing: [btm_left,btm_right,top_left,top_right]!
   array<array<double,4>,2> GetGhostCellCoords(int i,int j,int tag) override; 
+  array<double,2> ComputeMaxCoords(array<array<double,4>,2> &coords) override; //input: x & y coords
+  array<double,2> ComputeMinCoords(array<array<double,4>,2> &coords) override; //input: x & y coords
   //double GetCellVolume(int cell_id) override;
   
   void GenerateGhostCells(int left_id,int right_id,int btm_id,int top_id) override; //main fcn. that generates ghost nodes to each pertaining bounds

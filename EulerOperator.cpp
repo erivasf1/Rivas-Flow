@@ -391,6 +391,11 @@ void EulerBASE::ApplySlipWall(vector<array<double,4>>* &field,int side){
   return;
 }
 //-----------------------------------------------------------
+void EulerBASE::ApplyPeriodic(vector<array<double,4>>* &,int ){
+  return;
+}
+
+//-----------------------------------------------------------
 array<double,4> EulerBASE::ComputeSpatialFlux_UPWIND(vector<array<double,4>>* field,vector<array<double,4>>* field_stall,int loci,int locj,int nbori,int nborj,int nborloc_i,int nborloc_j,int nbornbor_i,int nbornbor_j,array<double,2> &unitvec,bool resid_stall){
 
   //! CHOOSING LEFT AND RIGHT STATES
@@ -419,6 +424,7 @@ array<double,4> EulerBASE::ComputeSpatialFlux_UPWIND(vector<array<double,4>>* fi
     else  //normal case (nbor does not use any ghost cells)
       right_state = fieldij(field,nbori,nborj,cell_imax);
   }
+
 
   else { //2nd order -- MUSCL extrapolation
     array<Vector,2> field_states = MUSCLApprox(field,field_stall,loci,locj,nbori,nborj,nborloc_i,nborloc_j,nbornbor_i,nbornbor_j,resid_stall);
@@ -2060,7 +2066,7 @@ void Euler2D::Enforce2DBoundaryConditions(vector<array<double,4>>* &field,bool s
   //NOTE: only enforcing inflow during setup to save CPU time
   //boundary id - 0:Top, 1:Btm, 2:Left, 3:Right
   //top boundary
-  if (scenario_2d != 0){ //non-inlet case
+  if (scenario_2d != 0){ //normal case
     if ((top_cond==0) && (setup==true))
       ApplyInflow(0);
     else if (top_cond==1)
@@ -2079,12 +2085,18 @@ void Euler2D::Enforce2DBoundaryConditions(vector<array<double,4>>* &field,bool s
   }
 
   //btm boundary 
-  if ((btm_cond==0) && (setup==true))
-    ApplyInflow(1);
-  else if (btm_cond==1)
-    ApplyOutflow(field,1);
-  else if (btm_cond==2)
+  if (scenario_2d != 1 && scenario_2d != 2){ //normal case
+    if ((btm_cond==0) && (setup==true))
+      ApplyInflow(1);
+    else if (btm_cond==1)
+      ApplyOutflow(field,1);
+    else if (btm_cond==2)
+      ApplySlipWall(field,1);
+  }
+  else{ //AIRFOIL CASE -- splitting btm boundary into slip wall & periodic boundary conditions
     ApplySlipWall(field,1);
+    ApplyPeriodic(field,1); 
+  }
   
 
   //left boundary
@@ -2199,8 +2211,10 @@ void Euler2D::ApplySlipWall(vector<array<double,4>>* &field,int side){
   double tang_dot, normal_dot; //dot products of interior cell vels. w/ tang. & normal dir.
   int i,j; //for indexing corresponding interior cell
 
-  [[maybe_unused]] array<double,2> pt_split{0.5,0.6}; // for inlet case
+  [[maybe_unused]] array<double,2> inlet_split{0.5,0.6}; // for inlet case
+  [[maybe_unused]] array<double,2> airfoil_split{0.1524,0.0}; // for inlet case
   [[maybe_unused]] array<array<double,4>,2> pt_current;
+  [[maybe_unused]] double x_max;
 
   //TOP SIDE
   if (side == 0){ //top side
@@ -2209,9 +2223,10 @@ void Euler2D::ApplySlipWall(vector<array<double,4>>* &field,int side){
     for (int n=0;n<(int)mesh->top_cells.size();n++){
 
       if (scenario_2d == 0){ //INLET CASE only
-        pt_current = mesh->GetGhostCellCoords(n,0,0);
+        i = (n < mesh->cell_imax) ? n : n - mesh->cell_imax;
+        pt_current = mesh->GetGhostCellCoords(i,0,0);
 
-        if (pt_current[0][3] <= pt_split[0]) //skipping ghost cells to the left of the split point
+        if (pt_current[0][3] <= inlet_split[0]) //skipping ghost cells to the left of the split point
           continue;
       } 
 
@@ -2247,7 +2262,7 @@ void Euler2D::ApplySlipWall(vector<array<double,4>>* &field,int side){
       else if (epsilon > 0){
         p_nbor2 = (n < mesh->cell_imax) ? fieldij(field,i,j-1,mesh->cell_imax)[3] : fieldij(field,i,j+1,mesh->cell_imax)[3]; 
         mesh->top_cells[n][3] = p_nbor1 - 0.5*(p_nbor2-p_nbor1)*epsilon;
-        if (mesh->top_cells[n][3] < 0)
+        if (mesh->top_cells[n][3] < 0) //to avoid negative pressure
           mesh->top_cells[n][3] = DBL_MIN;
       }
       else //error handling
@@ -2267,6 +2282,18 @@ void Euler2D::ApplySlipWall(vector<array<double,4>>* &field,int side){
   else if (side == 1){ 
 
     for (int n=0;n<(int)mesh->btm_cells.size();n++){
+
+      if (scenario_2d == 1 || scenario_2d == 2){ //AIRFOIL CASE only
+
+        i = (n < mesh->cell_imax) ? n : n - mesh->cell_imax;
+        pt_current = mesh->GetGhostCellCoords(i,0,1); //coords of ghost cell
+        x_max = mesh->ComputeMaxCoords(pt_current)[0];
+
+        if (x_max > airfoil_split[0] )
+          continue;
+
+      }
+
       //interior cell indexing
       i = (n < mesh->cell_imax) ? n : n - mesh->cell_imax;
       j  = (n < mesh->cell_imax) ? 0 : 1;
@@ -2294,7 +2321,7 @@ void Euler2D::ApplySlipWall(vector<array<double,4>>* &field,int side){
       else if (epsilon > 0){
         p_nbor2 = (n < mesh->cell_imax) ? fieldij(field,i,j+1,mesh->cell_imax)[3] : fieldij(field,i,j-1,mesh->cell_imax)[3]; 
         mesh->btm_cells[n][3] = p_nbor1 - 0.5*(p_nbor2-p_nbor1)*epsilon;
-        if (mesh->btm_cells[n][3] < 0)
+        if (mesh->btm_cells[n][3] < 0) //to avoid negative pressure
           mesh->btm_cells[n][3] = DBL_MIN;
       }
       else //error handling
@@ -2340,7 +2367,7 @@ void Euler2D::ApplySlipWall(vector<array<double,4>>* &field,int side){
       else if (epsilon > 0){
         p_nbor2 = (n < mesh->cell_jmax) ? fieldij(field,i+1,j,mesh->cell_imax)[3] : fieldij(field,i-1,j,mesh->cell_imax)[3]; 
         mesh->left_cells[n][3] = p_nbor1 - 0.5*(p_nbor2-p_nbor1)*epsilon;
-        if (mesh->left_cells[n][3] < 0) // to prevent negative pressure
+        if (mesh->left_cells[n][3] < 0) // to avoid negative pressure
           mesh->left_cells[n][3] = DBL_MIN;
       }
       else //error handling
@@ -2386,7 +2413,7 @@ void Euler2D::ApplySlipWall(vector<array<double,4>>* &field,int side){
       else if (epsilon > 0){
         p_nbor2 = (n < mesh->cell_jmax) ? fieldij(field,i+1,j,mesh->cell_imax)[3] : fieldij(field,i-1,j,mesh->cell_imax)[3]; 
         mesh->right_cells[n][3] = p_nbor1 - 0.5*(p_nbor2-p_nbor1);
-        if (mesh->right_cells[n][3] < 0)
+        if (mesh->right_cells[n][3] < 0) //to avoid negative pressure
           mesh->right_cells[n][3] = DBL_MIN;
       }
       else //error handling
@@ -2405,6 +2432,45 @@ void Euler2D::ApplySlipWall(vector<array<double,4>>* &field,int side){
     cerr<<"Error: Unknown side specification in SlipWall Boundary Condition!"<<endl;
 
   return;
+
+}
+
+//-----------------------------------------------------------
+void Euler2D::ApplyPeriodic(vector<array<double,4>>* &field,int side){
+
+  [[maybe_unused]] array<double,2> airfoil_split{0.1524,0.0}; // for inlet case
+  [[maybe_unused]] array<array<double,4>,2> pt_current;
+  [[maybe_unused]] double max_x;
+  int i,j;
+
+  //TOP SIDE
+  //BTM SIDE
+  if (side == 1){
+
+    for (int n=0;n<(int)mesh->btm_cells.size();n++){
+
+      if (scenario_2d == 1 || scenario_2d == 2){ //AIRFOIL CASE only
+
+        i = (n < mesh->cell_imax) ? n : n - mesh->cell_imax;
+        j = (n < mesh->cell_imax) ? 0 : 1;
+
+        pt_current = mesh->GetGhostCellCoords(i,0,1); //coords of ghost cell
+        max_x = mesh->ComputeMaxCoords(pt_current)[0];
+
+        if (max_x < airfoil_split[0]) //skipping cell since it should be slip-wall
+          continue;
+
+        mesh->btm_cells[n] = fieldij(field,i,j,mesh->cell_imax);
+
+      }
+      
+    }
+
+  }
+  //LEFT SIDE
+  //RIGHT SIDE
+
+
 
 }
 

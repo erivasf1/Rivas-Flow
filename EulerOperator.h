@@ -62,6 +62,7 @@ class EulerBASE {
   virtual void ApplyInflow(int side); //30 deg. inlet uses Mach number and T as inlet conditions
   void ApplyOutflow(vector<array<double,4>>* &field,int side);
   virtual void ApplySlipWall(vector<array<double,4>>* &field,int side);
+  virtual void ApplyPeriodic(vector<array<double,4>>* &field,int side);
 
   //SPATIAL FLUXES
   array<double,4> ComputeSpatialFlux_UPWIND(vector<array<double,4>>* field,vector<array<double,4>>* field_stall,int loci,int locj,int nbori,int nborj,int nborloc_i,int nborloc_j,int nbornbor_i,int nbornbor_j,array<double,2> &unitvec,bool resid_stall); //Utilizes both 1st and 2nd order
@@ -194,7 +195,7 @@ class Euler1D { //TODO: Make this into inherit class
 // EulerOperator Class for 2D Problems
 class Euler2D : public EulerBASE {
   
-  int scenario_2d;
+  int scenario_2d; //Inlet,Airfoil1, Airfoil2
 
   public:
   double Mach_bc,T_bc,P_bc,alpha; //free-stream and initial conditions, assigned in constructor
@@ -206,6 +207,7 @@ class Euler2D : public EulerBASE {
   void Enforce2DBoundaryConditions(vector<array<double,4>>* &field,bool setup) override;
   void ApplyInflow(int side) override;
   void ApplySlipWall(vector<array<double,4>>* &field, int side) override; //contains unique def. for the inlet due to split top boundary
+  void ApplyPeriodic(vector<array<double,4>>* &field,int side) override;
 
   void ComputeResidual(vector<array<double,4>>* &resid,vector<array<double,4>>* &field,vector<array<double,4>>* &field_stall,bool resid_stall) override;
 

@@ -47,6 +47,16 @@ array<double,4> MeshGenBASE::GetGhostCellVarVec(int,int,int){
 }
 
 //-----------------------------------------------------------
+array<double,2> MeshGenBASE::ComputeMaxCoords(array<array<double,4>,2> &){
+  return {0.0,0.0};
+}
+
+//-----------------------------------------------------------
+array<double,2> MeshGenBASE::ComputeMinCoords(array<array<double,4>,2> &){
+  return {0.0,0.0};
+}
+
+//-----------------------------------------------------------
 array<double,2> MeshGenBASE::ComputeOutwardUnitVector(int,int,int){
   array<double,2> zero{0.0,0.0};
   return zero; //return a zero array by default
@@ -408,6 +418,52 @@ array<array<double,4>,2> MeshGen2D::GetGhostCellCoords(int i,int j, int tag){
   cell_coords[1][2] = y3; cell_coords[1][3] = y4;
 
   return cell_coords;
+
+}
+
+//-----------------------------------------------------------
+array<double,2> MeshGen2D::ComputeMaxCoords(array<array<double,4>,2> &coords){
+
+  //NOTE: max_coords[0] = max x-coord
+  array<double,4> x_coords = coords[0];
+  array<double,4> y_coords = coords[1];
+
+  double max_x = DBL_MIN; double max_y = DBL_MIN;
+
+  for (int n=0;n<(int)x_coords.size();n++){
+    if (x_coords[n] > max_x)
+      max_x = x_coords[n];
+
+    if (y_coords[n] > max_y)
+      max_y = y_coords[n];
+
+  }
+  array<double,2> max_coords{max_x,max_y};
+
+  return max_coords;
+
+}
+//-----------------------------------------------------------
+array<double,2> MeshGen2D::ComputeMinCoords(array<array<double,4>,2> &coords){
+
+  //NOTE: min_coords[0] = min x-coord
+  array<double,4> x_coords = coords[0];
+  array<double,4> y_coords = coords[1];
+
+  double min_x = DBL_MAX; double min_y = DBL_MAX;
+
+  for (int n=0;n<(int)x_coords.size();n++){
+    if (x_coords[n] < min_x)
+      min_x = x_coords[n];
+
+    if (y_coords[n] < min_y)
+      min_y = y_coords[n];
+
+  }
+  array<double,2> min_coords{min_x,min_y};
+
+  return min_coords;
+
 
 }
 
