@@ -37,7 +37,7 @@ int main() {
   //! INITIALIZATION
   // Scenario
   int scenario = 2; //1 = 1D, 2 = 2D, 3 = 2D MMS, 4 = TRUE CARTESIAN of MMS
-  CASE_2D case_2d = AIRFOIL1;
+  CASE_2D case_2d = INLET;
 
   // Constants for 1D case or True Cartesian 2D MMS case
   [[maybe_unused]]double xmin = 0.0; [[maybe_unused]]double xmax = 1.0;
@@ -77,23 +77,23 @@ int main() {
   [[maybe_unused]]bool cond_bc{true}; //true for subsonic & false for supersonic (FOR OUTFLOW BC)
 
   // Mesh Specifications
-  [[maybe_unused]]const char* meshfile = "Grids/AirfoilGrids/NACA64A006.extra-coarse.27x14.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
-  //[[maybe_unused]]const char* meshfile = "Grids/InletGrids/Inlet.209x65.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
+  //[[maybe_unused]]const char* meshfile = "Grids/AirfoilGrids/NACA64A006.extra-coarse.27x14.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
+  [[maybe_unused]]const char* meshfile = "Grids/InletGrids/Inlet.53x17.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
   //[[maybe_unused]]const char* meshfile = "Grids/CurvilinearGrids/curv2d129.grd"; //name of 2D file -- Note: set to NULL if 1D case is to be ran
   //[[maybe_unused]]const char* meshfile = NULL;
   [[maybe_unused]]int cellnum = 100; //recommending an even number for cell face at the throat of nozzle (NOTE: will get reassigned val. if mesh is provided)
 
   // Temporal Specifications
   const int iter_max = 1e6;
-  int iterout = 50; //number of iterations per solution output
-  const double CFL = 1.2; //CFL number (must <= 1 for Euler Explicit integration)
+  int iterout = 10; //number of iterations per solution output
+  const double CFL = 1.1; //CFL number (must <= 1 for Euler Explicit integration)
   //const double CFL = 1e-2; //CFL number (must <= 1 for Euler Explicit integration)
   bool timestep{false}; //true = local time stepping; false = global time stepping
   int time_scheme = 1; //0 for Euler Explicit, 1 for RungeKutta2, 2 for RungeKutta4
 
   // Flux Specifications
   int flux_scheme{1}; //0=JST, 1=Van Leer, 2 = Roe 
-  double epsilon = 0.0; //0 for 1st order and 1 for 2nd order
+  double epsilon = 1.0; //0 for 1st order and 1 for 2nd order
   bool epsilon_ramp = false; //true to enable ramp from 2nd order to 1st
   [[maybe_unused]] int ramp_start = 1.2e4; 
   [[maybe_unused]] int ramp_stop = 1.2e4;

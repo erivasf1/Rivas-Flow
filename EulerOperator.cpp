@@ -2225,8 +2225,9 @@ void Euler2D::ApplySlipWall(vector<array<double,4>>* &field,int side){
       if (scenario_2d == 0){ //INLET CASE only
         i = (n < mesh->cell_imax) ? n : n - mesh->cell_imax;
         pt_current = mesh->GetGhostCellCoords(i,0,0);
+        x_max = mesh->ComputeMaxCoords(pt_current)[0];
 
-        if (pt_current[0][3] <= inlet_split[0]) //skipping ghost cells to the left of the split point
+        if (x_max <= inlet_split[0]) //skipping ghost cells to the left of the split point
           continue;
       } 
 
